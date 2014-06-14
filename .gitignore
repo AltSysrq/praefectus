@@ -19,3 +19,8 @@ depcomp
 .deps
 .dirstamp
 .libs
+test-driver
+*.core
+*.log
+core
+*.trs

@@ -87,14 +87,32 @@ void praef_context_delete(praef_context* this) {
 }
 
 praef_object* praef_context_add_object(praef_context* this, praef_object* obj) {
+  praef_object* already_existing;
+
   if (!obj->id) return obj;
 
-  return RB_INSERT(praef_object_idmap, &this->objects, obj);
+  already_existing = RB_INSERT(praef_object_idmap, &this->objects, obj);
+
+  if (!already_existing)
+    /* Inserted, need to inform the object of the actual now */
+    (*obj->rewind)(obj, this->actual_now);
+
+  return already_existing;
+}
+
+static void praef_context_roll_back(praef_context* this, praef_instant when) {
+  praef_object* it;
+
+  if (when < this->actual_now) {
+    this->actual_now = when;
+    RB_FOREACH(it, praef_object_idmap, &this->objects)
+      (*it->rewind)(it, this->actual_now);
+  }
 }
 
 praef_event* praef_context_add_event(praef_context* this, praef_event* evt) {
   praef_event* already_existing;
-  praef_object obj, * it;
+  praef_object obj;
 
   obj.id = evt->object;
   if (!RB_FIND(praef_object_idmap, &this->objects, &obj)) {
@@ -113,11 +131,7 @@ praef_event* praef_context_add_event(praef_context* this, praef_event* evt) {
   TAILQ_INSERT_AFTER(&this->events, SPLAY_LEFT(evt, sequence), evt, subsequent);
 
   /* Inserted successfully. Roll back if needed. */
-  if (evt->instant < this->actual_now) {
-    this->actual_now = evt->instant;
-    RB_FOREACH(it, praef_object_idmap, &this->objects)
-      (*it->rewind)(it, this->actual_now);
-  }
+  praef_context_roll_back(this, evt->instant);
 
   return NULL;
 }
@@ -137,6 +151,9 @@ int praef_context_redact_event(praef_context* this,
   example.serial_number = serial_number;
   evt = SPLAY_FIND(praef_event_sequence, &this->event_sequence, &example);
   if (evt) {
+    /* The event can be removed. Roll back if needed. */
+    praef_context_roll_back(this, evt->instant);
+
     TAILQ_REMOVE(&this->events, evt, subsequent);
     SPLAY_REMOVE(praef_event_sequence, &this->event_sequence, evt);
     (*evt->free)(evt);
