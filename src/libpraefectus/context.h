@@ -42,6 +42,8 @@ typedef struct praef_context_s praef_context;
 /**
  * Creates and returns a new, empty context. The empty context has an instant
  * of zero, no objects, and one event identified by the (0,0,0) triple.
+ *
+ * Returns NULL if allocating memory fails.
  */
 praef_context* praef_context_new(void);
 /**
@@ -122,8 +124,7 @@ praef_instant praef_context_now(const praef_context*);
  * equal to the given instant; the `sebsequent` field on each event can be used
  * to traverse events according to application order.
  *
- * Due to the implicit existence of the (0,0,0) event, this function will never
- * return NULL.
+ * Returns NULL if no events exist beyond the given instant.
  */
 const praef_event* praef_first_event_after(const praef_context*, praef_instant);
 

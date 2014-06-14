@@ -25,28 +25,17 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef LIBPRAEFECTUS_COMMON_H_
-#define LIBPRAEFECTUS_COMMON_H_
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
-#include <stdlib.h>
+#include "object.h"
 
-#include "bsd.h"
+int praef_compare_object_id(const praef_object* a, const praef_object* b) {
+  if (a->id < b->id) return -1;
+  if (a->id > b->id) return +1;
+  return 0;
+}
 
-/**
- * Specifies a discrete point in time in a praefectus simulation. Greater
- * values indicate later instants. The way in which instants are mapped to real
- * time (if at all) is up to the application.
- */
-typedef unsigned praef_instant;
-/**
- * Arbitrary userdata that is passed into specific callbacks.
- */
-typedef void* praef_userdata;
-
-/**
- * Function type for freeing values, allowing values (for example, events) to
- * specify how to deallocate themselves.
- */
-typedef void (*praef_free_t)(void*);
-
-#endif /* LIBPRAEFECTUS_COMMON_H_ */
+RB_GENERATE(praef_object_idmap, praef_object_s, idmap,
+            praef_compare_object_id)

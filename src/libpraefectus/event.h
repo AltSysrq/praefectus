@@ -29,7 +29,7 @@
 #define LIBPRAEFECTUS_EVENT_H_
 
 #include "common.h"
-#inlcude "object.h"
+#include "object.h"
 
 /**
  * The serial number type for an event.
@@ -110,7 +110,8 @@ struct praef_event_s {
  */
 int praef_compare_event_sequence(const praef_event*, const praef_event*);
 
+SPLAY_HEAD(praef_event_sequence, praef_event_s);
 SPLAY_PROTOTYPE(praef_event_sequence, praef_event_s, sequence,
-                praef_compare_event_sequence);
+                praef_compare_event_sequence)
 
 #endif /* LIBPRAEFECTUS_EVENT_H_ */
