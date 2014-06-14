@@ -1,0 +1,17 @@
+config.*
+m4
+stamp-h1
+*.o
+*.lo
+*.la
+libtool
+autom4te.cache
+aclocal.m4
+configure
+Makefile
+*.in
+*~
+missing
+ltmain.sh
+install-sh
+compile
