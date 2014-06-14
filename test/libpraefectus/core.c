@@ -134,7 +134,7 @@ deftest(cannot_add_event_for_nonexistent_object) {
                     is_freed = 1),
   };
 
-  ck_assert(praef_context_add_event(context, &evt));
+  ck_assert(!!praef_context_add_event(context, &evt));
   ck_assert(is_freed);
 }
 

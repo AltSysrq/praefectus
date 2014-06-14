@@ -6,7 +6,7 @@ AM_CFLAGS = $(CHECK_CFLAGS) -I$(top_builddir)/src -Wall -Wextra \
   -Wno-unused-parameter -Wno-long-long -Wno-missing-field-initializers \
   -std=gnu99 -Wno-gnu
 
-TEST_LIBS = $(CHECK_LIBS) libtestcore.la
+TEST_LIBS = libtestcore.la $(CHECK_LIBS)
 
 check_PROGRAMS = $(TESTS)
 noinst_LTLIBRARIES = libtestcore.la
