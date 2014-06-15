@@ -24,3 +24,4 @@ test-driver
 *.log
 core
 *.trs
+core-fullstack
