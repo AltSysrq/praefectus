@@ -126,6 +126,6 @@ praef_instant praef_context_now(const praef_context*);
  *
  * Returns NULL if no events exist beyond the given instant.
  */
-const praef_event* praef_first_event_after(const praef_context*, praef_instant);
+const praef_event* praef_context_first_event_after(const praef_context*, praef_instant);
 
 #endif /* LIBPRAEFECTUS_CONTEXT_H_ */

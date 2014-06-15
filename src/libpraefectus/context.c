@@ -111,7 +111,7 @@ static void praef_context_roll_back(praef_context* this, praef_instant when) {
 }
 
 praef_event* praef_context_add_event(praef_context* this, praef_event* evt) {
-  praef_event* already_existing;
+  praef_event* already_existing, * preceding, * next;
   praef_object obj;
 
   obj.id = evt->object;
@@ -127,8 +127,17 @@ praef_event* praef_context_add_event(praef_context* this, praef_event* evt) {
     return already_existing;
   }
 
-  /* No conflict. Add to the sorted list. */
-  TAILQ_INSERT_AFTER(&this->events, SPLAY_LEFT(evt, sequence), evt, subsequent);
+  /* No conflict. Add to the sorted list.
+   *
+   * First, we must locate the event that immediately precedes this one. Since
+   * this is a splay tree (meaning that the new event is now the root of the
+   * tree), this will always be the right-most descendant of the new event's
+   * left child.
+   */
+  preceding = SPLAY_LEFT(evt, sequence);
+  while ((next = SPLAY_RIGHT(preceding, sequence)))
+    preceding = next;
+  TAILQ_INSERT_AFTER(&this->events, preceding, evt, subsequent);
 
   /* Inserted successfully. Roll back if needed. */
   praef_context_roll_back(this, evt->instant);
@@ -167,8 +176,8 @@ praef_instant praef_context_now(const praef_context* this) {
   return this->logical_now;
 }
 
-const praef_event* praef_first_event_after(const praef_context* this,
-                                           praef_instant when) {
+const praef_event* praef_context_first_event_after(const praef_context* this,
+                                                   praef_instant when) {
   praef_event* evt, * next;
 
   next = SPLAY_ROOT(&this->event_sequence);
@@ -191,7 +200,7 @@ void praef_context_advance(praef_context* this, unsigned delta_t,
                            praef_userdata userdata) {
   praef_object* obj, obj_by_id;
   const praef_event* event_queue =
-    praef_first_event_after(this, this->actual_now);
+    praef_context_first_event_after(this, this->actual_now);
 
   this->logical_now += delta_t;
 

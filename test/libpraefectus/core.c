@@ -373,3 +373,182 @@ deftest(event_redaction_rewinds_to_past) {
   ck_assert(praef_context_redact_event(context, 42, 5, 0));
   ck_assert_int_eq(5, actual_now);
 }
+
+
+deftest(returned_now_independent_of_actual_now) {
+  praef_instant actual_now;
+  static praef_event evt = {
+    .object = 42,
+    .instant = 5,
+    .serial_number = 0,
+    .free = (praef_free_t)noop,
+  };
+  praef_object obj = {
+    .id = 42,
+    .rewind = lambdav((praef_object* this, praef_instant now),
+                      actual_now = now),
+  };
+
+  praef_context_advance(context, 10, NULL);
+  praef_context_add_object(context, &obj);
+  praef_context_add_event(context, &evt);
+  ck_assert_int_eq(5, actual_now);
+  ck_assert_int_eq(10, praef_context_now(context));
+}
+
+deftest(null_event_is_first_event_after_zero) {
+  const praef_event* evt = praef_context_first_event_after(context, 0);
+  ck_assert(!!evt);
+  ck_assert_int_eq(0, evt->object);
+  ck_assert_int_eq(0, evt->instant);
+  ck_assert_int_eq(0, evt->serial_number);
+  ck_assert(!TAILQ_NEXT(evt, subsequent));
+}
+
+deftest(no_event_is_first_after_last_event) {
+  static praef_event evt = {
+    .object = 42,
+    .instant = 10,
+    .serial_number = 0,
+    .free = (praef_free_t)noop,
+  };
+  praef_object obj = {
+    .id = 42,
+    .rewind = (praef_object_rewind_t)noop,
+  };
+
+  praef_context_add_object(context, &obj);
+  praef_context_add_event(context, &evt);
+
+  ck_assert(!praef_context_first_event_after(context, 11));
+}
+
+deftest(one_event_is_first_after_exact_instant) {
+  static praef_event evt = {
+    .object = 42,
+    .instant = 10,
+    .serial_number = 0,
+    .free = (praef_free_t)noop,
+  };
+  praef_object obj = {
+    .id = 42,
+    .rewind = (praef_object_rewind_t)noop,
+  };
+
+  praef_context_add_object(context, &obj);
+  praef_context_add_event(context, &evt);
+
+  ck_assert_ptr_eq(&evt, praef_context_first_event_after(context, 10));
+}
+
+deftest(one_event_is_first_after_earlier_instant) {
+  static praef_event evt = {
+    .object = 42,
+    .instant = 10,
+    .serial_number = 0,
+    .free = (praef_free_t)noop,
+  };
+  praef_object obj = {
+    .id = 42,
+    .rewind = (praef_object_rewind_t)noop,
+  };
+
+  praef_context_add_object(context, &obj);
+  praef_context_add_event(context, &evt);
+
+  ck_assert_ptr_eq(&evt, praef_context_first_event_after(context, 5));
+}
+
+deftest(events_list_is_sorted_ascending) {
+  unsigned i;
+  const praef_event* curr, * prev;
+  static praef_event evts[1024];
+  praef_object obj = {
+    .id = 42,
+    .rewind = (praef_object_rewind_t)noop,
+  };
+
+  praef_context_add_object(context, &obj);
+  for (i = 0; i < 1024; ++i) {
+    evts[i].object = 42;
+    evts[i].serial_number = rand();
+    evts[i].instant = rand();
+    evts[i].free = (praef_free_t)noop;
+    praef_context_add_event(context, evts+i);
+  }
+
+  curr = praef_context_first_event_after(context, 0);
+  ck_assert_int_eq(0, curr->instant);
+  ck_assert_int_eq(0, curr->object);
+  ck_assert_int_eq(0, curr->serial_number);
+  prev = NULL;
+  while (curr) {
+    if (prev)
+      ck_assert_int_eq(+1, praef_compare_event_sequence(curr, prev));
+
+    prev = curr;
+    curr = TAILQ_NEXT(curr, subsequent);
+  }
+}
+
+deftest(objects_are_advanced) {
+  int userdata;
+  praef_instant atime = 0, btime = 0;
+  praef_object oa = {
+    .id = 1,
+    .rewind = (praef_object_rewind_t)noop,
+    .step = lambdav((praef_object* this, praef_userdata ud),
+                    ck_assert_ptr_eq(&oa, this);
+                    ck_assert_ptr_eq(&userdata, ud);
+                    ck_assert_int_eq(atime, btime);
+                    ++atime),
+  };
+  praef_object ob = {
+    .id = 2,
+    .rewind = (praef_object_rewind_t)noop,
+    .step = lambdav((praef_object* this, praef_userdata ud),
+                    ck_assert_ptr_eq(&ob, this);
+                    ck_assert_ptr_eq(&userdata, ud);
+                    ck_assert_int_eq(atime, btime+1);
+                    ++btime),
+  };
+
+  praef_context_add_object(context, &oa);
+  praef_context_add_object(context, &ob);
+  praef_context_advance(context, 10, &userdata);
+  ck_assert_int_eq(10, atime);
+  ck_assert_int_eq(10, btime);
+}
+
+deftest(events_are_applied) {
+  int userdata = 0, applied = 0;
+  praef_instant now = 0;
+  praef_object obj = {
+    .id = 42,
+    .rewind = (praef_object_rewind_t)noop,
+    .step = lambdav((praef_object* this, praef_userdata d),
+                    ck_assert_ptr_eq(&userdata, d);
+                    ++now),
+  };
+  praef_event evt = {
+    .object = 42,
+    .instant = 2,
+    .serial_number = 0,
+    .apply = lambdav((praef_object* obj, const praef_event* this,
+                      praef_userdata d),
+                     ck_assert_ptr_eq(&userdata, d);
+                     ck_assert_ptr_eq(&evt, this);
+                     ck_assert_int_eq(2, now);
+                     ck_assert(!applied);
+                     applied = 1),
+    .free = (praef_free_t)noop,
+  };
+
+  praef_context_add_object(context, &obj);
+  praef_context_add_event(context, &evt);
+  praef_context_advance(context, 5, &userdata);
+  ck_assert(applied);
+  ck_assert_int_eq(5, now);
+
+  ck_assert(praef_context_redact_event(context, 42, 2, 0));
+}
