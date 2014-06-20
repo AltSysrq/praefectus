@@ -92,6 +92,9 @@ praef_event* praef_context_add_event(praef_context*, praef_event*);
  * already been rewound further), so applications will generally want to
  * restrict how far into the past they are willing to redact events.
  *
+ * As necessary, objects are rewound to the instant of the event, and this is
+ * guaranteed to occur before the event is destroyed.
+ *
  * Returns 1 if an event was removed, or 0 if there was no such event (or it
  * was the (0,0,0) event).
  *

@@ -345,18 +345,20 @@ deftest(event_redaction_does_not_rewind_to_future) {
   ck_assert(praef_context_redact_event(context, 42, 20, 0));
 }
 
-deftest(event_redaction_rewinds_to_past) {
+deftest(event_redaction_rewinds_to_past_before_destroying_event) {
   praef_instant actual_now = 0;
+  int is_freed = 0;
   praef_event evt = {
     .object = 42,
     .instant = 10,
     .serial_number = 0,
-    .free = (praef_free_t)noop,
+    .free = lambdav((void* this), ck_assert(!is_freed); is_freed = 1),
   };
   praef_object obj = {
     .id = 42,
     .rewind = lambdav((praef_object* this, praef_instant when),
                       ck_assert_ptr_eq(&obj, this);
+                      ck_assert(!is_freed);
                       actual_now = when),
   };
 

@@ -106,6 +106,7 @@ static inline void run_suite(Suite* suite) {
   }                                                        \
   static void GLUE(_teardown_,__LINE__)(void)
 
+#define ANONYMOUS GLUE(_anon_,__LINE__)
 #define _ID(...) __VA_ARGS__
 #define STRIP_PARENS(x) _ID(_ID x)
 #define lambda(args, expr)                              \
@@ -115,9 +116,9 @@ static inline void run_suite(Suite* suite) {
     }                                                   \
   GLUE(_lambda_,ANONYMOUS); })
 #define lambdav(args, expr)                     \
-  ({void _GLUE(_lambdav_,ANONYMOUS) args {      \
+  ({void GLUE(_lambdav_,ANONYMOUS) args {       \
       expr;                                     \
     }                                           \
-    _GLUE(_lambdav_,ANONYMOUS); })
+    GLUE(_lambdav_,ANONYMOUS); })
 
 #endif /* TEST_H_ */
