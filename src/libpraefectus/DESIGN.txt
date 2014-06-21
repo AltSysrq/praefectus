@@ -1,0 +1,60 @@
+Object/Event System
+===================
+
+Praefectus uses a four-layer system of contexts to ensure consistency of both
+simulation state and network topology.
+
+Contexts
+--------
+
+A context (context.h) is a collection of any number of objects (object.h) and
+events (event.h). An object is a container of state, both present and
+historical, whereas an event is a *spontaneous* mutation of object
+state. Events may be inserted and removed at any time, even at times not
+corresponding to the time of the event.
+
+Thus, a context allows for consistent handling of a sequence of events even if
+they arrive out of order or late, even as the simulation is advancing
+independently of the event inflow; all nodes which have accepted the same
+set of events will have exactly the same state for the context.
+
+Application Layer
+-----------------
+
+The application layer is the inner-most layer in which application-defined
+logic is performed.
+
+Transaction Layer
+-----------------
+
+The transaction layer sits atop the application layer. It controls the
+acceptance and redaction of application events according to voting performed by
+various nodes as well as timing considerations.
+
+Application events entering the transaction layer are associated with a
+time-out. An incomming event is initially inserted into the application layer,
+but is redacted if the time-out expires without there being sufficient votes
+for the event. Sufficient votes, even after the redaction, are sufficient to
+keep the event in the application permanently (assuming the votes themselves
+are not redacted).
+
+An event with zero time-out is called a pessimistic event; it is not inserted
+to the inner layer until sufficient votes have been cast. Non-pessimistic
+events are said to be optimistic.
+
+Existential Layer
+-----------------
+
+The existential layer sits atop the transactional layer. It maintains a table
+of nodes in existence, and redacts inner-layer events produced by nodes after
+they become defunct.
+
+Meta-Existential Layer
+----------------------
+
+The meta-existential layer is a thin layer over the existential layer,
+functioning identically to the transactional layer. It allows nodes to
+correctly reach concensus regarding network topology, etc.
+
+Meta-existential events are never redacted. This means that pessimistic
+existential events are permanent once voted into existence.
