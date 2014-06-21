@@ -87,10 +87,10 @@ praef_context* praef_transactor_master(const praef_transactor*);
  *
  * @return The event that was created, or NULL if the call fails.
  */
-const praef_event* praef_transactor_votefor(praef_transactor*,
-                                            praef_object_id evt_object,
-                                            praef_instant evt_time,
-                                            praef_event_serial_number evt_sn);
+praef_event* praef_transactor_votefor(praef_transactor*,
+                                      praef_object_id evt_object,
+                                      praef_instant evt_time,
+                                      praef_event_serial_number evt_sn);
 /**
  * Creates a new transactor event signaling the addition or removal of some
  * number of nodes, for the purposes of vote counting.
@@ -103,9 +103,9 @@ const praef_event* praef_transactor_votefor(praef_transactor*,
  * place.
  * @return The event that was created, or NULL if the call fails.
  */
-const praef_event* praef_transactor_node_count_delta(praef_transactor*,
-                                                     signed delta,
-                                                     praef_instant when);
+praef_event* praef_transactor_node_count_delta(praef_transactor*,
+                                               signed delta,
+                                               praef_instant when);
 /**
  * Creates a new transactor event arranging for the delivery of an event to the
  * slave context.
@@ -120,9 +120,9 @@ const praef_event* praef_transactor_node_count_delta(praef_transactor*,
  * praef_transactor_deadline()) to eventually require a vote.
  * @return The event that was created, or NULL if the call fails.
  */
-const praef_event* praef_transactor_put_event(praef_transactor*,
-                                              const praef_event* evt,
-                                              int optimistic);
+praef_event* praef_transactor_put_event(praef_transactor*,
+                                        praef_event* evt,
+                                        int optimistic);
 
 /**
  * Creates a new transactor event which will negate the `optimistic` flag of an
@@ -142,8 +142,8 @@ const praef_event* praef_transactor_put_event(praef_transactor*,
  * deadline applies.
  * @return The event that was created, or NULL if the call fails.
  */
-const praef_event* praef_transactor_deadline(praef_transactor*,
-                                             const praef_event* evt,
-                                             praef_instant deadline);
+praef_event* praef_transactor_deadline(praef_transactor*,
+                                       praef_event* evt,
+                                       praef_instant deadline);
 
 #endif /* LIBPRAEFECTUS_TRANSACTOR_H_ */

@@ -25,3 +25,5 @@ test-driver
 core
 *.trs
 core-fullstack
+transactor
+vgcore.*

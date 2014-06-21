@@ -140,7 +140,7 @@ typedef struct praef_transactor_node_count_delta_event_s {
 typedef struct praef_transactor_wrapped_event_s {
   praef_event self;
 
-  const praef_event* delegate;
+  praef_event* delegate;
   praef_event proxy;
 
   unsigned votes;
@@ -259,7 +259,7 @@ praef_transactor_get_wrapped_event(praef_transactor* this,
                                    praef_instant instant,
                                    praef_event_serial_number sn) {
   praef_transactor_wrapped_event example;
-  example.delegate = (const praef_event*)&example;
+  example.delegate = (praef_event*)&example;
   example.self.object = object;
   example.self.instant = instant;
   example.self.serial_number = sn;
@@ -286,15 +286,19 @@ static void praef_transactor_accept_reject_event(
   const praef_transactor_node_count* node_count
 ) {
   int should_be_accepted = (evt->optimistic ||
-                            evt->votes >= node_count->count/2);
+                            evt->votes*2 >= node_count->count);
 
   if (should_be_accepted) {
-    if (!evt->has_been_accepted)
+    if (!evt->has_been_accepted) {
       praef_context_add_event(this->slave, &evt->proxy);
+      evt->has_been_accepted = 1;
+    }
   } else {
-    if (evt->has_been_accepted)
+    if (evt->has_been_accepted) {
       praef_context_redact_event(this->slave, evt->proxy.object,
                                  evt->proxy.instant, evt->proxy.serial_number);
+      evt->has_been_accepted = 0;
+    }
   }
 }
 
@@ -317,7 +321,7 @@ static void praef_transactor_node_count_delta_unapply(
   SLIST_REMOVE_HEAD(&tx->node_count, prev);
 }
 
-const praef_event* praef_transactor_node_count_delta(
+praef_event* praef_transactor_node_count_delta(
   praef_transactor* tx, signed delta, praef_instant when
 ) {
   praef_transactor_node_count_delta_event* evt = malloc(
@@ -378,7 +382,7 @@ static void praef_transactor_votefor_unapply(
   praef_transactor_accept_reject_event(tx, target, node_count);
 }
 
-const praef_event* praef_transactor_votefor(
+praef_event* praef_transactor_votefor(
   praef_transactor* tx,
   praef_object_id object,
   praef_instant instant,
@@ -401,17 +405,17 @@ const praef_event* praef_transactor_votefor(
   evt->undo.unapply = (praef_transactor_journal_unapply_t)
     praef_transactor_votefor_unapply;
 
-  return (const praef_event*)evt;
+  return (praef_event*)evt;
 }
 
 /****************************** WRAPPED ******************************/
 
 static void praef_transactor_wrapped_proxy_apply(
   praef_object* obj,
-  const praef_event* proxy,
+  praef_event* proxy,
   praef_userdata userdata
 ) {
-  const praef_event* delegate =
+  praef_event* delegate =
     UNDOT(praef_transactor_wrapped_event, proxy, proxy)->delegate;
 
   (*delegate->apply)(obj, delegate, userdata);
@@ -453,9 +457,9 @@ static void praef_transactor_wrapped_event_free(
   free(evt);
 }
 
-const praef_event* praef_transactor_put_event(
+praef_event* praef_transactor_put_event(
   praef_transactor* tx,
-  const praef_event* delegate,
+  praef_event* delegate,
   int optimistic
 ) {
   praef_transactor_wrapped_event* evt;
@@ -480,7 +484,7 @@ const praef_event* praef_transactor_put_event(
   evt->undo.unapply = (praef_transactor_journal_unapply_t)
     praef_transactor_wrapped_unapply;
 
-  return (const praef_event*)evt;
+  return (praef_event*)evt;
 }
 
 /****************************** DEADLINE ******************************/
@@ -521,9 +525,9 @@ static void praef_transactor_deadline_unapply(
     tx, target, praef_transactor_get_node_count(tx, target->self.instant));
 }
 
-const praef_event* praef_transactor_deadline(praef_transactor* tx,
-                                             const praef_event* target,
-                                             praef_instant deadline) {
+praef_event* praef_transactor_deadline(praef_transactor* tx,
+                                       praef_event* target,
+                                       praef_instant deadline) {
   praef_transactor_deadline_event* evt;
 
   if (!(evt = malloc(sizeof(praef_transactor_deadline_event))))
@@ -541,5 +545,5 @@ const praef_event* praef_transactor_deadline(praef_transactor* tx,
   evt->undo.unapply = (praef_transactor_journal_unapply_t)
     praef_transactor_deadline_unapply;
 
-  return (const praef_event*)evt;
+  return (praef_event*)evt;
 }
