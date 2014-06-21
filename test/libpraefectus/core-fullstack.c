@@ -68,7 +68,7 @@ deftest(fullstack) {
    * t. Therefore, at any time t, `now` actually points to t+1, since the
    * events will mutate it to put it into the state for the *next* step.
    */
-  static object_state states[NUM_EVTS+1];
+  static object_state states[NUM_EVTS+2];
   static praef_event evts[NUM_EVTS];
   char inserted[NUM_EVTS] = { 0 }, redacted[NUM_EVTS] = { 0 };
   char freed[NUM_EVTS] = { 0 };
@@ -82,6 +82,7 @@ deftest(fullstack) {
                       memcpy(states+now, states+now-1, sizeof(object_state))),
     .step = lambdav((praef_object* this, praef_userdata ud),
                     ++now;
+                    ck_assert_int_lt(now, NUM_EVTS+2);
                     memcpy(states+now, states+now-1, sizeof(object_state))),
   };
 
