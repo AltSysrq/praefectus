@@ -196,6 +196,27 @@ const praef_event* praef_context_first_event_after(const praef_context* this,
   return evt;
 }
 
+const praef_event* praef_context_get_event(
+  const praef_context* this, praef_object_id object,
+  praef_instant instant, praef_event_serial_number serial_number
+) {
+  praef_event example;
+  example.object = object;
+  example.instant = instant;
+  example.serial_number = serial_number;
+
+  return SPLAY_FIND(praef_event_sequence,
+                    &((praef_context*)this)->event_sequence, &example);
+}
+
+praef_object* praef_context_get_object(const praef_context* this,
+                                       praef_object_id id) {
+  praef_object example;
+  example.id = id;
+  return RB_FIND(praef_object_idmap,
+                 &((praef_context*)this)->objects, &example);
+}
+
 void praef_context_advance(praef_context* this, unsigned delta_t,
                            praef_userdata userdata) {
   praef_object* obj, obj_by_id;

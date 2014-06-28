@@ -131,4 +131,18 @@ praef_instant praef_context_now(const praef_context*);
  */
 const praef_event* praef_context_first_event_after(const praef_context*, praef_instant);
 
+/**
+ * Retrieves an event within this context by its identifying triple. If there
+ * is no such event, NULL is returned.
+ */
+const praef_event* praef_context_get_event(
+  const praef_context*, praef_object_id,
+  praef_instant, praef_event_serial_number);
+
+/**
+ * Retrieves an object within this context by its id. If there is no such
+ * object, returns NULL.
+ */
+praef_object* praef_context_get_object(const praef_context*, praef_object_id);
+
 #endif /* LIBPRAEFECTUS_CONTEXT_H_ */

@@ -554,3 +554,57 @@ deftest(events_are_applied) {
 
   ck_assert(praef_context_redact_event(context, 42, 2, 0));
 }
+
+deftest(can_get_event_by_triple) {
+  praef_object obj = {
+    .id = 42,
+    .rewind = (praef_object_rewind_t)noop,
+  };
+  static praef_event evt = {
+    .object = 42,
+    .instant = 5,
+    .serial_number = 13,
+    .free = (praef_free_t)noop,
+  };
+
+  praef_context_add_object(context, &obj);
+  praef_context_add_event(context, &evt);
+  ck_assert_ptr_eq(&evt, praef_context_get_event(context, 42, 5, 13));
+}
+
+deftest(get_event_returns_null_if_not_present) {
+  praef_object obj = {
+    .id = 42,
+    .rewind = (praef_object_rewind_t)noop,
+  };
+  static praef_event evt = {
+    .object = 42,
+    .instant = 5,
+    .serial_number = 13,
+    .free = (praef_free_t)noop,
+  };
+
+  praef_context_add_object(context, &obj);
+  praef_context_add_event(context, &evt);
+  ck_assert_ptr_eq(NULL, praef_context_get_event(context, 42, 5, 0));
+}
+
+deftest(can_get_object_by_id) {
+  praef_object obj = {
+    .id = 42,
+    .rewind = (praef_object_rewind_t)noop,
+  };
+
+  praef_context_add_object(context, &obj);
+  ck_assert_ptr_eq(&obj, praef_context_get_object(context, 42));
+}
+
+deftest(get_object_returns_null_if_not_present) {
+  praef_object obj = {
+    .id = 42,
+    .rewind = (praef_object_rewind_t)noop,
+  };
+
+  praef_context_add_object(context, &obj);
+  ck_assert_ptr_eq(NULL, praef_context_get_object(context, 5));
+}
