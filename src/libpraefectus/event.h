@@ -89,7 +89,7 @@ struct praef_event_s {
    * Conventionally, events for an object begin at zero and increase
    * monotonically over the course of the simulation. However, this is not
    * required; the only requirement is that no two events against the same
-   * object share the same serial number.
+   * object in the same instant share the same serial number.
    */
   praef_event_serial_number serial_number;
 
