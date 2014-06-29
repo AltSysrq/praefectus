@@ -7,4 +7,5 @@ libpraefectus/object.c \
 libpraefectus/event.c \
 libpraefectus/context.c \
 libpraefectus/transactor.c \
-libpraefectus/metatransactor.c
+libpraefectus/metatransactor.c \
+libpraefectus/mtt-bridge.c
