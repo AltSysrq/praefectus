@@ -6,4 +6,5 @@ libpraefectus_la_SOURCES = \
 libpraefectus/object.c \
 libpraefectus/event.c \
 libpraefectus/context.c \
-libpraefectus/transactor.c
+libpraefectus/transactor.c \
+libpraefectus/metatransactor.c
