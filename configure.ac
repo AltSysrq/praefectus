@@ -15,6 +15,9 @@ PKG_PROG_PKG_CONFIG()
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
+AC_CHECK_PROG([ASN1C], [asn1c], [asn1c], [])
+AS_IF([test "x$ASN1C" = "x"],
+      [AC_MSG_ERROR([cannot find "asn1c" in the path])])
 
 # Checks for libraries.
 AC_SEARCH_LIBS([errc], [c bsd])
@@ -33,5 +36,6 @@ AC_C_RESTRICT
 AC_C_FLEXIBLE_ARRAY_MEMBER
 AC_TYPE_SIZE_T
 
-AC_CONFIG_FILES([Makefile src/Makefile test/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile src/asn1-support/Makefile
+                 test/Makefile])
 AC_OUTPUT

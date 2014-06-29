@@ -1,0 +1,5 @@
+Dummy DEFINITIONS ::= BEGIN
+Dummy ::= SEQUENCE {
+  dummy INTEGER
+}
+END
