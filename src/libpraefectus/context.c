@@ -100,7 +100,7 @@ praef_object* praef_context_add_object(praef_context* this, praef_object* obj) {
   return already_existing;
 }
 
-static void praef_context_roll_back(praef_context* this, praef_instant when) {
+void praef_context_rewind(praef_context* this, praef_instant when) {
   praef_object* it;
 
   if (when < this->actual_now) {
@@ -140,7 +140,7 @@ praef_event* praef_context_add_event(praef_context* this, praef_event* evt) {
   TAILQ_INSERT_AFTER(&this->events, preceding, evt, subsequent);
 
   /* Inserted successfully. Roll back if needed. */
-  praef_context_roll_back(this, evt->instant);
+  praef_context_rewind(this, evt->instant);
 
   return NULL;
 }
@@ -161,7 +161,7 @@ int praef_context_redact_event(praef_context* this,
   evt = SPLAY_FIND(praef_event_sequence, &this->event_sequence, &example);
   if (evt) {
     /* The event can be removed. Roll back if needed. */
-    praef_context_roll_back(this, evt->instant);
+    praef_context_rewind(this, evt->instant);
 
     TAILQ_REMOVE(&this->events, evt, subsequent);
     SPLAY_REMOVE(praef_event_sequence, &this->event_sequence, evt);

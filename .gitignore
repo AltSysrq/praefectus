@@ -27,3 +27,4 @@ core
 core-fullstack
 transactor
 vgcore.*
+test/libpraefectus/metatransactor

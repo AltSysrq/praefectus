@@ -608,3 +608,51 @@ deftest(get_object_returns_null_if_not_present) {
   praef_context_add_object(context, &obj);
   ck_assert_ptr_eq(NULL, praef_context_get_object(context, 5));
 }
+
+deftest(explicit_rewind_rewinds_to_past) {
+  praef_instant now = 0;
+  praef_object obj = {
+    .id = 42,
+    .step = lambdav((praef_object* this, praef_userdata _), ++now),
+    .rewind = lambdav((praef_object* this, praef_instant then), now = then),
+  };
+
+  praef_context_add_object(context, &obj);
+  praef_context_advance(context, 10, NULL);
+  ck_assert_int_eq(10, now);
+  praef_context_rewind(context, 5);
+  ck_assert_int_eq(5, now);
+  ck_assert_int_eq(10, praef_context_now(context));
+}
+
+deftest(explicit_rewind_doesnt_rewind_to_present) {
+  int has_init_rewind = 0;
+  praef_object obj = {
+    .id = 42,
+    .step = (praef_object_step_t)noop,
+    .rewind = lambdav((praef_object* this, praef_instant then),
+                      ck_assert_int_eq(0, then);
+                      ck_assert(!has_init_rewind);
+                      has_init_rewind = 1),
+  };
+
+  praef_context_add_object(context, &obj);
+  praef_context_advance(context, 10, NULL);
+  praef_context_rewind(context, 10);
+}
+
+deftest(explicit_rewind_doesnt_rewind_to_future) {
+  int has_init_rewind = 0;
+  praef_object obj = {
+    .id = 42,
+    .step = (praef_object_step_t)noop,
+    .rewind = lambdav((praef_object* this, praef_instant then),
+                      ck_assert_int_eq(0, then);
+                      ck_assert(!has_init_rewind);
+                      has_init_rewind = 1),
+  };
+
+  praef_context_add_object(context, &obj);
+  praef_context_advance(context, 10, NULL);
+  praef_context_rewind(context, 20);
+}

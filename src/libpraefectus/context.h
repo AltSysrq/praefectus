@@ -116,6 +116,12 @@ int praef_context_redact_event(praef_context*,
  */
 void praef_context_advance(praef_context*, unsigned delta_t, praef_userdata);
 /**
+ * Rewinds the actual (but not logical) time of the context to the given
+ * instant. This is required if an event at or after that instant is mutated
+ * after being added to the context.
+ */
+void praef_context_rewind(praef_context*, praef_instant);
+/**
  * Returns the current logical instant of the given context. Note that between
  * event mutation calls and praef_context_advance(), objects might be in a
  * state corresponding to an instant before the value returned.

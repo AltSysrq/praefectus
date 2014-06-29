@@ -320,6 +320,7 @@ praef_metatransactor_node_first_event_after(
   praef_metatransactor_node_event* evt, * next;
 
   next = SPLAY_ROOT(&this->event_sequence);
+  if (!next) return NULL;
   do {
     evt = next;
     if (when > evt->self.instant) next = SPLAY_RIGHT(evt, sequence);
@@ -419,7 +420,7 @@ int praef_metatransactor_add_event(praef_metatransactor* this,
     TAILQ_INSERT_HEAD(&node->events, evt, subsequent);
   }
 
-  if (evt->self.instant >= node->now) {
+  if (evt->self.instant > node->now) {
     /* In the future. The cursor may need to be updated, but the event need not
      * be accepted right now.
      */
@@ -457,6 +458,7 @@ static void praef_metatransactor_chmod_apply(
   praef_metatransactor_node*,
   const praef_metatransactor_chmod_evt*,
   praef_userdata);
+static void praef_metatransactor_chmod_free(praef_metatransactor_chmod_evt*);
 static void praef_metatransactor_chmod_proxy_apply(
   praef_object*, const praef_event*, praef_userdata);
 static void praef_metatransactor_chmod_proxy_free(void*);
@@ -475,7 +477,7 @@ static praef_metatransactor_chmod_evt* praef_metatransactor_chmod_new(
   this->self.object = node;
   this->self.serial_number = bit_to_set;
   this->self.apply = (praef_event_apply_t)praef_metatransactor_chmod_apply;
-  this->self.free = free;
+  this->self.free = (praef_free_t)praef_metatransactor_chmod_free;
   this->bit_to_set = bit_to_set;
   this->node_delta_evt = (*owner->cxn->node_count_delta)(
     owner->cxn, GRANT_BIT == bit_to_set? +1 : -1, instant);
@@ -492,12 +494,6 @@ static praef_metatransactor_chmod_evt* praef_metatransactor_chmod_new(
   this->node_delta_proxy.free = praef_metatransactor_chmod_proxy_free;
   SLIST_INIT(&this->votes);
 
-  if (praef_context_add_event(owner->context, (praef_event*)this)) {
-    (*this->node_delta_evt->free)(this->node_delta_evt);
-    free(this);
-    return NULL;
-  }
-
   return this;
 }
 
@@ -507,6 +503,7 @@ static void praef_metatransactor_chmod_apply(
   praef_userdata _
 ) {
   praef_metatransactor_node* node;
+  praef_metatransactor_chmod_vote* vote;
   unsigned votes = 0, possible_voters = 0;
 
   /* Count the number of nodes eligible for voting */
@@ -516,9 +513,9 @@ static void praef_metatransactor_chmod_apply(
       ++possible_voters;
 
   /* Count the votes received */
-  SLIST_FOREACH(node, &this->votes, next)
+  SLIST_FOREACH(vote, &this->votes, next)
     if (PRAEF_METATRANSACTOR_NS_ALIVE ==
-        praef_metatransactor_get_node_status(node))
+        praef_metatransactor_get_node_status(vote->voter))
       ++votes;
 
   /* Vote carries if at least 50% of eligible voters agree */
@@ -553,6 +550,18 @@ static void praef_metatransactor_chmod_apply(
     if (this->self.instant < target->bits_set[this->bit_to_set])
       target->bits_set[this->bit_to_set] = this->self.instant;
   }
+}
+
+static void praef_metatransactor_chmod_free(
+  praef_metatransactor_chmod_evt* evt
+) {
+  praef_metatransactor_chmod_vote* vote, * tmp;
+
+  SLIST_FOREACH_SAFE(vote, &evt->votes, next, tmp)
+    free(vote);
+
+  (*evt->node_delta_evt->free)(evt->node_delta_evt);
+  free(evt);
 }
 
 static void praef_metatransactor_chmod_proxy_apply(
@@ -610,5 +619,6 @@ int praef_metatransactor_chmod(praef_metatransactor* this,
   if (!vote) return 0;
   vote->voter = voter;
   SLIST_INSERT_HEAD(&chmod->votes, vote, next);
+  praef_context_rewind(this->context, instant);
   return 1;
 }
