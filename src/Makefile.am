@@ -15,4 +15,5 @@ libpraefectus/event.c \
 libpraefectus/context.c \
 libpraefectus/transactor.c \
 libpraefectus/metatransactor.c \
-libpraefectus/mtt-bridge.c
+libpraefectus/mtt-bridge.c \
+libpraefectus/std-state.c
