@@ -29,3 +29,4 @@ transactor
 vgcore.*
 test/libpraefectus/metatransactor
 src/asn1-support
+test/libpraefectus/hash-tree

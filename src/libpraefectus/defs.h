@@ -40,7 +40,7 @@
  * pointer to the base of the given type.
  */
 #define UNDOT(type,member,ptr)                  \
-  ((type*)(((char*)ptr) - offsetof(type, member)))
+  ((type*)(((char*)(ptr)) - offsetof(type, member)))
 
 #else /* LIBPRAEFECTUS_DEFS_H_ already defined... */
 

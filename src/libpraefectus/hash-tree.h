@@ -131,7 +131,7 @@ typedef struct {
    * The data associated with this object. If this points to the data within a
    * hash tree, it is guaranteed to be valid until the hash tree's destruction.
    */
-  const unsigned char* data;
+  const void* data;
 } praef_hash_tree_objref;
 
 /**
