@@ -3,6 +3,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 
 noinst_LTLIBRARIES = libasn1-support.la
 libasn1_support_la_SOURCES = everything.c
+AM_CFLAGS = -w
 
 everything.c: dummy.asn1
 	rm -f everything.c
@@ -11,7 +12,7 @@ everything.c: dummy.asn1
 # nominally breaks this concatenation. Since we don't plan on doing DER
 # encoding, just drop that source file.
 	rm -f der_encoder.c
-	cat *.c >everything.c
+	cat include-config-h.inc *.c >everything.c
 
 clean: clean-am
 	rm -f *.h *.c

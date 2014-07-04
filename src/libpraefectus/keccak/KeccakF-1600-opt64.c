@@ -79,9 +79,9 @@ void KeccakF1600_StateInitialize(void *state)
 void KeccakF1600_StateXORBytesInLane(void *state, unsigned int lanePosition, const unsigned char *data, unsigned int offset, unsigned int length)
 {
 #if (PLATFORM_BYTE_ORDER == IS_LITTLE_ENDIAN)
+    UINT64 lane;
     if (length == 0)
         return;
-    UINT64 lane;
     if (length == 1)
         lane = data[0];
     else {
@@ -105,7 +105,7 @@ void KeccakF1600_StateXORLanes(void *state, const unsigned char *data, unsigned 
 #if (PLATFORM_BYTE_ORDER == IS_LITTLE_ENDIAN)
     unsigned int i = 0;
 #ifdef NO_MISALIGNED_ACCESSES
-    // If either pointer is misaligned, fall back to byte-wise xor.
+    /* If either pointer is misaligned, fall back to byte-wise xor. */
     if (((((uintptr_t)state) & 7) != 0) || ((((uintptr_t)data) & 7) != 0)) {
       for (i = 0; i < laneCount * 8; i++) {
         ((unsigned char*)state)[i] ^= data[i];
@@ -114,7 +114,7 @@ void KeccakF1600_StateXORLanes(void *state, const unsigned char *data, unsigned 
     else
 #endif
     {
-      // Otherwise...
+      /* Otherwise... */
       for( ; (i+8)<=laneCount; i+=8) {
           ((UINT64*)state)[i+0] ^= ((UINT64*)data)[i+0];
           ((UINT64*)state)[i+1] ^= ((UINT64*)data)[i+1];

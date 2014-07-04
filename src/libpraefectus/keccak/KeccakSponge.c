@@ -50,13 +50,13 @@ int Keccak_SpongeAbsorb(Keccak_SpongeInstance *instance, const unsigned char *da
     unsigned int rateInBytes = instance->rate/8;
 
     if (instance->squeezing)
-        return 1; // Too late for additional input
+        return 1; /* Too late for additional input */
 
     i = 0;
     curData = data;
     while(i < dataByteLen) {
         if ((instance->byteIOIndex == 0) && (dataByteLen >= (i + rateInBytes))) {
-            // fast lane: processing whole blocks first
+            /* fast lane: processing whole blocks first */
             for(j=dataByteLen-i; j>=rateInBytes; j-=rateInBytes) {
                 #ifdef KeccakReference
                 displayBytes(1, "Block to be absorbed", curData, rateInBytes);
@@ -71,7 +71,7 @@ int Keccak_SpongeAbsorb(Keccak_SpongeInstance *instance, const unsigned char *da
             i = dataByteLen - j;
         }
         else {
-            // normal lane: using the message queue
+            /* normal lane: using the message queue */
             partialBlock = (unsigned int)(dataByteLen - i);
             if (partialBlock+instance->byteIOIndex > rateInBytes)
                 partialBlock = rateInBytes-instance->byteIOIndex;
@@ -114,19 +114,19 @@ int Keccak_SpongeAbsorbLastFewBits(Keccak_SpongeInstance *instance, unsigned cha
     if (delimitedData == 0)
         return 1;
     if (instance->squeezing)
-        return 1; // Too late for additional input
+        return 1; /* Too late for additional input */
 
     delimitedData1[0] = delimitedData;
     #ifdef KeccakReference
     displayBytes(1, "Block to be absorbed (last few bits + first bit of padding)", delimitedData1, 1);
     #endif
-    // Last few bits, whose delimiter coincides with first bit of padding
+    /* Last few bits, whose delimiter coincides with first bit of padding */
     KeccakF1600_StateXORBytesInLane(instance->state, instance->byteIOIndex/KeccakF_laneInBytes,
         delimitedData1, instance->byteIOIndex%KeccakF_laneInBytes, 1);
-    // If the first bit of padding is at position rate-1, we need a whole new block for the second bit of padding
+    /* If the first bit of padding is at position rate-1, we need a whole new block for the second bit of padding */
     if ((delimitedData >= 0x80) && (instance->byteIOIndex == (rateInBytes-1)))
         KeccakF1600_StatePermute(instance->state);
-    // Second bit of padding
+    /* Second bit of padding */
     KeccakF1600_StateComplementBit(instance->state, rateInBytes*8-1);
     #ifdef KeccakReference
     {
@@ -161,7 +161,7 @@ int Keccak_SpongeSqueeze(Keccak_SpongeInstance *instance, unsigned char *data, u
     curData = data;
     while(i < dataByteLen) {
         if ((instance->byteIOIndex == rateInBytes) && (dataByteLen >= (i + rateInBytes))) {
-            // fast lane: processing whole blocks first
+            /* fast lane: processing whole blocks first */
             for(j=dataByteLen-i; j>=rateInBytes; j-=rateInBytes) {
                 KeccakF1600_StateXORPermuteExtract(instance->state, 0, 0, curData, rateInBytes/KeccakF_laneInBytes);
                 if ((rateInBytes % KeccakF_laneInBytes) > 0)
@@ -176,7 +176,7 @@ int Keccak_SpongeSqueeze(Keccak_SpongeInstance *instance, unsigned char *data, u
             i = dataByteLen - j;
         }
         else {
-            // normal lane: using the message queue
+            /* normal lane: using the message queue */
             if (instance->byteIOIndex == rateInBytes) {
                 KeccakF1600_StatePermute(instance->state);
                 instance->byteIOIndex = 0;

@@ -96,11 +96,11 @@ typedef void (*praef_metatransactor_cxn_redact_t)(
 typedef praef_event* (*praef_metatransactor_cxn_node_count_delta_t)(
   praef_metatransactor_cxn*, signed, praef_instant);
 
-typedef struct praef_metatransactor_cxn_s {
+struct praef_metatransactor_cxn_s {
   praef_metatransactor_cxn_accept_t accept;
   praef_metatransactor_cxn_redact_t redact;
   praef_metatransactor_cxn_node_count_delta_t node_count_delta;
-} praef_metatransactor_cxn;
+};
 
 /**
  * Creates a new metatransactor using the given connection. It is the caller's
