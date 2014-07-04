@@ -33,4 +33,7 @@
 #include "keccak-rename.h"
 #include "keccak/KeccakSponge.h"
 
+#define PRAEF_KECCAK_CAP (512)
+#define PRAEF_KECCAK_RATE (1600 - PRAEF_KECCAK_CAP)
+
 #endif /* LIBPRAEFECTUS_KECCAK_H_ */

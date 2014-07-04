@@ -18,4 +18,5 @@ libpraefectus/context.c \
 libpraefectus/transactor.c \
 libpraefectus/metatransactor.c \
 libpraefectus/mtt-bridge.c \
-libpraefectus/std-state.c
+libpraefectus/std-state.c \
+libpraefectus/hash-tree.c
