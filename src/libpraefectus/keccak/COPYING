@@ -1,0 +1,9 @@
+Files in this directory are not covered by the same copyright as the rest of
+this project, but according to the terms set forth at the head of each file.
+
+Some trivial modifications were made to the two *.c files
+(KeccakF-1600-opt64.c, KeccakSponge.c) by Jason Lingle in order to properly
+integrate them into this project's build system, and to fix a name conflict
+with a system header file. It is not believed that this constitutes any
+copyrightable change; however, to avoid such ambiguity, all such copyright (or
+other related rights) to these edits is hereby waived.

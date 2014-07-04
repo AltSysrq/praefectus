@@ -1,0 +1,9 @@
+This directory constains the optimised reference implementation of the Keccak
+(SHA-3) hash function. It was obtained from
+https://github.com/gvanas/KeccakCodePackage, commit
+32b2147bfbe65238f0043f7282b87fbcdd874b04, on 2014-07-03.
+
+The sources are compiled directly into libpraefectus. The header
+keccak-rename.h is used to rename the exported symbols to have the praef_
+prefix, so as to avoid collisions with any other software that does something
+similar.

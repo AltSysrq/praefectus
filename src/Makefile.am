@@ -10,6 +10,8 @@ AM_CFLAGS="-I$(top_srcdir)/asn1-support"
 
 noinst_LTLIBRARIES = libpraefectus.la
 libpraefectus_la_SOURCES = \
+libpraefectus/keccak/KeccakF-1600-opt64.c \
+libpraefectus/keccak/KeccakSponge.c \
 libpraefectus/object.c \
 libpraefectus/event.c \
 libpraefectus/context.c \
