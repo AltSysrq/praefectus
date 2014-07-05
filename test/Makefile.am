@@ -3,7 +3,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 
 TESTS = libpraefectus/core libpraefectus/core-fullstack \
 libpraefectus/transactor libpraefectus/metatransactor \
-libpraefectus/hash-tree
+libpraefectus/hash-tree libpraefectus/commitment-chain
 AM_CFLAGS = $(CHECK_CFLAGS) -I$(top_builddir)/src -Wall -Wextra \
   -Wno-unused-parameter -Wno-long-long -Wno-missing-field-initializers \
   -std=gnu99 -Wno-gnu
@@ -23,3 +23,5 @@ libpraefectus_metatransactor_SOURCES = libpraefectus/metatransactor.c
 libpraefectus_metatransactor_LDADD = $(TEST_LIBS)
 libpraefectus_hash_tree_SOURCES = libpraefectus/hash-tree.c
 libpraefectus_hash_tree_LDADD = $(TEST_LIBS)
+libpraefectus_commitment_chain_SOURCES = libpraefectus/commitment-chain.c
+libpraefectus_commitment_chain_LDADD = $(TEST_LIBS)

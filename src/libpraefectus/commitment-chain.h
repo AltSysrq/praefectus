@@ -107,7 +107,7 @@ int praef_comchain_reveal(praef_comchain*,
  * zero. If there is no such sequence, 0 is returned. In certain permanent
  * error conditions, 0 may be returned instead of a real value.
  */
-praef_instant praef_comchain_comitted(const praef_comchain*);
+praef_instant praef_comchain_committed(const praef_comchain*);
 /**
  * Returns the instant of the "validated threshold" for this comchain. The
  * validated threshold corresponds to the end instant of the last commit in the

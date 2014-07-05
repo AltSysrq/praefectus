@@ -357,7 +357,8 @@ static int praef_comchain_insert_commit(praef_comchain* this,
   return 0;
 }
 
-static void praef_comchain_commitment_coalesce_pair(
+static praef_comchain_commitment*
+praef_comchain_commitment_coalesce_pair(
   praef_comchain* this,
   praef_comchain_commitment* left,
   praef_comchain_commitment* right);
@@ -368,18 +369,20 @@ static void praef_comchain_commitment_coalesce_pair(
  * originally had the validated status, and is invalidated if either was in the
  * invalidated state.
  */
-static void praef_comchain_commitment_coalesce(
+static praef_comchain_commitment* praef_comchain_commitment_coalesce(
   praef_comchain* this, praef_comchain_commitment* centre
 ) {
   praef_comchain_commitment_coalesce_pair(
-    this, RB_PREV(praef_comchain_commitment_tree, &this->commits, centre),
-    centre);
-  praef_comchain_commitment_coalesce_pair(
     this, centre,
     RB_NEXT(praef_comchain_commitment_tree, &this->commits, centre));
+  return
+    praef_comchain_commitment_coalesce_pair(
+      this, RB_PREV(praef_comchain_commitment_tree, &this->commits, centre),
+      centre);
 }
 
-static void praef_comchain_commitment_coalesce_pair(
+static praef_comchain_commitment*
+praef_comchain_commitment_coalesce_pair(
   praef_comchain* this,
   praef_comchain_commitment* left,
   praef_comchain_commitment* right
@@ -394,7 +397,10 @@ static void praef_comchain_commitment_coalesce_pair(
 
     RB_REMOVE(praef_comchain_commitment_tree, &this->commits, right);
     free(right);
+    return left;
   }
+
+  return right;
 }
 
 int praef_comchain_commit(praef_comchain* this,
@@ -420,7 +426,7 @@ int praef_comchain_commit(praef_comchain* this,
    */
   praef_comchain_commitment_backfill(this, commit);
   praef_comchain_commitment_rehash(commit);
-  praef_comchain_commitment_coalesce(this, commit);
+  commit = praef_comchain_commitment_coalesce(this, commit);
   this->invalid |= (praef_ccs_invalidated == commit->status);
 
   return 1;
@@ -439,25 +445,26 @@ int praef_comchain_reveal(praef_comchain* this,
   memcpy(object->hash, hash, PRAEF_HASH_SIZE);
 
   /* Find the commit that owns this commit. NFIND will give us the first commit
-   * *past* the commit's time, so use the one before that. If NFIND returns
-   * NULL, use the final commit in the tree.
+   * *past* the commit's time unless the start happens to be the same as this
+   * instant, so use the one before that if needed. If NFIND returns NULL, use
+   * the final commit in the tree.
    *
    * Either case still requires an explicit check afterwards to see whether the
    * object really falls within the commit's range.
    */
   example.start = instant;
   commit = RB_NFIND(praef_comchain_commitment_tree, &this->commits, &example);
-  if (commit)
+  if (commit && commit->start > instant)
     commit = RB_PREV(praef_comchain_commitment_tree, &this->commits, commit);
-  else
+  else if (!commit)
     commit = RB_MAX(praef_comchain_commitment_tree, &this->commits);
 
   if (commit) {
     if (praef_comchain_commitment_add_object_without_rehash(commit, object)) {
       praef_comchain_commitment_rehash(commit);
-      praef_comchain_commitment_coalesce(this, commit);
-      this->invalid |= (praef_ccs_invalidated == commit->status);
+      commit = praef_comchain_commitment_coalesce(this, commit);
     }
+    this->invalid |= (praef_ccs_invalidated == commit->status);
   } else {
     /* No applicable commit yet; add to unassociated tree. */
     if (RB_INSERT(praef_comchain_object_instant_tree,
@@ -506,7 +513,10 @@ praef_instant praef_comchain_validated(const praef_comchain* cthis) {
    * need to look at the earliest event, as the coalescence guarantees that any
    * event that follows it is still pending.
    */
-  return commit && 0 == commit->start && praef_ccs_validated == commit->status;
+  if (commit && 0 == commit->start && praef_ccs_validated == commit->status)
+    return commit->end;
+  else
+    return 0;
 }
 
 int praef_comchain_create_commit(unsigned char hash[PRAEF_HASH_SIZE],
