@@ -33,6 +33,12 @@
 #include "bsd.h"
 
 /**
+ * The size, in bytes, of the hashes used by the hash tree and other components
+ * that work with hashes.
+ */
+#define PRAEF_HASH_SIZE 32
+
+/**
  * Specifies a discrete point in time in a praefectus simulation. Greater
  * values indicate later instants. The way in which instants are mapped to real
  * time (if at all) is up to the application.

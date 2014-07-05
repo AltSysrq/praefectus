@@ -33,10 +33,6 @@
 #include "common.h"
 
 /**
- * The size, in bytes, of the hashes used by the hash tree.
- */
-#define PRAEF_HASH_SIZE 32
-/**
  * The number of entries in a hash tree directory.
  */
 #define PRAEF_HTDIR_SIZE 16
