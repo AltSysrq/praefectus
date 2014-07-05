@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013 Jason Lingle
+ * Copyright (c) 2013, 2014 Jason Lingle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -66,5 +66,26 @@
 #else
 #error "No BSD sysexits.h could be found on your system. (See libbsd-dev on GNU.)"
 #endif
+
+/* In an older libbsd on Debian, we have the following comment in cdefs.h:
+ *
+ * * Linux headers define a struct with a member names __unused.
+ * * Debian bugs: #522773 (linux), #522774 (libc).
+ * * Disable for now.
+ *
+ * Following this is an #if 0 surrounding the definition of __unused, which
+ * breaks RB_*. Why they couldn't just s/__unused/__bsd_unused/g to work around
+ * this is beyond me. Since this is BSD-native code, we obviously won't be
+ * including Linux-specific headers, so just replicate what's supposed to be
+ * provided.
+ */
+#ifndef __unused
+# if LIBBSD_GCC_VERSION >= 0x0300
+#  define __unused __attribute__((unused))
+# else
+#  define __unused
+# endif
+#endif
+
 
 #endif /* BSD_H_ */
