@@ -1,7 +1,7 @@
 Object/Event System
 ===================
 
-Praefectus uses a four-layer system of contexts to ensure consistency of both
+Praefectus uses a three-layer system of contexts to ensure consistency of both
 simulation state and network topology.
 
 Contexts
@@ -42,19 +42,23 @@ An event with zero time-out is called a pessimistic event; it is not inserted
 to the inner layer until sufficient votes have been cast. Non-pessimistic
 events are said to be optimistic.
 
-Existential Layer
------------------
+Metatransaction Layer
+---------------------
 
-The existential layer sits atop the transactional layer. It maintains a table
-of nodes in existence, and redacts inner-layer events produced by nodes after
-they become defunct.
+The metatransaction layer sits atop the tranaction and application layers. It
+ensures that nodes produce consistent results upon the joining and leaving of
+other nodes.
 
-Meta-Existential Layer
-----------------------
+Nodes are at any time associated with two permissions: GRANT and DENY. Events
+(both to the metatransaction layer and the lower layer) originating from a node
+only have effect if the node has the GRANT permission and does *not* have the
+DENY permsission; such a node is said to be "alive". Permissions changes are
+effected by a vote from a simple majority of existing nodes; such votes are
+only counted from nodes that are alive, and only nodes that are alive count
+towards the definition of "majority". Permissions changes only ever take the
+effect of giving a node GRANT or DENY; thus, permissions changes are fully
+idempotent.
 
-The meta-existential layer is a thin layer over the existential layer,
-functioning identically to the transactional layer. It allows nodes to
-correctly reach concensus regarding network topology, etc.
-
-Meta-existential events are never redacted. This means that pessimistic
-existential events are permanent once voted into existence.
+Note that votes themselves are subject to retroactive node status changes; this
+means that nodes do not all need to have a perfect global view of permissions
+at any time.
