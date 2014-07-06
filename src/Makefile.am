@@ -20,4 +20,5 @@ libpraefectus/metatransactor.c \
 libpraefectus/mtt-bridge.c \
 libpraefectus/std-state.c \
 libpraefectus/hash-tree.c \
-libpraefectus/commitment-chain.c
+libpraefectus/commitment-chain.c \
+libpraefectus/secure-random.c

@@ -24,10 +24,17 @@ AC_SEARCH_LIBS([errc], [c bsd])
 AC_SEARCH_LIBS([sin], [c m])
 AC_SEARCH_LIBS([dlopen], [dl])
 PKG_CHECK_MODULES([CHECK], [check], [], [:])
+# In theory, this should work, but maybe it won't.
+# Leave it here for now, and cross that bridge when we eventually port to this
+# platform.
+AC_SEARCH_LIBS([CryptAcquireContextW], [advapi32])
 
 # Headers
 AC_CHECK_HEADERS([sys/queue.h bsd/sys/queue.h sys/tree.h bsd/sys/tree.h dnl
                   err.h bsd/err.h sysexits.h bsd/sysexits.h bsd/string.h])
+# For Windows-specific crypto functions, since that platform doesn't have
+# /dev/urandom and such.
+AC_CHECK_HEADERS([windows.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_INLINE
