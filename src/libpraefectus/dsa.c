@@ -31,6 +31,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #if defined(HAVE_GMP_H)
 #include <gmp.h>
@@ -97,7 +98,7 @@ praef_signator* praef_signator_new(void) {
 }
 
 static praef_pubkey_hint praef_calc_pubkey_hint(mpz_t pubkey) {
-  unsigned char serialised[PRAEF_SIGINT_SIZE];
+  unsigned char serialised[PRAEF_PUBKEY_SIZE];
   unsigned char hash[sizeof(praef_pubkey_hint)];
   praef_keccak_sponge sponge;
 
@@ -150,7 +151,7 @@ void praef_signator_sign(unsigned char signature[PRAEF_SIGNATURE_SIZE],
   if (!mpz_cmp_ui(this->r, 0)) goto produce_new_k;
 
   /* Calculate S */
-  mpz_import(this->s, PRAEF_SIGINT_SIZE, -1, 1, 0, 0, kb);
+  mpz_import(this->s, PRAEF_SIGINT_SIZE, -1, 1, 0, 0, hash);
   mpz_addmul(this->s, this->x, this->r);
   mpz_invert(this->kinv, this->k, this->q);
   mpz_mul(this->s, this->kinv, this->s);
@@ -297,15 +298,17 @@ int praef_verifier_assoc(praef_verifier* this,
 
 int praef_verifier_disassoc(praef_verifier* this,
                             const unsigned char key[PRAEF_PUBKEY_SIZE]) {
-  praef_verifier_entry example, * removed;
+  praef_verifier_entry example, * to_remove;
 
   praef_verifier_entry_init(&example, key, 0);
-  removed = RB_REMOVE(praef_verifier_entry_tree, &this->entries, &example);
-  if (removed)
-    praef_verifier_entry_delete(removed);
+  to_remove = RB_FIND(praef_verifier_entry_tree, &this->entries, &example);
+  if (to_remove) {
+    RB_REMOVE(praef_verifier_entry_tree, &this->entries, to_remove);
+    praef_verifier_entry_delete(to_remove);
+  }
 
   praef_verifier_entry_clear(&example);
-  return !!removed;
+  return !!to_remove;
 }
 
 /**
