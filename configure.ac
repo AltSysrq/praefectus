@@ -19,11 +19,21 @@ AC_CHECK_PROG([ASN1C], [asn1c], [asn1c], [])
 AS_IF([test "x$ASN1C" = "x"],
       [AC_MSG_ERROR([cannot find "asn1c" in the path])])
 
+# Modifying these variables directly is typically considered a bad thing.
+# But for whatever reason, Autotools doesn't bother adding the /usr/local paths
+# to the search directories on systems (eg, FreeBSD) where *everything* lives
+# there, so we'll do it ourselves here, making sure to preserve the flags
+# already given.
+CPPFLAGS="$CPPFLAGS -I/usr/local/include"
+LDFLAGS="$LDFLAGS -L/usr/local/lib"
+
 # Checks for libraries.
 AC_SEARCH_LIBS([errc], [c bsd])
 AC_SEARCH_LIBS([sin], [c m])
 AC_SEARCH_LIBS([dlopen], [dl])
 PKG_CHECK_MODULES([CHECK], [check], [], [:])
+AC_SEARCH_LIBS(__gmpz_powm, [gmp mpir], [],
+[AC_MSG_ERROR([cannot locate a gmp or mpir library])])
 # In theory, this should work, but maybe it won't.
 # Leave it here for now, and cross that bridge when we eventually port to this
 # platform.
@@ -32,6 +42,7 @@ AC_SEARCH_LIBS([CryptAcquireContextW], [advapi32])
 # Headers
 AC_CHECK_HEADERS([sys/queue.h bsd/sys/queue.h sys/tree.h bsd/sys/tree.h dnl
                   err.h bsd/err.h sysexits.h bsd/sysexits.h bsd/string.h])
+AC_CHECK_HEADERS([gmp.h mpir.h])
 # For Windows-specific crypto functions, since that platform doesn't have
 # /dev/urandom and such.
 AC_CHECK_HEADERS([windows.h])

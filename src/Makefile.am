@@ -21,4 +21,5 @@ libpraefectus/mtt-bridge.c \
 libpraefectus/std-state.c \
 libpraefectus/hash-tree.c \
 libpraefectus/commitment-chain.c \
-libpraefectus/secure-random.c
+libpraefectus/secure-random.c \
+libpraefectus/dsa.c
