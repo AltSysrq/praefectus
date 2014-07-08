@@ -53,10 +53,13 @@ static inline void run_suite(Suite* suite) {
   TCase* kase;
 
   for (i = 0; i < test_num; ++i) {
-    kase = tcase_create(test_names[i]);
+    /* Run the tests in reverse registration order, since GCC runs the
+     * constructors in the file from the bottom up.
+     */
+    kase = tcase_create(test_names[test_num-i-1]);
     for (j = 0; j < setup_num && j < teardown_num; ++j)
       tcase_add_checked_fixture(kase, setups[j], teardowns[j]);
-    tcase_add_test(kase, test_impls[i]);
+    tcase_add_test(kase, test_impls[test_num-i-1]);
     suite_add_tcase(suite, kase);
   }
 }
