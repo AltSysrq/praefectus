@@ -1,0 +1,113 @@
+Messages DEFINITIONS AUTOMATIC TAGS ::= BEGIN
+
+PraefDword      ::= INTEGER (0..4294967295)
+PraefShort      ::= INTEGER (0..65536)
+PraefByte       ::= INTEGER (0..255)
+PraefPingId     ::= PraefShort
+PraefNodeId     ::= PraefDword
+PraefInstant    ::= PraefDword
+PraefSerialNumber ::= PraefDword
+PraefPubkey     ::= OCTET STRING SIZE(64)
+PraefHash       ::= OCTET STRING SIZE(32)
+PraefHashPrefix ::= OCTET STRING SIZE(0..32)
+
+PraefMsgPing ::= SEQUENCE {
+  id            PraefShort
+}
+
+PraefMsgPong ::= SEQUENCE {
+  id            PraefShort
+}
+
+PraefNetworkIdentifierPair ::= SEQUENCE {
+  internal      PraefNetworkIdentifier,
+  external      PraefNetworkIdentifier
+}
+
+PraefNetworkIdentifier ::= SEQUENCE {
+  address       PraefIpAddress,
+  port          PraefShort
+}
+
+PraefIpAddress ::= CHOICE {
+  ipv4          SEQUENCE SIZE(4) OF PraefByte,
+  ipv6          SEQUENCE SIZE(8) OF PraefShort
+}
+
+PraefMsgOpen ::= SEQUENCE {
+  publickey     PraefPubkey,
+  identifier    PraefNetworkIdentifierPair
+}
+
+PraefMsgChmod ::= SEQUENCE {
+  node          PraefNodeId,
+  effective     PraefInstant,
+  bit           ENUMERATED { praefmsgchmodgrant, praefmsgchmoddeny }
+}
+
+PraefMsgAppEvent ::= SEQUENCE {
+  serialnumber  PraefSerialNumber,
+  data          OCTET STRING
+}
+
+PraefMsgVote ::= SEQUENCE {
+  node          PraefNodeId,
+  instant       PraefInstant,
+  serialnumber  PraefSerialNumber
+}
+
+PraefMsgCommit ::= SEQUENCE {
+  start         PraefInstant,
+  end           PraefInstant,
+  hash          OCTET STRING SIZE(32)
+}
+
+PraefMsgHtLs ::= SEQUENCE {
+  snapshot      PraefInstant,
+  hash          PraefHashPrefix,
+  lownybble     BOOLEAN
+}
+
+PraefMsgHtDir ::= SEQUENCE {
+  snapshot      PraefInstant,
+  request       PraefMsgHtLs,
+  entries       SEQUENCE SIZE(16) OF PraefMsgHtdirEntry
+}
+
+PraefMsgHtdirEntry ::= CHOICE {
+  empty         NULL,
+  objectid      PraefDword,
+  subdirsid     PraefDword
+}
+
+PraefMsgHtRead ::= SEQUENCE {
+  objectid      PraefDword
+}
+
+PraefMsgHtRange ::= SEQUENCE {
+  hash          PraefHashPrefix,
+  offset        PraefByte,
+  mask          PraefByte
+}
+
+PraefMsgAppUnicast ::= SEQUENCE {
+  data          OCTET STRING
+}
+
+PraefMsg ::= CHOICE {
+  ping          PraefMsgPing,
+  pong          PraefMsgPong,
+  open          PraefMsgOpen,
+  chmod         PraefMsgChmod,
+  vote          PraefMsgVote,
+  appevt        PraefMsgAppEvent,
+  commit        PraefMsgCommit,
+  htls          PraefMsgHtLs,
+  htdir         PraefMsgHtDir,
+  htread        PraefMsgHtRead,
+  htrange       PraefMsgHtRange,
+  appuni        PraefMsgAppUnicast
+}
+
+
+END

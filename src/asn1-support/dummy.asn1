@@ -1,5 +1,14 @@
+-- This module exists mainly to get asn1c to pull in everything we need.
 Dummy DEFINITIONS ::= BEGIN
-Dummy ::= SEQUENCE {
-  dummy INTEGER
+PraefDummy ::= SEQUENCE {
+  dummyseq SEQUENCE OF INTEGER,
+  dummyset SET OF INTEGER
+}
+
+PraefDummyChoice ::= CHOICE {
+  dummy PraefDummy,
+  other ENUMERATED { foo, bar },
+  bool BOOLEAN,
+  null NULL
 }
 END

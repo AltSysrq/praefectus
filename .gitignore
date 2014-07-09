@@ -29,6 +29,7 @@ transactor
 vgcore.*
 test/libpraefectus/metatransactor
 src/asn1-support
+src/libpraefectus/messages
 test/libpraefectus/hash-tree
 test/libpraefectus/commitment-chain
 gen-dsa-parms

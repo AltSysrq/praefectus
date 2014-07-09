@@ -4,11 +4,11 @@ AUTOMAKE_OPTIONS = subdir-objects
 # Recursing into asn1-support first has the nice effect of forcing everything
 # there to be built first, so we don't need to go through the headache of
 # getting Automake to comprehend that a task produces multiple header files.
-SUBDIRS = asn1-support .
+SUBDIRS = asn1-support libpraefectus/messages .
 
-AM_CFLAGS="-I$(top_srcdir)/asn1-support"
+AM_CFLAGS="-Iasn1-support"
 
-noinst_LTLIBRARIES = libpraefectus.la
+noinst_LTLIBRARIES = libpraefectus.la libpraefectus-messages.la
 libpraefectus_la_SOURCES = \
 libpraefectus/keccak/KeccakF-1600-opt64.c \
 libpraefectus/keccak/KeccakSponge.c \
@@ -23,3 +23,37 @@ libpraefectus/hash-tree.c \
 libpraefectus/commitment-chain.c \
 libpraefectus/secure-random.c \
 libpraefectus/dsa.c
+
+libpraefectus_la_LIBADD = \
+  libpraefectus-messages.la asn1-support/libasn1-support.la
+
+libpraefectus_messages_la_SOURCES = \
+libpraefectus/messages/PraefByte.c \
+libpraefectus/messages/PraefDword.c \
+libpraefectus/messages/PraefHash.c \
+libpraefectus/messages/PraefHashPrefix.c \
+libpraefectus/messages/PraefInstant.c \
+libpraefectus/messages/PraefIpAddress.c \
+libpraefectus/messages/PraefMsg.c \
+libpraefectus/messages/PraefMsgAppEvent.c \
+libpraefectus/messages/PraefMsgAppUnicast.c \
+libpraefectus/messages/PraefMsgChmod.c \
+libpraefectus/messages/PraefMsgCommit.c \
+libpraefectus/messages/PraefMsgHtDir.c \
+libpraefectus/messages/PraefMsgHtLs.c \
+libpraefectus/messages/PraefMsgHtRange.c \
+libpraefectus/messages/PraefMsgHtRead.c \
+libpraefectus/messages/PraefMsgHtdirEntry.c \
+libpraefectus/messages/PraefMsgOpen.c \
+libpraefectus/messages/PraefMsgPing.c \
+libpraefectus/messages/PraefMsgPong.c \
+libpraefectus/messages/PraefMsgVote.c \
+libpraefectus/messages/PraefNetworkIdentifier.c \
+libpraefectus/messages/PraefNetworkIdentifierPair.c \
+libpraefectus/messages/PraefNodeId.c \
+libpraefectus/messages/PraefPingId.c \
+libpraefectus/messages/PraefPubkey.c \
+libpraefectus/messages/PraefSerialNumber.c \
+libpraefectus/messages/PraefShort.c
+
+libpraefectus_messages_la_CFLAGS = -w -Iasn1-support

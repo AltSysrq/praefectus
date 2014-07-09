@@ -55,5 +55,6 @@ AC_C_FLEXIBLE_ARRAY_MEMBER
 AC_TYPE_SIZE_T
 
 AC_CONFIG_FILES([Makefile src/Makefile src/asn1-support/Makefile
+                 src/libpraefectus/messages/Makefile
                  test/Makefile])
 AC_OUTPUT
