@@ -146,6 +146,26 @@ typedef struct {
 } praef_hash_tree_cursor;
 
 /**
+ * Return type from praef_hash_tree_add().
+ */
+typedef enum {
+  /**
+   * Indicates that the operation failed (eg, out of memory). This is
+   * guaranteed to be false.
+   */
+  praef_htar_failed = 0,
+  /**
+   * Indicates that a new object was added to the tree.
+   */
+  praef_htar_added,
+  /**
+   * Indicates that no new object was added to the tree because that object was
+   * already present in the tree.
+   */
+  praef_htar_already_present
+} praef_hash_tree_add_result;
+
+/**
  * Allocates a new, empty, read-write hash tree.
  *
  * @return The hash tree, or NULL if memory could not be obtained.
@@ -175,10 +195,13 @@ void praef_hash_tree_delete(const praef_hash_tree*);
  *
  * Complexity: O(log(n))
  *
- * @return Whether the operation succeeds (the re-adding of an existing object
- * is treated as success).
+ * @return praef_htar_failed (0) if the operation fails; praef_htar_added if
+ * the item was inserted; praef_htar_already_present if the object was already
+ * present in the hash tree.
  */
-int praef_hash_tree_add(praef_hash_tree*, praef_hash_tree_objref*);
+praef_hash_tree_add_result praef_hash_tree_add(
+  praef_hash_tree*, praef_hash_tree_objref*);
+
 /**
  * Obtains an object reference by exact hash code. The contents of the given
  * objref are set to the data stored within the hash tree. On failure, the

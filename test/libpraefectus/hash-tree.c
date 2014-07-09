@@ -51,7 +51,8 @@ deftest(can_add_and_fetch_objects_by_id) {
     object.size = sizeof(i);
     object.instant = i;
     object.data = &i;
-    ck_assert(praef_hash_tree_add(tree, &object));
+    ck_assert_int_eq(praef_htar_added,
+                     praef_hash_tree_add(tree, &object));
     ck_assert_ptr_ne(&i, object.data);
   }
 
@@ -200,14 +201,15 @@ deftest(inserting_duplicate_object_has_no_effect) {
   object.instant = 0;
   object.size = sizeof(value);
   object.data = &value;
-  ck_assert(praef_hash_tree_add(tree, &object));
+  ck_assert_int_eq(praef_htar_added, praef_hash_tree_add(tree, &object));
 
   /* Add a dupe, but with a different instant. When reading later, the old
    * instant should be reflected.
    */
   object.instant = 1;
   object.data = &value;
-  ck_assert(praef_hash_tree_add(tree, &object));
+  ck_assert_int_eq(praef_htar_already_present,
+                   praef_hash_tree_add(tree, &object));
 
   ck_assert(praef_hash_tree_get_id(&object, tree, 0));
   ck_assert_int_eq(0, object.instant);
