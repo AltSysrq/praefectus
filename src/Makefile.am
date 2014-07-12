@@ -32,28 +32,35 @@ libpraefectus/messages/PraefByte.c \
 libpraefectus/messages/PraefDword.c \
 libpraefectus/messages/PraefHash.c \
 libpraefectus/messages/PraefHashPrefix.c \
+libpraefectus/messages/PraefHtdirEntry.c \
 libpraefectus/messages/PraefInstant.c \
 libpraefectus/messages/PraefIpAddress.c \
+libpraefectus/messages/PraefJoinAccept.c \
 libpraefectus/messages/PraefMsg.c \
 libpraefectus/messages/PraefMsgAppEvent.c \
 libpraefectus/messages/PraefMsgAppUnicast.c \
 libpraefectus/messages/PraefMsgChmod.c \
 libpraefectus/messages/PraefMsgCommit.c \
+libpraefectus/messages/PraefMsgGetNetworkInfo.c \
 libpraefectus/messages/PraefMsgHtDir.c \
 libpraefectus/messages/PraefMsgHtLs.c \
 libpraefectus/messages/PraefMsgHtRange.c \
 libpraefectus/messages/PraefMsgHtRead.c \
-libpraefectus/messages/PraefMsgHtdirEntry.c \
-libpraefectus/messages/PraefMsgOpen.c \
+libpraefectus/messages/PraefMsgJoinCommandeerment.c \
+libpraefectus/messages/PraefMsgJoinEndorsement.c \
+libpraefectus/messages/PraefMsgJoinRequest.c \
+libpraefectus/messages/PraefMsgNetworkInfo.c \
 libpraefectus/messages/PraefMsgPing.c \
 libpraefectus/messages/PraefMsgPong.c \
 libpraefectus/messages/PraefMsgVote.c \
 libpraefectus/messages/PraefNetworkIdentifier.c \
 libpraefectus/messages/PraefNetworkIdentifierPair.c \
+libpraefectus/messages/PraefNetworkSalt.c \
 libpraefectus/messages/PraefNodeId.c \
 libpraefectus/messages/PraefPingId.c \
 libpraefectus/messages/PraefPubkey.c \
 libpraefectus/messages/PraefSerialNumber.c \
-libpraefectus/messages/PraefShort.c
+libpraefectus/messages/PraefShort.c \
+libpraefectus/messages/PraefSignature.c
 
 libpraefectus_messages_la_CFLAGS = -w -Iasn1-support

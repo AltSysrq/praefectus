@@ -1,5 +1,42 @@
 Messages DEFINITIONS AUTOMATIC TAGS ::= BEGIN
 
+-- Definitions for libpraefectus-level messages, excluding the high-level
+-- message envelope.
+--
+-- The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
+-- NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and
+-- "OPTIONAL" in this file are to be interpreted as per RFC 2119.
+--
+-- The concept of a "high-level message" is defined in
+-- libpraefectus/DESIGN.txt.
+--
+-- "SHA-3" always refers to the Keccak hash function with the 256-bit
+-- parameters, even if fewer than 256 bits will be generated from the result.
+--
+-- Many things dealing with instants and intervals are "application-defined"
+-- because the rate at which instances actually advance is also
+-- application-defined.
+--
+-- When a node is said to be "voting to DENY" some node, it means that the
+-- node will vote for any valid vote to set the DENY status on that node,
+-- as well as starting its own votes to do so. Such votes SHOULD be a few
+-- seconds into the future and SHOULD be a round number (eg, evenly divisible
+-- by 2 seconds) that other such nodes are likely to use, in order to maximise
+-- the chance of the DENY carrying.
+--
+-- In general, if a message is received which violates an absolute requirement,
+-- the node that received the message SHOULD begin voting to DENY the node that
+-- created the message, and MUST not attempt to process the message. However,
+-- it MUST count the message towards any hashing (both the in the hash tree and
+-- for the purposes of commits) and SHOULD continue to proliferate the message
+-- if it is not an RPC-type message. Some messages define other semantics for
+-- the violation of hard requirements which take precedence over these general
+-- rules.
+--
+-- Messages are classified as RPC-type, uncommitted redistributable, and
+-- committed redistributable. Messages MUST be contained with envelopes of the
+-- same type.
+
 PraefDword      ::= INTEGER (0..4294967295)
 PraefShort      ::= INTEGER (0..65536)
 PraefByte       ::= INTEGER (0..255)
@@ -8,96 +45,455 @@ PraefNodeId     ::= PraefDword
 PraefInstant    ::= PraefDword
 PraefSerialNumber ::= PraefDword
 PraefPubkey     ::= OCTET STRING SIZE(64)
+PraefSignature  ::= OCTET STRING SIZE(32)
 PraefHash       ::= OCTET STRING SIZE(32)
 PraefHashPrefix ::= OCTET STRING SIZE(0..32)
+PraefNetworkSalt ::= OCTET STRING SIZE(32)
 
+-- Used to discover latency between nodes. A node SHOULD transmit a Ping
+-- message to all other nodes at regular intervals. Upon receiving a Ping, the
+-- receiver SHOULD immediateld transimit a a Pong containing the same id back
+-- to the sender of the Ping. Nodes MAY begin voting to DENY a node which fails
+-- to answer a certain number of consecutive Ping messages.
+--
+-- This an RPC-type message.
 PraefMsgPing ::= SEQUENCE {
-  id            PraefShort
+  -- The id of this ping, used to identify the corresponding Pong. This has no
+  -- meaning to the receive, except that it determines the appropriate value
+  -- for the field of the same name on the reply Pong message.
+  --
+  -- The value of this field SHOULD NOT be predictable.
+  id            PraefPingId
 }
 
+-- An answer to a Ping message. Receivers SHOULD ignore the message if the id
+-- does not correspond to that of a recently transmitted Ping message.
+--
+-- This is an RPC-type message.
 PraefMsgPong ::= SEQUENCE {
-  id            PraefShort
+  -- The id of the Ping that this Pong answers.
+  id            PraefPingId
 }
 
+-- Identifies a node based upon network addresses. This is primarily used for
+-- establishing routes.
 PraefNetworkIdentifierPair ::= SEQUENCE {
-  internal      PraefNetworkIdentifier,
-  external      PraefNetworkIdentifier
+  -- The network identifier of the host itself. Within a NAT, one might refer
+  -- to this as the "LAN address" in some circles. Only nodes within the same
+  -- physical network can expect to reach the node on this address.
+  --
+  -- Nodes with the same internet identifier SHOULD communicate via the address
+  -- defined by the intranet identifier.
+  intranet      PraefNetworkIdentifier,
+  -- The network identifier of the node as perceived by an external party over
+  -- the Internet. Nodes may generally expect to reach other nodes on the
+  -- internet identifier; however, some NATs are buggy and will not route
+  -- packets to their own external address correctly. Thus, nodes with the same
+  -- internet identifier SHOULD use the intranet identifiers instead.
+  --
+  -- This field is OPTIONAL in "LAN games"; ie, those where all nodes are
+  -- expected to be on the same physical network. It is REQUIRED for systems
+  -- which are spread across the Internet.
+  --
+  -- If this field is present, the ip address contained MUST be of the same
+  -- IP version as that of the intranet field.
+  internet      PraefNetworkIdentifier OPTIONAL
 }
 
+-- An IP address / port pair.
 PraefNetworkIdentifier ::= SEQUENCE {
   address       PraefIpAddress,
   port          PraefShort
 }
 
+-- Either an IPv4 or IPv6 address.
 PraefIpAddress ::= CHOICE {
   ipv4          SEQUENCE SIZE(4) OF PraefByte,
   ipv6          SEQUENCE SIZE(8) OF PraefShort
 }
 
-PraefMsgOpen ::= SEQUENCE {
+-- Requests basic information on the system in which the receiver is
+-- participating. The receiver SHOULD reply to the given return address
+-- with a NetworkInfo message. The receiver MUST process the message even
+-- if the signature is not recognised, as this is used by nodes wishing to
+-- join the system. The receiver MAY ignore the message if it does recognise
+-- the signature, since it is assumed that members of the system are already
+-- aware of the information that would be in the reply.
+--
+-- This is an RPC-type message. It SHOULD be the only compoment of the
+-- high-level message; nodes MAY ignore GetNetworkInfo messages which do not
+-- meet this requirement.
+--
+-- This is typically the first message sent by a prospective node. In NAT
+-- environments, it must often be proxied by a third party. Prospective nodes
+-- which do not receive a response after some timeout SHOULD retry sending it,
+-- possibly with a different node known to be part of the system.
+PraefMsgGetNetworkInfo ::= SEQUENCE {
+  -- The network identifier that wishes to receive the information. This is not
+  -- necessarily the same as the apparent source address, due to triangular
+  -- routing needed to bootstrap Internet connections in NAT environments.
+  retaddr       PraefNetworkIdentifierPair
+}
+
+-- Response to a GetNetworkInfo message. The contents MUST be correct, though a
+-- prospective node has no way to validate them.
+--
+-- This response provides prospective nodes sufficient knowledge to begin
+-- obtaining system state upon being accepted into the system, as well as to
+-- calculate their id if commandeering is being used.
+--
+-- This is an RPC-type message.
+PraefMsgNetworkInfo ::= SEQUENCE {
+  -- Some random string of bytes used to salt hashes used for node id
+  -- commandeerment.
+  salt          PraefNetworkSalt,
+  -- A digital signature of the salt field (alone) generated with the bootstrap
+  -- node's public key. This signature MUST be valid.
+  --
+  -- This field prevents a node from participating in a system with an invalid
+  -- salt, which would lead to it diverging from the other nodes severely if a
+  -- node joined via id commandeering. (This would only happen if the victim
+  -- joined via id endorsement.) If the salt is wrong, either (a) the node will
+  -- identify the fact that the signature is invalid and reject the message, or
+  -- (b) will attempt to join with an incorrect bootstrap key, leading it to
+  -- reject all messages it ever sees and eventually give up.
+  saltsig       PraefSignature,
+  -- The public key of the bootstrap node (ie, the one with id 1).
+  bootstrapkey  PraefPubkey
+}
+
+-- Requests to join the system of which the receiver is a part. Receivers MUST
+-- process this message if and only if they do not recognise the
+-- signature. This MUST be the only message inside the high-level message
+-- envelope, and the high-level message MUST NOT have tailing garbage. The
+-- instant on the high-level message MUST be zero.
+--
+-- Receiving nodes SHOULD accept the new node (with either a JoinEndorsement or
+-- JoinCommandeerment). The sender SHOULD NOT reattempt this exact request if
+-- it receives no response after a certain time-out, but instead generate a new
+-- public key and restart with a NetworkInfo message, generally to a different
+-- node known to be a part of the system.
+--
+-- Receiving nodes SHOULD ignore this message if they have not recently
+-- received a GetNetworkInfo message from the same return address.
+--
+-- Acceptance of the new node is performed by broadcasting a JoinEndorsement or
+-- JoinCommandeerment message to all nodes, including the new one.
+--
+-- This is an RPC-type message.
+PraefMsgJoinRequest ::= SEQUENCE {
+  -- The public key of the node requesting to join. The signature on the
+  -- containing high-level message envelope MUST be valid by this signature.
   publickey     PraefPubkey,
+  -- The network address pair with which this node will communicate.
   identifier    PraefNetworkIdentifierPair
 }
 
+PraefJoinAccept ::= SEQUENCE {
+  -- The original JoinRequest message, used to validate the signature.
+  request       PraefMsgJoinRequest,
+  -- The signature of the high-level message envelope containing the original
+  -- JoinRequest message, calculated by composing the most compact such
+  -- high-level message possible with instan 0. (That is, the signature signs 4
+  -- zero bytes, a byte containing the encoded size of request, followed by
+  -- the encoded form of request itself, padded to an octet boundary with
+  -- zeroes.) The signature MUST be valid.
+  signature     PraefSignature
+}
+
+-- Endorses the joining of a new node to the system.
+--
+-- In this model of joining, the transimitter allocates one of a small pool of
+-- node ids which it is allowed to endorse and assigns it to the new
+-- node. Nodes SHOULD prefer endorsement over commandeerment.
+--
+-- This is an uncommitted redistributable message.
+PraefMsgJoinEndorsement ::= SEQUENCE {
+  -- Information on the JoinRequest being accepted
+  accepted      PraefJoinAccept,
+  -- The new id of the node being endorsed. This is subject to strict
+  -- constraints, which MUST be met, based upon the id of the endorsing node
+  -- ("source_id" below)
+  --
+  -- 1. (id & ~source_id) MUST be a power of two
+  -- 2. (id > source_id) MUST be true
+  -- 3. (source_id & 1) MUST be 1
+  --
+  -- In other words, the new id shall have exactly one bit set that was not in
+  -- the endorsing node's id, and it must be to the left of the left-most set
+  -- bit in the endorsing node's id. Furthermore, the endorsing node's id must
+  -- be odd. Endorsing always produces odd ids.
+  id            PraefNodeId
+}
+
+-- Joins a new node to the system via commandeerment.
+--
+-- In this model of joining, a timestamp is hashed with the node's information
+-- and a system-specific salt to produce a hopefully-unique even id for the new
+-- node. Specifically, this hash is the first 31 bits output by SHA-3 after
+-- inputing the system's salt, the public key of the new node, and the
+-- timestamp of the envelope (a 4-byte little-endian integer) followed by a
+-- zero bit. If this would produce an id of 0, the value 2 is used instead.
+--
+-- This is an uncommitted redistributable message.
+PraefMsgJoinCommandeerment ::= SEQUENCE {
+  -- Information on the JoinRequest being accepted.
+  accepted      PraefJoinAccept
+}
+
+-- Votes to set a a status bit on a node.
+--
+-- A chmod carries when at least half of the nodes which are alive (have GRANT
+-- but do not have DENY) cast identical votes. Nodes MUST correctly handle
+-- retroactive result changes based upon messages received after the fact or
+-- network topology changes.
+--
+-- Further details of how chmod events work, as well as the node status model,
+-- can be found in the documentation for metatransactor (see
+-- libpraefectus/metatransactor.h).
+--
+-- This is a committed redistributable message.
 PraefMsgChmod ::= SEQUENCE {
+  -- The node to be affected by this change. If the receiver does not know of
+  -- a node with this id, it MUST act as if it never received the containing
+  -- high-level message.
   node          PraefNodeId,
+  -- The instant at which the status bit will be set. This MUST be greater than
+  -- or equal to the timestamp on the high-level message timestamp, and MUST
+  -- not exceed the timestamp on the high-level message by a certain
+  -- application-defined threshold.
   effective     PraefInstant,
-  bit           ENUMERATED { praefmsgchmodgrant, praefmsgchmoddeny }
+  -- The bit which is to be set on the node if this vote carries.
+  bit           ENUMERATED { grant, deny }
 }
 
+-- Specifies an application-defined event to be passed into the
+-- application-level context. It is up to the application to provide the means
+-- to decode the message and to provide the pessimistic/optimistic parameters
+-- and the optimistic deadline, as appropriate.
+--
+-- The object id of the event is implicitly the id of the node that produced
+-- this message. The instant of the event is implicitly the instant on the
+-- envelope of the high-level message.
+--
+-- While the receiver MAY tentatively accept the new event, it MUST eventually
+-- reject the message if fewer than half of the nodes in the system cast a Vote
+-- message for this event. Nodes MUST correctly handle retroactive changes to
+-- this acceptance based upon untimely message reception or incorrect topology
+-- data. The full semantics for voting are described in the transactor
+-- documentation (see libpraefectus/transactor.h).
+--
+-- This message implicitly has the effect of a Vote message specifying the
+-- event sent with this message.
+--
+-- This is a committed redistributable message.
 PraefMsgAppEvent ::= SEQUENCE {
+  -- The serial number for this event. The (node,instant,serialnumber) triple
+  -- MUST uniquely identify this event. If the sender creates a conflict, the
+  -- receiver MUST remove the existing event with the same identifier from its
+  -- state, and additionally not add this event, but MUST otherwise accept the
+  -- message. In such a case, the node SHOULD start voting to DENY the node
+  -- that created this conflict.
   serialnumber  PraefSerialNumber,
-  data          OCTET STRING
+  -- The encoded form of the application event. How to decode this is
+  -- application-specific.
+  data          OCTET STRING SIZE(1..256)
 }
 
+-- Indicates that the sender wishes to accept a particular event.
+--
+-- More information on voting can be found in the documentation for the
+-- AppEvent message and in the transactor documentation (see
+-- libpraefectus/transactor.h).
+--
+-- Nodes MUST accept Votes which specify nonexistent events and eventually
+-- apply them if the event comes into existence.
 PraefMsgVote ::= SEQUENCE {
+  -- The node which sent the event that this message votes for.
   node          PraefNodeId,
+  -- The instant of the event being voted for. This MUST be less than or equal
+  -- to the instant of the high-level message, and MUST not be beyond a certain
+  -- application-defined distance into the past.
   instant       PraefInstant,
+  -- The serial number of the event being voted for.
   serialnumber  PraefSerialNumber
 }
 
+-- Indicates that the sender is committing to a particular set of of committed
+-- redistributable messages within a particular timespan, starting from some
+-- specified instant to the instant of the high-level message (both inclusive).
+--
+-- Commits from the same node MUST NOT have overlapping timespans.
+--
+-- A node MUST continue processing committed redistributable messages even if
+-- it can prove that the commit will never be fulfilled.
+--
+-- More information on how commits can be used can be found in the
+-- commitment-chain documentation (see limpraefectus/commitment-chain.h).
+--
+-- This is an uncommitted redistributable message.
 PraefMsgCommit ::= SEQUENCE {
+  -- The instant at which the commit range starts. This MUST be less than or
+  -- equal to the instant on the high-level message.
   start         PraefInstant,
-  end           PraefInstant,
-  hash          OCTET STRING SIZE(32)
+  -- The hash of the messages in this commit. This is the SHA-3 obtained by
+  -- concatenating all committed redistributable high-level messages within the
+  -- commit's timespan, in ascending order by each message's respective
+  -- hash. The message hash is the SHA-3 of the high-level message itself.
+  hash          PraefHash
 }
 
+-- Requests a listing of a directory within the receiver's hash tree.
+--
+-- Nodes MUST maintain a hash tree of all redistributable messages they have
+-- received. The hash of each message within the tree is the SHA-3 of the whole
+-- high-level message. The hash tree itself is organised into directories and
+-- objects.
+--
+-- Each directory corresponds to some prefix of nybbles from message hashes,
+-- and has 16 entries. Each entry can be empty, refer to an object, or refer to
+-- a subdirectory. The root directory (with a prefix of 0 nybbles) is always a
+-- directory, even if it is empty. Entries in a directory may only be a
+-- subdirectory if that subdirectory directly or indirectly contains more than
+-- one object.
+--
+-- Objects (ie, serialised messages) are identified by a 32-bit integer which
+-- is particular to the node maintaining that tree. Other nodes can learn these
+-- identifiers by traversing the tree.
+--
+-- Subdirectory entries are associated with a 32-bit SHA-3 hash of their
+-- contents. The input for this hash is the concatenation of the hashes of
+-- objects which are direct entries within the directory and the hashes of
+-- direct subdirectory entries. These are concatenated in the order they
+-- occur in the directory (ie, object and directory hashes can be
+-- interspersed). These 32-bit hashes allow for rapidly locating which parts of
+-- the hash tree are inconsistent between two nodes.
+--
+-- Nodes SHOULD maintain snapshots of their hash trees at well-known intervals
+-- into the past in order to maximise the consistency between different nodes'
+-- snapshots. It is RECOMMENDED that snapshots be kept at fixed,
+-- application-defined deltas, where the instant for a delta is the greatest
+-- instant evenly divisible by delta which is also at least delta instants in
+-- the past. (At 64 instants/second, good values for delta may be 16, 32, 64,
+-- 128, and 196.)
+--
+-- This particular message requests a listing of a directory within the other
+-- node's hash tree. The receiver SHOULD respond with a sensible HtDir
+-- message. If the named directory does not exist, no response is necessary.
+--
+-- The root directory is always expected to be available, as is any directory
+-- the responder indicates to be present. Nodes MAY begin voting to DENY a node
+-- which fails some consecutive number of times to respond to HtLs messages
+-- that are expected to elicit a response.
+--
+-- This is an RPC-type message.
 PraefMsgHtLs ::= SEQUENCE {
+  -- The snapshot that the requester would like to compare against. The
+  -- responder SHOULD produce a response by looking at the latest snapshot
+  -- before this instant, or the earliest snapshot available if this is before
+  -- all snapshots it maintains.
   snapshot      PraefInstant,
+  -- The hash prefix for the given directory. The final nybble in the prefix
+  -- may or may not be meaningful, depending on the lownybble field.
+  --
+  -- The empty prefix refers to the root directory.
   hash          PraefHashPrefix,
+  -- Whether the final nybble in hash is actually part of the prefix. If this
+  -- is false, the final 4 bits of hash are ignored. This field is meaningless
+  -- if hash is empty.
   lownybble     BOOLEAN
 }
 
+-- Informs the receiver of the contents of a hash tree directory in one of the
+-- sender's hash tree snapshots.
+--
+-- This is an RPC-type message.
 PraefMsgHtDir ::= SEQUENCE {
-  snapshot      PraefInstant,
+  -- An HtLs message to which this is (in theory) a response. As much as
+  -- possible, it SHOULD be the exact contents of an actual HtLs message
+  -- received, though nodes MAY send gratuitous HtDir messages at any time.
   request       PraefMsgHtLs,
-  entries       SEQUENCE SIZE(16) OF PraefMsgHtdirEntry
+  -- The entries present in this directory, indexed by the first nybble of
+  -- objects after the hash prefix of the containing directory.
+  entries       SEQUENCE SIZE(16) OF PraefHtdirEntry
 }
 
-PraefMsgHtdirEntry ::= CHOICE {
+-- A single hash tree directory entry.
+PraefHtdirEntry ::= CHOICE {
+  -- Indicates that this entry has no content.
   empty         NULL,
+  -- Indicates that this entry has a direct object, and specifies the
+  -- node-specific id of that object.
   objectid      PraefDword,
+  -- Indicates that this entry is a subdirectory, and specifies the 32-bit hash
+  -- of that subdirectory entry.
   subdirsid     PraefDword
 }
 
+-- Requests the receiver to retransmit the high-level message associated with
+-- the object of the given id in the receiver's hash tree. The receiver does
+-- not need to be the original author of this message.
+--
+-- Unless the receiver has some reason not to, it SHOULD send the high-level
+-- message identified by the given id to the receiver verbatim. Note that there
+-- is no special envelope for this response, so there is no message type for
+-- it. Rather, the original requester simply receives the original message
+-- without needing to associate it back to an HtRead request.
+--
+-- Nodes SHOULD define time-based rules as to what objects they are willing to
+-- transmit via this request. For example, one typically will not want to
+-- reveal committed redistributable messages that were introduced after the
+-- commit threshold of the requester (see libpraefectus/commitment-chain.h for
+-- details on this terminology).
+--
+-- Nodes SHOULD NOT begin voting to DENY another node on the suspicion that
+-- they have not received a response to this request.
+--
+-- This is an RPC-type message.
 PraefMsgHtRead ::= SEQUENCE {
   objectid      PraefDword
 }
 
+-- Reqeuests the receiver to act as if it had received a large number of HtRead
+-- requests for objects with particular hashes.
+--
+-- The same recommendations as for HtRead with respect to limiting visibility
+-- of committed redistributable messages applies here as well.
+--
+-- An HtRange specifies a base hash as well as some filter parameters. The
+-- receiver SHOULD look up what objects match these parameters (up to some
+-- maximum number of objects) and transmit them to the requester.
+--
+-- This is an RPC-type message.
 PraefMsgHtRange ::= SEQUENCE {
+  -- The minimum hash that the requester is interested in. This is expanded to
+  -- a full hash by padding it to the right with zeroes. The receiver SHOULD
+  -- NOT retransmit messages whose hash would precede this hash.
   hash          PraefHashPrefix,
+  -- offset and mask control which messages may be retransmitted, allowing a
+  -- range query to be performed across multiple nodes. An object matches the
+  -- range filter only if, given the final byte of the object hash h,
+  -- ((h & mask) == offset).
   offset        PraefByte,
   mask          PraefByte
 }
 
+-- Sends an application-defined unicast message to the receiving node.
+--
+-- This is an RPC-type message.
 PraefMsgAppUnicast ::= SEQUENCE {
-  data          OCTET STRING
+  -- The application-defined message.
+  data          OCTET STRING SIZE(1..256)
 }
 
 PraefMsg ::= CHOICE {
   ping          PraefMsgPing,
   pong          PraefMsgPong,
-  open          PraefMsgOpen,
+  getnetinfo    PraefMsgGetNetworkInfo,
+  netinfo       PraefMsgNetworkInfo,
+  joinreq       PraefMsgJoinRequest,
+  endorsement   PraefMsgJoinEndorsement,
+  commandeer    PraefMsgJoinCommandeerment,
   chmod         PraefMsgChmod,
   vote          PraefMsgVote,
   appevt        PraefMsgAppEvent,
