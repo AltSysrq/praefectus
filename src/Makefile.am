@@ -52,6 +52,7 @@ libpraefectus/messages/PraefMsgJoinRequest.c \
 libpraefectus/messages/PraefMsgNetworkInfo.c \
 libpraefectus/messages/PraefMsgPing.c \
 libpraefectus/messages/PraefMsgPong.c \
+libpraefectus/messages/PraefMsgRoute.c \
 libpraefectus/messages/PraefMsgVote.c \
 libpraefectus/messages/PraefNetworkIdentifier.c \
 libpraefectus/messages/PraefNetworkIdentifierPair.c \
