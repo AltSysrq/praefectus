@@ -1,3 +1,4 @@
+
 AUTOMAKE_OPTIONS = subdir-objects
 .MAKE.JOB.PREFIX=
 
@@ -22,7 +23,8 @@ libpraefectus/std-state.c \
 libpraefectus/hash-tree.c \
 libpraefectus/commitment-chain.c \
 libpraefectus/secure-random.c \
-libpraefectus/dsa.c
+libpraefectus/dsa.c \
+libpraefectus/virtual-bus.c
 
 libpraefectus_la_LIBADD = \
   libpraefectus-messages.la asn1-support/libasn1-support.la
