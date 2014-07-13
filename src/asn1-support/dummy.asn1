@@ -9,6 +9,7 @@ PraefDummyChoice ::= CHOICE {
   dummy PraefDummy,
   other ENUMERATED { foo, bar },
   bool BOOLEAN,
-  null NULL
+  null NULL,
+  chars VisibleString
 }
 END

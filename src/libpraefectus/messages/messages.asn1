@@ -107,9 +107,14 @@ PraefNetworkIdentifier ::= SEQUENCE {
 }
 
 -- Either an IPv4 or IPv6 address.
+--
+-- These are represented as octet strings rather than structured sequences
+-- because it makes the interface produced by asn1c more tolerable.
 PraefIpAddress ::= CHOICE {
-  ipv4          SEQUENCE SIZE(4) OF PraefByte,
-  ipv6          SEQUENCE SIZE(8) OF PraefShort
+  ipv4          OCTET STRING SIZE(4),
+  -- The ipv6 address is a sequence of 16 16-bit integers, each encoded as
+  -- little-endian.
+  ipv6          OCTET STRING SIZE(32)
 }
 
 -- Requests basic information on the system in which the receiver is
