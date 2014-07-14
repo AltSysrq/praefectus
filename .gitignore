@@ -34,3 +34,4 @@ test/libpraefectus/hash-tree
 test/libpraefectus/commitment-chain
 gen-dsa-parms
 test/libpraefectus/dsa
+test/libpraefectus/virtual-bus

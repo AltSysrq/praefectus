@@ -43,7 +43,11 @@ struct praef_virtual_link_s {
   praef_virtual_link* reverse;
   praef_virtual_bus* destination;
 
-  praef_instant last_xmit;
+  /* The last time that the link in this direction was maintained open or had a
+   * packet transmitted through it. This is only of interest to the reverse
+   * link.
+   */
+  praef_instant last_xmit, last_xmit_exttime;
   int is_route_open;
 
   SLIST_ENTRY(praef_virtual_link_s) next;
@@ -74,6 +78,7 @@ struct praef_virtual_bus_s {
 struct praef_virtual_network_s {
   SLIST_HEAD(,praef_virtual_bus_s) busses;
   praef_instant now;
+  praef_instant exttime;
   unsigned num_busses;
   int oom;
 };
@@ -120,6 +125,7 @@ praef_virtual_network* praef_virtual_network_new(void) {
 
   SLIST_INIT(&this->busses);
   this->now = 0;
+  this->exttime = 0;
   this->oom = 0;
   this->num_busses = 0;
 
@@ -190,6 +196,11 @@ int praef_virtual_network_advance(praef_virtual_network* this, unsigned delta) {
 
   this->oom = 0;
   return !oom;
+}
+
+void praef_virtual_network_set_exttime(praef_virtual_network* this,
+                                       praef_instant t) {
+  this->exttime = t;
 }
 
 static praef_virtual_link* praef_virtual_link_new(void) {
@@ -301,7 +312,8 @@ static int praef_virtual_bus_create_route(
   praef_virtual_link* link;
 
   SLIST_FOREACH(link, &this->outbound_links, next) {
-    if (network_identifiers_equal(id, &this->network_identifier_pair)) {
+    if (network_identifiers_equal(
+          id, &link->destination->network_identifier_pair)) {
       link->is_route_open = 1;
     }
   }
@@ -315,12 +327,13 @@ static int praef_virtual_bus_delete_route(
   praef_virtual_link* link;
 
   SLIST_FOREACH(link, &this->outbound_links, next) {
-    if (network_identifiers_equal(id, &this->network_identifier_pair)) {
+    if (network_identifiers_equal(
+          id, &link->destination->network_identifier_pair)) {
       if (!link->is_route_open) return 0;
 
       link->is_route_open = 0;
-      if (link->reverse)
-        link->reverse->last_xmit = this->network->now;
+      link->last_xmit = this->network->now;
+      link->last_xmit_exttime = this->network->exttime;
       return 1;
     }
   }
@@ -349,7 +362,8 @@ static void praef_virtual_bus_do_unicast(
   praef_virtual_link* link;
 
   SLIST_FOREACH(link, &this->outbound_links, next)
-    if (network_identifiers_equal(dst, &this->network_identifier_pair))
+    if (network_identifiers_equal(
+          dst, &link->destination->network_identifier_pair))
       break;
 
   if (!link)
@@ -359,8 +373,8 @@ static void praef_virtual_bus_do_unicast(
   /* Regardless of whether the packet will get dropped, the host's firewall
    * will reset the grace period.
    */
-  if (link->reverse)
-    link->reverse->last_xmit = this->network->now;
+  link->last_xmit = this->network->now;
+  link->last_xmit_exttime = this->network->exttime;
 
   praef_virtual_bus_send_packet(this, link, is_triangular, data, sz);
 }
@@ -396,8 +410,8 @@ static void praef_virtual_bus_send_packet(
     reverse_xmit = 0;
 
   if (!bypass_firewall &&
-      !((link->reverse && link->reverse->is_route_open) ||
-        reverse_xmit + link->parms.firewall_grace_period < this->network->now))
+      (!link->reverse || !link->reverse->is_route_open) &&
+      reverse_xmit + link->parms.firewall_grace_period <= this->network->now)
     /* This packet is not routed so as to bypass firewall/NAT effects, and the
      * destination is not holding the route open and has not transmitted a
      * packet to the sender since the grace period ended. The packet gets
@@ -411,7 +425,7 @@ static void praef_virtual_bus_send_packet(
     return;
 
   /* Check whether the packet should be randomly duplicated */
-  if ((rand() & 0xFFFF) > link->parms.duplicity)
+  if ((rand() & 0xFFFF) < link->parms.duplicity)
     praef_virtual_bus_send_packet(this, link, bypass_firewall, data, sz);
 
   message = praef_virtual_bus_message_new(data, sz);
@@ -423,7 +437,7 @@ static void praef_virtual_bus_send_packet(
   message->delivery_time = this->network->now +
     link->parms.base_latency + (rand() % (link->parms.variable_latency+1));
 
-  TAILQ_INSERT_TAIL(&this->in_flight, message, next);
+  TAILQ_INSERT_TAIL(&link->destination->in_flight, message, next);
 }
 
 static praef_instant praef_virtual_bus_last_recv(
@@ -436,7 +450,7 @@ static praef_instant praef_virtual_bus_last_recv(
           id, &link->destination->network_identifier_pair) &&
         link->reverse)
       return link->reverse->is_route_open?
-        this->network->now : link->reverse->last_xmit;
+        this->network->exttime : link->reverse->last_xmit_exttime;
 
   return 0;
 }

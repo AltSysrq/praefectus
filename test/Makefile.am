@@ -4,8 +4,9 @@ AUTOMAKE_OPTIONS = subdir-objects
 TESTS = libpraefectus/core libpraefectus/core-fullstack \
 libpraefectus/transactor libpraefectus/metatransactor \
 libpraefectus/hash-tree libpraefectus/commitment-chain \
-libpraefectus/dsa
-AM_CFLAGS = $(CHECK_CFLAGS) -I$(top_builddir)/src -Wall -Wextra \
+libpraefectus/dsa libpraefectus/virtual-bus
+AM_CFLAGS = $(CHECK_CFLAGS) -I$(top_builddir)/src \
+  -I$(top_builddir)/src/asn1-support -Wall -Wextra \
   -Wno-unused-parameter -Wno-long-long -Wno-missing-field-initializers \
   -std=gnu99 -Wno-gnu
 
@@ -28,3 +29,5 @@ libpraefectus_commitment_chain_SOURCES = libpraefectus/commitment-chain.c
 libpraefectus_commitment_chain_LDADD = $(TEST_LIBS)
 libpraefectus_dsa_SOURCES = libpraefectus/dsa.c
 libpraefectus_dsa_LDADD = $(TEST_LIBS)
+libpraefectus_virtual_bus_SOURCES = libpraefectus/virtual-bus.c
+libpraefectus_virtual_bus_LDADD = $(TEST_LIBS)

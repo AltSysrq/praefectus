@@ -156,4 +156,10 @@ const PraefNetworkIdentifierPair_t* praef_virtual_bus_address(
  */
 int praef_virtual_network_advance(praef_virtual_network*, unsigned);
 
+/**
+ * Sets the external time used to determine appropriate return values used for
+ * praef_message_bus::last_recv.
+ */
+void praef_virtual_network_set_exttime(praef_virtual_network*, praef_instant);
+
 #endif /* LIBPRAEFECTUS_VIRTUAL_BUS_H_ */
