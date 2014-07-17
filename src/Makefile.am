@@ -24,7 +24,8 @@ libpraefectus/hash-tree.c \
 libpraefectus/commitment-chain.c \
 libpraefectus/secure-random.c \
 libpraefectus/dsa.c \
-libpraefectus/virtual-bus.c
+libpraefectus/virtual-bus.c \
+libpraefectus/hl-msg.c
 
 libpraefectus_la_LIBADD = \
   libpraefectus-messages.la asn1-support/libasn1-support.la

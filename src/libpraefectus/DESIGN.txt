@@ -132,9 +132,10 @@ commit-validate rules. Semi-public messages are also passed into the
 commit-validate system.
 
 Bit 1 of the flags indicates whether the message is an asynchronous RPC. If
-set, bit 0 is meaningless, and the message will be discarded after
-processing. Every semantic message type is either RPC-like or distributable,
-and must be sent in a high-level message of the appropriate type.
+set, bit 0 is meaningless and must be 0, and the message will be discarded
+after processing. Every semantic message type is either RPC-like or
+distributable, and must be sent in a high-level message of the appropriate
+type.
 
 Other flags bits are currently reserved and must be zero.
 
