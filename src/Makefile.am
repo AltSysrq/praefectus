@@ -9,7 +9,9 @@ SUBDIRS = asn1-support libpraefectus/messages .
 
 AM_CFLAGS="-Iasn1-support"
 
-noinst_LTLIBRARIES = libpraefectus.la libpraefectus-messages.la
+noinst_LTLIBRARIES = libpraefectus.la libasn1-support.la \
+libpraefectus-messages.la
+
 libpraefectus_la_SOURCES = \
 libpraefectus/keccak/KeccakF-1600-opt64.c \
 libpraefectus/keccak/KeccakSponge.c \
@@ -28,7 +30,7 @@ libpraefectus/virtual-bus.c \
 libpraefectus/hl-msg.c
 
 libpraefectus_la_LIBADD = \
-  libpraefectus-messages.la asn1-support/libasn1-support.la
+  libpraefectus-messages.la libasn1-support.la
 
 libpraefectus_messages_la_SOURCES = \
 libpraefectus/messages/PraefByte.c \
@@ -68,3 +70,36 @@ libpraefectus/messages/PraefShort.c \
 libpraefectus/messages/PraefSignature.c
 
 libpraefectus_messages_la_CFLAGS = -w -Iasn1-support
+
+libasn1_support_la_SOURCES = \
+asn1-support/BIT_STRING.c \
+asn1-support/BOOLEAN.c \
+asn1-support/ENUMERATED.c \
+asn1-support/INTEGER.c \
+asn1-support/NULL.c \
+asn1-support/NativeEnumerated.c \
+asn1-support/NativeInteger.c \
+asn1-support/OCTET_STRING.c \
+asn1-support/VisibleString.c \
+asn1-support/asn_SEQUENCE_OF.c \
+asn1-support/asn_SET_OF.c \
+asn1-support/asn_codecs_prim.c \
+asn1-support/ber_decoder.c \
+asn1-support/ber_tlv_length.c \
+asn1-support/ber_tlv_tag.c \
+asn1-support/constr_CHOICE.c \
+asn1-support/constr_SEQUENCE.c \
+asn1-support/constr_SEQUENCE_OF.c \
+asn1-support/constr_SET_OF.c \
+asn1-support/constr_TYPE.c \
+asn1-support/constraints.c \
+asn1-support/der_encoder.c \
+asn1-support/per_decoder.c \
+asn1-support/per_encoder.c \
+asn1-support/per_opentype.c \
+asn1-support/per_support.c \
+asn1-support/xer_decoder.c \
+asn1-support/xer_encoder.c \
+asn1-support/xer_support.c
+
+libasn1_support_la_CFLAGS = -w -Iasn1-support
