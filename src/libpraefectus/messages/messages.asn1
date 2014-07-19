@@ -38,7 +38,7 @@ Messages DEFINITIONS AUTOMATIC TAGS ::= BEGIN
 -- same type.
 
 PraefDword      ::= INTEGER (0..4294967295)
-PraefShort      ::= INTEGER (0..65536)
+PraefShort      ::= INTEGER (0..65535)
 PraefByte       ::= INTEGER (0..255)
 PraefPingId     ::= PraefShort
 PraefNodeId     ::= PraefDword
