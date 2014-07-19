@@ -49,7 +49,7 @@ PraefSignature  ::= OCTET STRING SIZE(32)
 PraefHash       ::= OCTET STRING SIZE(32)
 PraefHashPrefix ::= OCTET STRING SIZE(0..32)
 PraefNetworkSalt ::= OCTET STRING SIZE(32)
-PraefAdvSerNo   ::= INTEGER (0..2147483647)
+PraefAdvSerNo   ::= PraefDword
 
 -- Used to discover latency between nodes. A node SHOULD transmit a Ping
 -- message to all other nodes at regular intervals. Upon receiving a Ping, the
