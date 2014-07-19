@@ -51,8 +51,11 @@
 #define PRAEF_HLMSG_INSTANT_OFF                         \
   (PRAEF_HLMSG_FLAGS_OFF + PRAEF_HLMSG_FLAGS_SZ)
 #define PRAEF_HLMSG_INSTANT_SZ 4
-#define PRAEF_HLMSG_SEGMENT_OFF                         \
+#define PRAEF_HLMSG_SERNO_OFF                           \
   (PRAEF_HLMSG_INSTANT_OFF + PRAEF_HLMSG_INSTANT_SZ)
+#define PRAEF_HLMSG_SERNO_SZ 4
+#define PRAEF_HLMSG_SEGMENT_OFF                         \
+  (PRAEF_HLMSG_SERNO_OFF + PRAEF_HLMSG_SERNO_SZ)
 
 struct praef_hlmsg_encoder_s {
   praef_hlmsg_type_flag type;
@@ -61,6 +64,9 @@ struct praef_hlmsg_encoder_s {
   size_t append_garbage;
   size_t garbage_bytes;
   praef_instant now;
+  praef_advisory_serial_number* serno;
+
+  praef_advisory_serial_number private_serno;
 
   /* Arrays of size garbage_bytes, which are part of the same memory
    * allocation as the encoder itself. Each message (if garbage_bytes is
@@ -185,14 +191,25 @@ praef_instant praef_hlmsg_instant(const praef_hlmsg* message) {
     (((praef_instant)data[3]) << 24);
 }
 
+praef_advisory_serial_number praef_hlmsg_serno(const praef_hlmsg* message) {
+  const unsigned char* data = message->data;
+  data += PRAEF_HLMSG_SERNO_OFF;
+
+  return
+    (((praef_advisory_serial_number)data[0]) <<  0) |
+    (((praef_advisory_serial_number)data[1]) <<  8) |
+    (((praef_advisory_serial_number)data[2]) << 16) |
+    (((praef_advisory_serial_number)data[3]) << 24);
+}
+
 const void* praef_hlmsg_signable(const praef_hlmsg* message) {
   const unsigned char* data = message->data;
 
-  return data + PRAEF_HLMSG_SEGMENT_OFF;
+  return data + PRAEF_HLMSG_FLAGS_OFF;
 }
 
 size_t praef_hlmsg_signable_sz(const praef_hlmsg* message) {
-  return message->size - PRAEF_HLMSG_SEGMENT_OFF - 1;
+  return message->size - PRAEF_HLMSG_FLAGS_OFF - 1;
 }
 
 const praef_hlmsg_segment* praef_hlmsg_first(const praef_hlmsg* message) {
@@ -203,9 +220,10 @@ const praef_hlmsg_segment* praef_hlmsg_first(const praef_hlmsg* message) {
 
 const praef_hlmsg_segment* praef_hlmsg_snext(const praef_hlmsg_segment* seg) {
   const unsigned char* data = (const unsigned char*)seg;
+  data += *data + 1;
 
   if (*data)
-    return (const praef_hlmsg_segment*)(data + *data + 1);
+    return (const praef_hlmsg_segment*)data;
   else
     return NULL;
 }
@@ -242,6 +260,7 @@ praef_hlmsg* praef_hlmsg_of(const void* data, size_t sz) {
 
 praef_hlmsg_encoder* praef_hlmsg_encoder_new(praef_hlmsg_type_flag type,
                                              praef_signator* signator,
+                                             praef_advisory_serial_number* sn,
                                              size_t mtu,
                                              size_t append_garbage) {
   praef_hlmsg_encoder* this;
@@ -264,6 +283,8 @@ praef_hlmsg_encoder* praef_hlmsg_encoder_new(praef_hlmsg_type_flag type,
   this->append_garbage = append_garbage;
   this->garbage_bytes = garbage_bytes;
   this->now = 0;
+  this->serno = sn? sn : &this->private_serno;
+  this->private_serno = 0;
   this->garbage_salt = base + sizeof(praef_hlmsg_encoder);
   this->garbage = this->garbage_salt + garbage_bytes;
   this->msg.size = 0;
@@ -327,7 +348,7 @@ int praef_hlmsg_encoder_append(praef_hlmsg* dst,
   data += this->msg.size;
   *data = num_bytes;
   memcpy(data + 1, serialised, num_bytes);
-  this->msg.size += num_bytes;
+  this->msg.size += num_bytes + 1;
   return flushed;
 }
 
@@ -348,7 +369,7 @@ void praef_hlmsg_encoder_singleton(praef_hlmsg* dst,
   data += dst->size;
   *data = num_bytes;
   memcpy(data + 1, serialised, num_bytes);
-  dst->size += num_bytes;
+  dst->size += num_bytes + 1;
 
   praef_hlmsg_encoder_finish_msg(dst, this);
 }
@@ -362,6 +383,7 @@ int praef_hlmsg_encoder_flush(praef_hlmsg* dst,
   praef_hlmsg_encoder_finish_msg(&this->msg, this);
   dst->size = this->msg.size;
   memcpy((unsigned char*)dst->data, this->msg.data, this->msg.size);
+  this->msg.size = 0;
   return 1;
 }
 
@@ -377,6 +399,7 @@ static praef_hlmsg_type_flag praef_hlmsg_type_flag_for(PraefMsg_PR present) {
   case PraefMsg_PR_htread:
   case PraefMsg_PR_htrange:
   case PraefMsg_PR_appuni:
+  case PraefMsg_PR_received:
     return praef_htf_rpc_type;
 
   case PraefMsg_PR_endorsement:
@@ -390,8 +413,14 @@ static praef_hlmsg_type_flag praef_hlmsg_type_flag_for(PraefMsg_PR present) {
   case PraefMsg_PR_vote:
     return praef_htf_committed_redistributable;
 
-  default: abort();
+  /* Not a default case so that the compiler can warn us if we forget
+   * something.
+   */
+  case PraefMsg_PR_NOTHING: abort();
   }
+
+  /* unreachable */
+  abort();
 }
 
 static void praef_hlmsg_encoder_init_msg(praef_hlmsg* message,
@@ -423,6 +452,12 @@ static void praef_hlmsg_encoder_init_msg(praef_hlmsg* message,
   data[PRAEF_HLMSG_INSTANT_OFF + 1] = this->now >>  8;
   data[PRAEF_HLMSG_INSTANT_OFF + 2] = this->now >> 16;
   data[PRAEF_HLMSG_INSTANT_OFF + 3] = this->now >> 24;
+
+  data[PRAEF_HLMSG_SERNO_OFF + 0] = *this->serno >>  0;
+  data[PRAEF_HLMSG_SERNO_OFF + 1] = *this->serno >>  8;
+  data[PRAEF_HLMSG_SERNO_OFF + 2] = *this->serno >> 16;
+  data[PRAEF_HLMSG_SERNO_OFF + 3] = *this->serno >> 24;
+  ++*this->serno;
 
   message->size = PRAEF_HLMSG_SEGMENT_OFF;
 }

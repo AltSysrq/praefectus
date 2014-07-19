@@ -49,6 +49,7 @@ PraefSignature  ::= OCTET STRING SIZE(32)
 PraefHash       ::= OCTET STRING SIZE(32)
 PraefHashPrefix ::= OCTET STRING SIZE(0..32)
 PraefNetworkSalt ::= OCTET STRING SIZE(32)
+PraefAdvSerNo   ::= INTEGER (0..2147483647)
 
 -- Used to discover latency between nodes. A node SHOULD transmit a Ping
 -- message to all other nodes at regular intervals. Upon receiving a Ping, the
@@ -171,7 +172,7 @@ PraefMsgNetworkInfo ::= SEQUENCE {
 -- process this message if and only if they do not recognise the
 -- signature. This MUST be the only message inside the high-level message
 -- envelope, and the high-level message MUST NOT have tailing garbage. The
--- instant on the high-level message MUST be zero.
+-- instant and advisory serial number on the high-level message MUST be zero.
 --
 -- Receiving nodes SHOULD accept the new node (with either a JoinEndorsement or
 -- JoinCommandeerment). The sender SHOULD NOT reattempt this exact request if
@@ -485,6 +486,47 @@ PraefMsgHtRange ::= SEQUENCE {
   mask          PraefByte
 }
 
+-- Advises the receiver of a bitmap of affirmative and negative
+-- acknowledgements of message reception from another node (which may be the
+-- receiver or some other node), according to the advisory serial numbers on
+-- the messages.
+--
+-- The receiver SHOULD check each negatively-acknowledged advisory serial
+-- number (if it still maintains an advisory serial number table for that node
+-- in that era) and forward any such messages it is aware of back to the
+-- sender, unless the messages would be hidden by the same rules governing
+-- HtRead, or if the time of the messages is later than the time of this
+-- request (since the node likely has received such a message by the time this
+-- request is received).
+--
+-- This is a faster way to redistribute lost messages than the hash-tree
+-- system, but relies on the original sender making a best effort to use
+-- advisory serial numbers optimally.
+--
+-- The RECCOMMENDED usage of this message is to broadcast one per node from
+-- which the sending node has received messages on fixed intervals, eg, 2 times
+-- per second, with a more frequent unicast to the originating node (eg, 4
+-- times per second). Generally, the receiver starts base at the first advisory
+-- serial number that has *not* been received, since affirmative
+-- acknowledgements have little effect.
+--
+-- This is an RPC-type message.
+PraefMsgReceived ::= SEQUENCE {
+  -- The node from which listed advisory serial numbers were generated
+  node          PraefNodeId,
+  -- The first advisory serial number being acknowledged
+  base          PraefAdvSerNo,
+  -- A bitmap of messages within the range that have been received. The range
+  -- is defined to be from base, inclusive, to (base + sizeof(received)*8),
+  -- exclusive, modulo 2**32. The lowest bit of the first octet corresponds to
+  -- base. A 1 bit indicates that the sender had received the given message as
+  -- of the time of this message; a 0 bit indicates that the sender had not.
+  --
+  -- (This is not a BIT STREAM or a SEQUENCE OF BOOLEAN because it produces a
+  -- more compact encoding and is simpler to work with.)
+  received      OCTET STRING SIZE(1..128)
+}
+
 -- Sends an application-defined unicast message to the receiving node.
 --
 -- This is an RPC-type message.
@@ -532,6 +574,7 @@ PraefMsg ::= CHOICE {
   htdir         PraefMsgHtDir,
   htread        PraefMsgHtRead,
   htrange       PraefMsgHtRange,
+  received      PraefMsgReceived,
   appuni        PraefMsgAppUnicast,
   route         PraefMsgRoute
 }

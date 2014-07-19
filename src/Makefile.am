@@ -33,6 +33,7 @@ libpraefectus_la_LIBADD = \
   libpraefectus-messages.la libasn1-support.la
 
 libpraefectus_messages_la_SOURCES = \
+libpraefectus/messages/PraefAdvSerNo.c \
 libpraefectus/messages/PraefByte.c \
 libpraefectus/messages/PraefDword.c \
 libpraefectus/messages/PraefHash.c \
@@ -57,6 +58,7 @@ libpraefectus/messages/PraefMsgJoinRequest.c \
 libpraefectus/messages/PraefMsgNetworkInfo.c \
 libpraefectus/messages/PraefMsgPing.c \
 libpraefectus/messages/PraefMsgPong.c \
+libpraefectus/messages/PraefMsgReceived.c \
 libpraefectus/messages/PraefMsgRoute.c \
 libpraefectus/messages/PraefMsgVote.c \
 libpraefectus/messages/PraefNetworkIdentifier.c \

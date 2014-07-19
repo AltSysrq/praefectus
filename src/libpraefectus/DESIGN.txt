@@ -113,6 +113,8 @@ A high-level message begins with the following fixed header:
 
 - 4 bytes; instant
 
+- 4 bytes; advisory serial number
+
 The public key identity hint is equal to the first two bytes of the SHA-3 of
 the signing node's public key (encoded as per the node-existence message),
 which allow the receiver to more rapidly locate the correct public key to use
@@ -141,6 +143,14 @@ Other flags bits are currently reserved and must be zero.
 
 The instant is a 32-bit little-endian integer indicating the instant at which
 this message applies, in particular towards the commit-validate system.
+
+The advisory serial number is a 32-bit little-endian integer, used to allow
+nodes to more rapidly repair network faults. Advisory serial numbers are not
+required to be unique or to follow any particular sequence. However, it is in a
+node's best interest to start advisory serial numbers from zero and increment
+by 1 for every redistributable message so as to maximise speed of message
+distribution and minimise the perceived latency of that node from the
+perspective of other nodes.
 
 After the header, extending to the end of the message, is a series of any
 number of chunks. Each chunk consists of a byte indicating its length, followed

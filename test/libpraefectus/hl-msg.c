@@ -68,11 +68,18 @@ defteardown {
   praef_verifier_delete(verifier);
 }
 
+#define SIGNABLE_OFF 34
+#define FLAG_OFF SIGNABLE_OFF
+
+#define INSTANT_1234 0x04, 0x03, 0x02, 0x01
+#define SERNO_5678 0x08, 0x07, 0x06, 0x05
 #define SIGNATURE \
   0, 0, 0, 0, 0, 0, 0, 0, \
   0, 0, 0, 0, 0, 0, 0, 0, \
   0, 0, 0, 0, 0, 0, 0, 0, \
   0, 0, 0, 0, 0, 0, 0, 0
+
+#define GENERIC_HEADER 0xEF, 0xBE, SIGNATURE, 0, INSTANT_1234, SERNO_5678
 
 static void mk_appuni_msg(const void* data, size_t sz) {
   free_submsg(submsg);
@@ -88,10 +95,7 @@ static void mk_appuni_msg_str(const char* str) {
 
 deftest(decodes_pubkey_hint) {
   unsigned char data[] = {
-    0xEF, 0xBE,
-    SIGNATURE,
-    0x00,
-    0x04, 0x03, 0x02, 0x01,
+    GENERIC_HEADER,
     0x01, 0x00,
     0x00
   };
@@ -105,10 +109,7 @@ deftest(decodes_pubkey_hint) {
 
 deftest(returns_pointer_to_signature) {
   unsigned char data[] = {
-    0xEF, 0xBE,
-    SIGNATURE,
-    0x00,
-    0x04, 0x03, 0x02, 0x01,
+    GENERIC_HEADER,
     0x01, 0x00,
     0x00
   };
@@ -124,10 +125,7 @@ deftest(returns_pointer_to_signature) {
 
 deftest(decodes_type) {
   unsigned char data[] = {
-    0xEF, 0xBE,
-    SIGNATURE,
-    0x00,
-    0x04, 0x03, 0x02, 0x01,
+    GENERIC_HEADER,
     0x01, 0x00,
     0x00
   };
@@ -139,20 +137,17 @@ deftest(decodes_type) {
   ck_assert_int_eq(praef_htf_committed_redistributable,
                    praef_hlmsg_type(&msg));
 
-  data[34] = 1;
+  data[FLAG_OFF] = 1;
   ck_assert_int_eq(praef_htf_uncommitted_redistributable,
                    praef_hlmsg_type(&msg));
-  data[34] = 2;
+  data[FLAG_OFF] = 2;
   ck_assert_int_eq(praef_htf_rpc_type,
                    praef_hlmsg_type(&msg));
 }
 
 deftest(decodes_instant) {
   unsigned char data[] = {
-    0xEF, 0xBE,
-    SIGNATURE,
-    0x00,
-    0x04, 0x03, 0x02, 0x01,
+    GENERIC_HEADER,
     0x01, 0x00,
     0x00
   };
@@ -164,12 +159,9 @@ deftest(decodes_instant) {
   ck_assert_int_eq(0x01020304, praef_hlmsg_instant(&msg));
 }
 
-deftest(identifies_signable_region) {
+deftest(decodes_serno) {
   unsigned char data[] = {
-    0xEF, 0xBE,
-    SIGNATURE,
-    0x00,
-    0x04, 0x03, 0x02, 0x01,
+    GENERIC_HEADER,
     0x01, 0x00,
     0x00
   };
@@ -178,18 +170,29 @@ deftest(identifies_signable_region) {
     .data = data
   };
 
-  ck_assert_ptr_eq(data + 34, praef_hlmsg_signable(&msg));
-  ck_assert_int_eq(sizeof(data) - 34 - 1, praef_hlmsg_signable_sz(&msg));
+  ck_assert_int_eq(0x05060708, praef_hlmsg_serno(&msg));
+}
+
+deftest(identifies_signable_region) {
+  unsigned char data[] = {
+    GENERIC_HEADER,
+    0x01, 0x00,
+    0x00
+  };
+  praef_hlmsg msg = {
+    .size = sizeof(data),
+    .data = data
+  };
+
+  ck_assert_ptr_eq(data + SIGNABLE_OFF, praef_hlmsg_signable(&msg));
+  ck_assert_int_eq(sizeof(data) - SIGNABLE_OFF - 1, praef_hlmsg_signable_sz(&msg));
 }
 
 #define C(ptr) ((unsigned char*)(ptr))
 
 deftest(traverses_segments) {
   unsigned char data[] = {
-    0xEF, 0xBE,
-    SIGNATURE,
-    0x00,
-    0x04, 0x03, 0x02, 0x01,
+    GENERIC_HEADER,
     0x02, 0xCA, 0xFE,
     0x03, 0xC0, 0xDE, 0x01,
     0x00, 0xDE, 0xAD,
@@ -239,8 +242,7 @@ deftest(validation_rejects_truncated_before_flags) {
 
 deftest(validation_rejects_with_no_segments) {
   unsigned char data[] = {
-    0, 0, SIGNATURE,
-    0, 1, 2, 3, 4
+    GENERIC_HEADER
   };
 
   msg = praef_hlmsg_of(data, sizeof(data));
@@ -249,8 +251,7 @@ deftest(validation_rejects_with_no_segments) {
 
 deftest(validation_rejects_zero_segment_message) {
   unsigned char data[] = {
-    0, 0, SIGNATURE,
-    0, 1, 2, 3, 4,
+    GENERIC_HEADER,
     0, 0xDE, 0xAD
   };
 
@@ -261,7 +262,7 @@ deftest(validation_rejects_zero_segment_message) {
 deftest(validation_rejects_invalid_flags) {
   unsigned char data[] = {
     0, 0, SIGNATURE,
-    3, 1, 2, 3, 4,
+    3, INSTANT_1234, SERNO_5678,
     1, 1
   };
 
@@ -271,8 +272,7 @@ deftest(validation_rejects_invalid_flags) {
 
 deftest(validation_rejects_oversized_segment) {
   unsigned char data[] = {
-    0, 0, SIGNATURE,
-    0, 1, 2, 3, 4,
+    GENERIC_HEADER,
     1
   };
 
@@ -282,8 +282,7 @@ deftest(validation_rejects_oversized_segment) {
 
 deftest(validation_rejects_unparsable_message) {
   unsigned char data[] = {
-    0, 0, SIGNATURE,
-    0, 1, 2, 3, 4,
+    GENERIC_HEADER,
     1, 0xFF
   };
 
@@ -296,7 +295,7 @@ deftest(can_encode_valid_singleton_messages) {
   praef_hlmsg msg = { .size = sizeof(data), .data = data };
 
   encoder = praef_hlmsg_encoder_new(
-    praef_htf_rpc_type, NULL, PRAEF_HLMSG_MTU_MIN, 0);
+    praef_htf_rpc_type, NULL, NULL, PRAEF_HLMSG_MTU_MIN, 0);
   mk_appuni_msg_str("hello world");
   praef_hlmsg_encoder_singleton(&msg, encoder, submsg);
 
@@ -309,7 +308,7 @@ deftest(can_encode_valid_composite_messages) {
   praef_hlmsg msg = { .size = sizeof(data), .data = data };
 
   encoder = praef_hlmsg_encoder_new(
-    praef_htf_rpc_type, NULL, PRAEF_HLMSG_MTU_MIN, 0);
+    praef_htf_rpc_type, NULL, NULL, PRAEF_HLMSG_MTU_MIN, 0);
   mk_appuni_msg_str("hello world");
   ck_assert(!praef_hlmsg_encoder_append(&msg, encoder, submsg));
   ck_assert(!praef_hlmsg_encoder_append(&msg, encoder, submsg));
@@ -324,12 +323,12 @@ deftest(validation_rejects_message_with_incorrect_type) {
   praef_hlmsg msg = { .size = sizeof(data), .data = data };
 
   encoder = praef_hlmsg_encoder_new(
-    praef_htf_rpc_type, NULL, PRAEF_HLMSG_MTU_MIN, 0);
+    praef_htf_rpc_type, NULL, NULL, PRAEF_HLMSG_MTU_MIN, 0);
   mk_appuni_msg_str("hello world");
   praef_hlmsg_encoder_singleton(&msg, encoder, submsg);
 
   ck_assert(praef_hlmsg_is_valid(&msg));
-  data[34] = 0;
+  data[FLAG_OFF] = 0;
   ck_assert(!praef_hlmsg_is_valid(&msg));
 }
 deftest(validation_rejects_truncated_message) {
@@ -338,7 +337,7 @@ deftest(validation_rejects_truncated_message) {
   praef_hlmsg* truncated;
 
   encoder = praef_hlmsg_encoder_new(
-    praef_htf_rpc_type, NULL, PRAEF_HLMSG_MTU_MIN, 0);
+    praef_htf_rpc_type, NULL, NULL, PRAEF_HLMSG_MTU_MIN, 0);
   mk_appuni_msg_str("hello world");
   praef_hlmsg_encoder_singleton(&msg, encoder, submsg);
 
@@ -362,7 +361,7 @@ deftest(doesnt_overflow_message_data_array) {
   msg.size = PRAEF_HLMSG_MTU_MIN+1;
 
   encoder = praef_hlmsg_encoder_new(
-    praef_htf_rpc_type, NULL, PRAEF_HLMSG_MTU_MIN, 0);
+    praef_htf_rpc_type, NULL, NULL, PRAEF_HLMSG_MTU_MIN, 0);
 
   for (second_size = 1; second_size <= sizeof(scratch); ++second_size) {
     msg.size = PRAEF_HLMSG_MTU_MIN+1;
@@ -397,6 +396,7 @@ deftest(encoding_is_idempotent_with_signator_and_no_garbage_bytes) {
   unsigned char data[2][PRAEF_HLMSG_MTU_MIN+1];
   praef_hlmsg msg;
   size_t first_size;
+  praef_advisory_serial_number serno = 0;
 
   memset(data[0], 0, PRAEF_HLMSG_MTU_MIN+1);
   memset(data[1], ~0, PRAEF_HLMSG_MTU_MIN+1);
@@ -404,11 +404,13 @@ deftest(encoding_is_idempotent_with_signator_and_no_garbage_bytes) {
   mk_appuni_msg_str("hello world");
 
   encoder = praef_hlmsg_encoder_new(
-    praef_htf_rpc_type, signator, PRAEF_HLMSG_MTU_MIN, 0);
+    praef_htf_rpc_type, signator, &serno, PRAEF_HLMSG_MTU_MIN, 0);
   msg.data = data[0];
   msg.size = PRAEF_HLMSG_MTU_MIN+1;
   praef_hlmsg_encoder_singleton(&msg, encoder, submsg);
   first_size = msg.size;
+
+  serno = 0;
   msg.data = data[1];
   msg.size = PRAEF_HLMSG_MTU_MIN+1;
   praef_hlmsg_encoder_singleton(&msg, encoder, submsg);
@@ -421,6 +423,7 @@ deftest(encoding_is_nonidempotent_with_garbage_bytes) {
   unsigned char data[2][PRAEF_HLMSG_MTU_MIN+1];
   praef_hlmsg msg;
   size_t first_size;
+  praef_advisory_serial_number serno = 0;
 
   memset(data[0], 0, PRAEF_HLMSG_MTU_MIN+1+8);
   memset(data[1], 0, PRAEF_HLMSG_MTU_MIN+1+8);
@@ -428,11 +431,13 @@ deftest(encoding_is_nonidempotent_with_garbage_bytes) {
   mk_appuni_msg_str("hello world");
 
   encoder = praef_hlmsg_encoder_new(
-    praef_htf_rpc_type, signator, PRAEF_HLMSG_MTU_MIN+8, 8);
+    praef_htf_rpc_type, signator, &serno, PRAEF_HLMSG_MTU_MIN+8, 8);
   msg.data = data[0];
   msg.size = PRAEF_HLMSG_MTU_MIN+1+8;
   praef_hlmsg_encoder_singleton(&msg, encoder, submsg);
   first_size = msg.size;
+
+  serno = 0;
   msg.data = data[1];
   msg.size = PRAEF_HLMSG_MTU_MIN+1+8;
   praef_hlmsg_encoder_singleton(&msg, encoder, submsg);
@@ -446,7 +451,7 @@ deftest(produces_message_with_valid_signature) {
   praef_hlmsg msg = { .data = data, .size = sizeof(data) };
 
   encoder = praef_hlmsg_encoder_new(
-    praef_htf_rpc_type, signator, PRAEF_HLMSG_MTU_MIN+8, 8);
+    praef_htf_rpc_type, signator, NULL, PRAEF_HLMSG_MTU_MIN+8, 8);
   mk_appuni_msg_str("hello world");
   praef_hlmsg_encoder_singleton(&msg, encoder, submsg);
 
@@ -464,10 +469,9 @@ deftest(flipping_any_bit_invalidates_signature) {
   unsigned byte, bit;
 
   encoder = praef_hlmsg_encoder_new(
-    praef_htf_rpc_type, signator, PRAEF_HLMSG_MTU_MIN+8, 8);
+    praef_htf_rpc_type, signator, NULL, PRAEF_HLMSG_MTU_MIN+8, 8);
   mk_appuni_msg_str("hello world");
   praef_hlmsg_encoder_singleton(&msg, encoder, submsg);
-
 
   for (byte = 0; byte < msg.size - 1; ++byte) {
     for (bit = 0; bit < 8; ++bit) {
@@ -481,4 +485,40 @@ deftest(flipping_any_bit_invalidates_signature) {
       data[byte] ^= (1 << bit);
     }
   }
+}
+
+deftest(private_serial_number_increments_per_hlmsg) {
+  unsigned char data[PRAEF_HLMSG_MTU_MIN+1];
+  praef_hlmsg msg = { .data = data, .size = sizeof(data) };
+  unsigned i;
+
+  encoder = praef_hlmsg_encoder_new(
+    praef_htf_rpc_type, NULL, NULL, PRAEF_HLMSG_MTU_MIN, 0);
+  mk_appuni_msg_str("foo");
+
+  for (i = 0; i < 8; ++i) {
+    msg.size = sizeof(data);
+    ck_assert(!praef_hlmsg_encoder_append(&msg, encoder, submsg));
+    ck_assert(!praef_hlmsg_encoder_append(&msg, encoder, submsg));
+    ck_assert(praef_hlmsg_encoder_flush(&msg, encoder));
+
+    ck_assert_int_eq(i, praef_hlmsg_serno(&msg));
+  }
+}
+
+deftest(shared_serial_number_increments_shared_value_per_hlmsg) {
+  unsigned char data[PRAEF_HLMSG_MTU_MIN+1];
+  praef_hlmsg msg = { .data = data, .size = sizeof(data) };
+  praef_advisory_serial_number serno;
+
+  encoder = praef_hlmsg_encoder_new(
+    praef_htf_rpc_type, NULL, &serno, PRAEF_HLMSG_MTU_MIN, 0);
+  mk_appuni_msg_str("foo");
+
+  serno = 42;
+  ck_assert(!praef_hlmsg_encoder_append(&msg, encoder, submsg));
+  ck_assert(!praef_hlmsg_encoder_append(&msg, encoder, submsg));
+  ck_assert(praef_hlmsg_encoder_flush(&msg, encoder));
+  ck_assert_int_eq(43, serno);
+  ck_assert_int_eq(42, praef_hlmsg_serno(&msg));
 }
