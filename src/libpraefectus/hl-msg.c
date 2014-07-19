@@ -95,6 +95,7 @@ int praef_hlmsg_is_valid(const praef_hlmsg* message) {
   praef_hlmsg_type_flag expected_type;
   PraefMsg_t deserialised, * deserialised_ptr = & deserialised;;
   asn_dec_rval_t decode_result;
+  int ok;
 
   /* Needs to have at least the base header, plus one segment (which cannot be
    * empty).
@@ -134,18 +135,17 @@ int praef_hlmsg_is_valid(const praef_hlmsg* message) {
     decode_result = uper_decode_complete(
       NULL, &asn_DEF_PraefMsg, (void**)&deserialised_ptr,
       data+offset+1, data[offset]);
-    /* The only field of the deserialised structure we care about is the
-     * present entry on the top-level choice, which is allocated on the stack
-     * and not freed by this call, so just free everything else now for the
-     * sake of simplicity.
-     */
+
+    ok = (RC_OK == decode_result.code);
+    if (ok)
+      ok = (expected_type == praef_hlmsg_type_flag_for(deserialised.present));
+    if (ok)
+      ok = !(*asn_DEF_PraefMsg.check_constraints)(
+        &asn_DEF_PraefMsg, &deserialised, NULL, NULL);
+
     (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, &deserialised, 1);
 
-    if (RC_OK != decode_result.code)
-      return 0;
-
-    if (expected_type != praef_hlmsg_type_flag_for(deserialised.present))
-      return 0;
+    if (!ok) return 0;
   }
 
   /* Everything is valid */
