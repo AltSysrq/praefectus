@@ -181,7 +181,9 @@ PraefMsgNetworkInfo ::= SEQUENCE {
 -- node known to be a part of the system.
 --
 -- Receiving nodes SHOULD ignore this message if they have not recently
--- received a GetNetworkInfo message from the same return address.
+-- received a GetNetworkInfo message from the same return address, unless the
+-- application is designed to bypass the GetNetworkInfo/NetworkInfo exchange by
+-- using a more secure method.
 --
 -- Acceptance of the new node is performed by broadcasting a JoinEndorsement or
 -- JoinCommandeerment message to all nodes, including the new one.
@@ -192,7 +194,25 @@ PraefMsgJoinRequest ::= SEQUENCE {
   -- containing high-level message envelope MUST be valid by this signature.
   publickey     PraefPubkey,
   -- The network address pair with which this node will communicate.
-  identifier    PraefNetworkIdentifierPair
+  identifier    PraefNetworkIdentifierPair,
+  -- An optional application-defined authentication structure. This can be used
+  -- for purposes such as password-protected LAN games or secured Internet
+  -- games.
+  --
+  -- For example, a password-protected lan game could be effected by embedding
+  -- the following structure within this field:
+  --
+  -- SEQUENCE {
+  --   hmac     OCTET STRING SIZE(32)
+  -- }
+  --
+  -- Where hmac is the HMAC of the node's public key and the secret password.
+  --
+  -- If the application-defined semantics reject this value, the node SHALL NOT
+  -- be accepted into the system, and the node that received this request MUST
+  -- NOT send a JoinEndorsement or JoinCommandeerment message to any
+  -- peer.
+  auth          OCTET STRING SIZE(1..64) OPTIONAL
 }
 
 PraefJoinAccept ::= SEQUENCE {
@@ -212,6 +232,9 @@ PraefJoinAccept ::= SEQUENCE {
 -- In this model of joining, the transimitter allocates one of a small pool of
 -- node ids which it is allowed to endorse and assigns it to the new
 -- node. Nodes SHOULD prefer endorsement over commandeerment.
+--
+-- This SHOULD be the only message within the containing high-level message,
+-- and the containing high-level message MUST NOT exceed 128 bytes in length.
 --
 -- This is an uncommitted redistributable message.
 PraefMsgJoinEndorsement ::= SEQUENCE {
@@ -241,10 +264,56 @@ PraefMsgJoinEndorsement ::= SEQUENCE {
 -- timestamp of the envelope (a 4-byte little-endian integer) followed by a
 -- zero bit. If this would produce an id of 0, the value 2 is used instead.
 --
+-- This SHOULD be the only message within the containing high-level message,
+-- and the containing high-level message MUST NOT exceed 128 bytes in length.
+--
 -- This is an uncommitted redistributable message.
 PraefMsgJoinCommandeerment ::= SEQUENCE {
   -- Information on the JoinRequest being accepted.
   accepted      PraefJoinAccept
+}
+
+-- Requests the contents of a high-level message which represented the
+-- acceptance of a new node into the system.
+--
+-- The receiver SHOULD immediately answer with an appropriate JoinTreeEntry.
+--
+-- This is normally only used by newly-joined nodes to quickly discover all the
+-- public keys.
+--
+-- This is an RPC-type message.
+PraefMsgJoinTree ::= SEQUENCE {
+  -- The id of the node which hypothetically accepted a new node into the
+  -- system.
+  node          PraefNodeId,
+  -- The offset of the message within the receiver's list of messages from the
+  -- given node which contained an acceptance of another node. No particular
+  -- sequence is defined, but it SHOULD be consistent for any given node,
+  -- starting at zero and increasing by one for each message.
+  offset        PraefDword
+}
+
+-- A response to a JoinTree request.
+--
+-- Spurious JoinTreeEntry messages MUST be silently ignored.
+--
+-- This is an RPC-type request.
+PraefMsgJoinTreeEntry ::= SEQUENCE {
+  -- The node id sent in the corresponding JoinTree message.
+  node          PraefNodeId,
+  -- The offset sent in the corresponding JoinTree message.
+  offset        PraefDword,
+  -- An advisory number indicating how many keys the receiver might expect to
+  -- receive from the sender via JoinTree traversal. The intent of this field
+  -- is for progress reporting.
+  nkeys         PraefDword,
+  -- A high-level message which SHOULD contain an acccptance by the input node
+  -- of another node. Note that compliant JoinEndorsement and
+  -- JoinCommandeerment messages always fit within this field.
+  --
+  -- The absence of this field indicates that offset is beyond the end of the
+  -- list.
+  data          OCTET STRING SIZE(1..128) OPTIONAL
 }
 
 -- Votes to set a a status bit on a node.
@@ -503,7 +572,7 @@ PraefMsgHtRange ::= SEQUENCE {
 -- system, but relies on the original sender making a best effort to use
 -- advisory serial numbers optimally.
 --
--- The RECCOMMENDED usage of this message is to broadcast one per node from
+-- The RECOMMENDED usage of this message is to broadcast one per node from
 -- which the sending node has received messages on fixed intervals, eg, 2 times
 -- per second, with a more frequent unicast to the originating node (eg, 4
 -- times per second). Generally, the receiver starts base at the first advisory
@@ -574,6 +643,8 @@ PraefMsg ::= CHOICE {
   htdir         PraefMsgHtDir,
   htread        PraefMsgHtRead,
   htrange       PraefMsgHtRange,
+  jointree      PraefMsgJoinTree,
+  jtentry       PraefMsgJoinTreeEntry,
   received      PraefMsgReceived,
   appuni        PraefMsgAppUnicast,
   route         PraefMsgRoute

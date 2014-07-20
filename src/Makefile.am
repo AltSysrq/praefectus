@@ -55,6 +55,8 @@ libpraefectus/messages/PraefMsgHtRead.c \
 libpraefectus/messages/PraefMsgJoinCommandeerment.c \
 libpraefectus/messages/PraefMsgJoinEndorsement.c \
 libpraefectus/messages/PraefMsgJoinRequest.c \
+libpraefectus/messages/PraefMsgJoinTree.c \
+libpraefectus/messages/PraefMsgJoinTreeEntry.c \
 libpraefectus/messages/PraefMsgNetworkInfo.c \
 libpraefectus/messages/PraefMsgPing.c \
 libpraefectus/messages/PraefMsgPong.c \

@@ -247,3 +247,62 @@ this message.
 
 An endorsement messages is not considered valid if the endorser cannot endorse
 the specified node id.
+
+Node Join Proceedure
+--------------------
+
+(This section is strictly recommendational, and primarily describes the
+reference implementation. This section also speaks as if all nodes are always
+fully cooperating; see message definitions for correct handling of improper
+behaviour.)
+
+In order to join a system, a prospective node must first obtain basic
+information about the system in an application-specific way. This information
+includes the network address of at least one existing node in the system as
+well as any authentication details needed.
+
+The node then chooses one of the existing system members and sends a
+GetNetworkInfo message to it (possibly with assistance of triangular routing to
+overcome NATs if need be). The node which receives this request will respond
+with a NetworkInfo message which provides the final pieces of information that
+the node will need (ie, the public key of the bootstrap node and the
+system-specific salt). This part of the process is vulnerable to a
+Brain-in-a-Jar attack since the node that services the GetNetworkInfo call can
+create a different public key and salt for the node, putting it into its own
+isolated world. Applications wishing to be secure against this attack should
+distribute the NetworkInfo along with the other application-specific
+information, bypassing this exchange. (This assumes, of course, that that
+"other information" is also secure.)
+
+To begin the joining process proper, the node sends a JoinRequest message to
+the same node it got the NetworkInfo from (or any node if the application does
+not use that step). The JoinRequest contains sufficient information to prove
+the node has authorisation to enter the system (if the application defines any)
+and provides the network and key information for the node. The node awaits a
+JoinEndorsement or JoinCommandeerment, which provides the node with a probably
+unique id within the system.
+
+Once the node has an id, it connects to other nodes both by Route messages and
+optionally by a side-channel from the application (eg, via the same method it
+discovered the initial node).
+
+The new node first begins using the JoinTree message to quickly learn the
+public keys of all nodes that have ever been in the system (which it needs in
+order to be able to retain other existing messages), starting from the
+bootstrap node, whose public key it got from the NetworkInfo message. To
+improve margin of safety, nodes will also traverse the JoinTree of any new
+nodes to whom the establish a route before they gain the GRANT status.
+
+Once the join trees have been walked, the node will begin walking the hash
+trees of the other nodes beginning with distributed random range queries
+followed by a direct tree walk.
+
+At this point, the new node will have a fairly good idea of what the current
+system time is. Once no new messages too far in the past have been received,
+the node decides it is ready to fully participate, and begins voting to give
+itself the GRANT status. (Though this vote carries no weight itself,
+cooperating nodes will agree to it anyway.) Once the GRANT status is obtained,
+it sends a commit containing the vote messages it sent so far, extending up to
+its belief of the current system time. The node is now a fully functional
+member of the system.
+

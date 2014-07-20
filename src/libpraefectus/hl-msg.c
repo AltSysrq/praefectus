@@ -400,6 +400,8 @@ static praef_hlmsg_type_flag praef_hlmsg_type_flag_for(PraefMsg_PR present) {
   case PraefMsg_PR_htrange:
   case PraefMsg_PR_appuni:
   case PraefMsg_PR_received:
+  case PraefMsg_PR_jointree:
+  case PraefMsg_PR_jtentry:
     return praef_htf_rpc_type;
 
   case PraefMsg_PR_endorsement:
