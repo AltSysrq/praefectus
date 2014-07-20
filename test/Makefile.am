@@ -13,6 +13,7 @@ AM_CFLAGS = $(CHECK_CFLAGS) -I$(top_builddir)/src \
 
 TEST_LIBS = libtestcore.la $(CHECK_LIBS) ../src/libpraefectus.la
 
+noinst_PROGRAMS = libpraefectus/clock-sim
 check_PROGRAMS = $(TESTS)
 check_LTLIBRARIES = libtestcore.la
 libtestcore_la_SOURCES = test.c
@@ -36,3 +37,6 @@ libpraefectus_hl_msg_SOURCES = libpraefectus/hl-msg.c
 libpraefectus_hl_msg_LDADD = $(TEST_LIBS)
 libpraefectus_clock_SOURCES = libpraefectus/clock.c
 libpraefectus_clock_LDADD = $(TEST_LIBS)
+
+libpraefectus_clock_sim_SOURCES = libpraefectus/clock-sim.c
+libpraefectus_clock_sim_LDADD = ../src/libpraefectus.la
