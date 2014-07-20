@@ -97,6 +97,11 @@ int praef_hlmsg_is_valid(const praef_hlmsg* message) {
   asn_dec_rval_t decode_result;
   int ok;
 
+  /* Abort if not 0-terminated, as that is indicative of a serious application
+   * bug rather than a malformed message sent over the network.
+   */
+  if (!message->size || data[message->size-1]) abort();
+
   /* Needs to have at least the base header, plus one segment (which cannot be
    * empty).
    */
@@ -142,6 +147,19 @@ int praef_hlmsg_is_valid(const praef_hlmsg* message) {
     if (ok)
       ok = !(*asn_DEF_PraefMsg.check_constraints)(
         &asn_DEF_PraefMsg, &deserialised, NULL, NULL);
+
+    if (ok) {
+      switch (deserialised.present) {
+      case PraefMsg_PR_endorsement:
+      case PraefMsg_PR_commandeer:
+        ok &= (message->size <= 129 /* plus one for extra trailing zero */);
+        break;
+
+      default:
+        /* No additional constraints imposed by this packet type */
+        break;
+      }
+    }
 
     (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, &deserialised, 1);
 

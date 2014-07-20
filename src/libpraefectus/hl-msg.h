@@ -113,7 +113,9 @@ typedef enum {
  *
  * This checks both that the high-level message itself is sensible, and that
  * all the messages it contains can be decoded and are of the correct type (wrt
- * the high-level messages type).
+ * the high-level messages type), as well as that any constraints (both
+ * internal and applying to the hlmsg itself) imposed by the contained messages
+ * are met.
  *
  * If the constraint that the final byte of data is zero is violated, this
  * aborts the process instead, since it is indicative of a serious internal bug

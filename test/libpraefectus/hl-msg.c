@@ -331,6 +331,7 @@ deftest(validation_rejects_message_with_incorrect_type) {
   data[FLAG_OFF] = 0;
   ck_assert(!praef_hlmsg_is_valid(&msg));
 }
+
 deftest(validation_rejects_truncated_message) {
   unsigned char data[PRAEF_HLMSG_MTU_MIN+1];
   praef_hlmsg msg = { .size = sizeof(data), .data = data };
@@ -346,6 +347,107 @@ deftest(validation_rejects_truncated_message) {
   ck_assert(!praef_hlmsg_is_valid(truncated));
 
   free(truncated);
+}
+
+deftest(validation_rejects_oversized_JoinEndorsement) {
+  unsigned char data[PRAEF_HLMSG_MTU_MIN+1] = { 0 };
+  praef_hlmsg msg = { .size = sizeof(data), .data = data };
+  PraefMsg_t endorsement = {
+    .present = PraefMsg_PR_endorsement,
+    .choice = {
+      .endorsement = {
+        .id = 3,
+        .accepted = {
+          .signature = { 0 },
+          .request = {
+            .auth = NULL,
+            .publickey = { 0 },
+            .identifier = {
+              .internet = NULL,
+              .intranet = {
+                .port = 31337,
+                .address = {
+                  .present = PraefIpAddress_PR_ipv4,
+                  .choice = {
+                    .ipv4 = { 0 },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+
+  OCTET_STRING_fromBuf(&endorsement.choice.endorsement.accepted.signature,
+                       (char*)data, PRAEF_SIGNATURE_SIZE);
+  OCTET_STRING_fromBuf(&endorsement.choice.endorsement
+                       .accepted.request.publickey,
+                       (char*)data, PRAEF_PUBKEY_SIZE);
+  OCTET_STRING_fromBuf(&endorsement.choice.endorsement
+                       .accepted.request.identifier.intranet
+                       .address.choice.ipv4,
+                       (char*)data, 4);
+
+  encoder = praef_hlmsg_encoder_new(
+    praef_htf_uncommitted_redistributable, NULL, NULL, PRAEF_HLMSG_MTU_MIN, 0);
+  while (!praef_hlmsg_encoder_append(&msg, encoder, &endorsement));
+
+  ck_assert_int_gt(msg.size, 129);
+  ck_assert(!praef_hlmsg_is_valid(&msg));
+
+  (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, &endorsement, 1);
+}
+
+deftest(validation_rejects_oversized_JoinCommandeerment) {
+  unsigned char data[PRAEF_HLMSG_MTU_MIN+1] = { 0 };
+  praef_hlmsg msg = { .size = sizeof(data), .data = data };
+  PraefMsg_t endorsement = {
+    .present = PraefMsg_PR_commandeer,
+    .choice = {
+      .commandeer = {
+        .accepted = {
+          .signature = { 0 },
+          .request = {
+            .auth = NULL,
+            .publickey = { 0 },
+            .identifier = {
+              .internet = NULL,
+              .intranet = {
+                .port = 31337,
+                .address = {
+                  .present = PraefIpAddress_PR_ipv4,
+                  .choice = {
+                    .ipv4 = { 0 },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+
+  OCTET_STRING_fromBuf(&endorsement.choice.endorsement.accepted.signature,
+                       (char*)data, PRAEF_SIGNATURE_SIZE);
+  OCTET_STRING_fromBuf(&endorsement.choice.endorsement
+                       .accepted.request.publickey,
+                       (char*)data, PRAEF_PUBKEY_SIZE);
+  OCTET_STRING_fromBuf(&endorsement.choice.endorsement
+                       .accepted.request.identifier.intranet
+                       .address.choice.ipv4,
+                       (char*)data, 4);
+
+  encoder = praef_hlmsg_encoder_new(
+    praef_htf_uncommitted_redistributable, NULL, NULL, PRAEF_HLMSG_MTU_MIN, 0);
+  while (!praef_hlmsg_encoder_append(&msg, encoder, &endorsement));
+
+  ck_assert_int_gt(msg.size, 129);
+  ck_assert(!praef_hlmsg_is_valid(&msg));
+
+  (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, &endorsement, 1);
 }
 
 deftest(doesnt_overflow_message_data_array) {
