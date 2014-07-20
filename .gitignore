@@ -36,3 +36,4 @@ gen-dsa-parms
 test/libpraefectus/dsa
 test/libpraefectus/virtual-bus
 test/libpraefectus/hl-msg
+test/libpraefectus/clock
