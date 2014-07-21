@@ -5,7 +5,7 @@ TESTS = libpraefectus/core libpraefectus/core-fullstack \
 libpraefectus/transactor libpraefectus/metatransactor \
 libpraefectus/hash-tree libpraefectus/commitment-chain \
 libpraefectus/dsa libpraefectus/virtual-bus \
-libpraefectus/hl-msg libpraefectus/clock
+libpraefectus/hl-msg libpraefectus/clock libpraefectus/dynamic
 AM_CFLAGS = $(CHECK_CFLAGS) -I$(top_builddir)/src \
   -I$(top_builddir)/src/asn1-support -Wall -Wextra \
   -Wno-unused-parameter -Wno-long-long -Wno-missing-field-initializers \
@@ -37,6 +37,8 @@ libpraefectus_hl_msg_SOURCES = libpraefectus/hl-msg.c
 libpraefectus_hl_msg_LDADD = $(TEST_LIBS)
 libpraefectus_clock_SOURCES = libpraefectus/clock.c
 libpraefectus_clock_LDADD = $(TEST_LIBS)
+libpraefectus_dynamic_SOURCES = libpraefectus/dynamic.c
+libpraefectus_dynamic_LDADD = $(TEST_LIBS)
 
 libpraefectus_clock_sim_SOURCES = libpraefectus/clock-sim.c
 libpraefectus_clock_sim_LDADD = ../src/libpraefectus.la

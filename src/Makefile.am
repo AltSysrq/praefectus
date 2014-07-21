@@ -28,7 +28,8 @@ libpraefectus/secure-random.c \
 libpraefectus/dsa.c \
 libpraefectus/virtual-bus.c \
 libpraefectus/hl-msg.c \
-libpraefectus/clock.c
+libpraefectus/clock.c \
+libpraefectus/dynamic.c
 
 libpraefectus_la_LIBADD = \
   libpraefectus-messages.la libasn1-support.la
