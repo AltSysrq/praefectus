@@ -98,10 +98,10 @@ typedef enum {
   praef_ss_partitioned,
   /**
    * Indicates that the local node has gained the DENY status, preventing it
-   * from taking further meaningful action. This is almost a permanent and
-   * fatal condition, though applications may wish to wait a short while to see
-   * if it gets cleared, which can happen due to retroactive status changes of
-   * other nodes in some circumstances.
+   * from taking further meaningful action. This is almost always a permanent
+   * and fatal condition, though applications may wish to wait a short while to
+   * see if it gets cleared, which can happen due to retroactive status changes
+   * of other nodes in some circumstances.
    */
   praef_ss_kicked,
   /**
