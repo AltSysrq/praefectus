@@ -214,4 +214,22 @@ void praef_system_disconnect(praef_system*);
  */
 praef_system_status praef_system_advance(praef_system*, unsigned);
 
+
+/**
+ * Configures the obsolescence interval of the clock on the given system.
+ *
+ * The default is 5*std_latency.
+ *
+ * @see praef_clock::obsolescence_interval
+ */
+void praef_system_conf_clock_obsolescence_interval(praef_system*, unsigned);
+/**
+ * Configures the tolerance of the clock on the given system.
+ *
+ * The default is std_latency.
+ *
+ * @see praef_clock::tolerance
+ */
+void praef_system_conf_clock_tolerance(praef_system*, unsigned);
+
 #endif /* LIBPRAEFECTUS_SYSTEM_H_ */
