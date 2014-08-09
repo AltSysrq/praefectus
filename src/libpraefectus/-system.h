@@ -72,6 +72,7 @@ struct praef_extnode_s {
 
   praef_clock_source clock_source;
   praef_comchain* comchain;
+  unsigned latency;
 
   RB_ENTRY(praef_extnode_s) map;
 };
