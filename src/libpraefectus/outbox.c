@@ -89,15 +89,20 @@ static inline void praef_rc_hlmsg_decref(praef_rc_hlmsg* this) {
 praef_outbox* praef_outbox_new(praef_hlmsg_encoder* enc,
                                unsigned mtu) {
   praef_outbox* this = malloc(sizeof(praef_outbox));
-  if (!this) return NULL;
+  if (!this) {
+    praef_hlmsg_encoder_delete(enc);
+    return NULL;
+  }
 
   this->enc = enc;
   this->mtu = mtu;
+  this->now = 0;
   SLIST_INIT(&this->subscribers);
 
   this->next = praef_rc_hlmsg_new(mtu);
   if (!this->next) {
     free(this);
+    praef_hlmsg_encoder_delete(enc);
     return NULL;
   }
 
@@ -218,6 +223,7 @@ static int praef_mq_enqueue(praef_mq* this, praef_rc_hlmsg* msg) {
 
     memset(new_entries + this->pending_cap, 0,
            this->pending_cap * sizeof(praef_mq_entry));
+    this->pending = new_entries;
     this->pending_ix = this->pending_cap;
     this->pending_cap *= 2;
   }
