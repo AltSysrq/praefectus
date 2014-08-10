@@ -157,6 +157,7 @@ typedef enum {
  * that this pointer remains valid for the lifetime of the system.
  * @param bus The message bus to use for communication. The application must
  * ensure that this pointer remains valid for the lifetime of the system.
+ * @param self The network identifier of the local node.
  * @param std_latency The "standard latency" of the underlying network, in
  * terms of instants. This is used (along with profile) to set the default
  * configuration of the system. This should be the latency that the application
@@ -168,14 +169,17 @@ typedef enum {
  * message-bus abstraction.
  * @param profile The profile to use to calculate default configuration based
  * on std_latency.
- * @param self The network identifier of the local node.
+ * @param mtu The MTU for message encoders. This needs to be at least
+ * PRAEF_HLMSG_MTU_MIN+8.
  * @return The new system, or NULL if insufficient memory was available.
  */
 praef_system* praef_system_new(praef_app* app,
                                praef_message_bus* bus,
+                               const PraefNetworkIdentifierPair_t* self,
                                unsigned std_latency,
                                praef_system_profile profile,
-                               const PraefNetworkIdentifierPair_t* self);
+                               unsigned mtu);
+
 /**
  * Frees all memory held by the given praef_system.
  *
@@ -231,5 +235,104 @@ void praef_system_conf_clock_obsolescence_interval(praef_system*, unsigned);
  * @see praef_clock::tolerance
  */
 void praef_system_conf_clock_tolerance(praef_system*, unsigned);
+
+/**
+ * Configures the commit interval, in instants, of the given system.
+ *
+ * Smaller values reduce latency effects but increase bandwidth usage.
+ *
+ * The default is std_latency/2, or 1, whichever is greater.
+ */
+void praef_system_conf_commit_interval(praef_system*, unsigned);
+/**
+ * Configures the maximum commit lag, in instants, of the given system.
+ *
+ * The local node will begin voting to DENY nodes with GRANT whose commit
+ * threshold lags behind the current time by more than this number of
+ * instants. Since commits are simply single messages, fairly low latencies can
+ * usually be expected. Larger values are more forgiving of high-latency nodes,
+ * but increase the possible latency effects proportionally.
+ *
+ * The default is std_latency*8.
+ */
+void praef_system_conf_max_commit_lag(praef_system*, unsigned);
+/**
+ * Configures the maximum validated lag, in instants, of the given system.
+ *
+ * The local node will begin voting to DENY nodes with GRANT whose validated
+ * threshold lags behind the current time by more than this number of
+ * instants. Since many messages may be part of a commit, greater latencies
+ * than commits can usually be expected. Larger values are more forgiving of
+ * high-latency nodes, but increase the possible latency effects
+ * proportionally.
+ *
+ * The default is std_latency*16.
+ */
+void praef_system_conf_max_validated_lag(praef_system*, unsigned);
+/**
+ * Configures the laxness of the commited threshold of a node as it applies to
+ * that node's ability to see committed-redistributable messages.
+ *
+ * This parameter is designed to mitigate latency effects incurred by other
+ * nodes' networks. It allows nodes to see an additional number of instants
+ * equal to this value beyond the commit threshold, even after adjusting for
+ * the local node's estimated intrinsic latency. Larger values reduce latency
+ * effects; if the sum of this value and the local node's estimated intrinsic
+ * latency (after adjustment via
+ * praef_system_conf_self_commit_lag_compensation()) is greater than or equal
+ * to the true latency between two nodes, the effects of latency from the local
+ * node to the destination node are completely reduced to that of a one-way
+ * trip in the absence of packet loss.
+ *
+ * Note that any non-zero value for this field makes it possible for other
+ * nodes to see beyond their commit threshold, which could permit them to make
+ * decisions based upon information that should be in the future for them.
+ *
+ * Typically, this should be set to half the expected one-way latency plus any
+ * delay that could be incurred by praef_system_conf_commit_interval(),
+ * provided that the advance knowledge nodes could gain is not useful in that
+ * time interval.
+ *
+ * For the lax profile, this defaults to std_latency. For the strict profile,
+ * it defaults to 0.
+ */
+void praef_system_conf_commit_lag_laxness(praef_system*, unsigned);
+/**
+ * Configures a fraction by which to multiply the estimated latency incurred by
+ * the local node's network in order to compensate for commit lag.
+ *
+ * The local node maintains an estimate of how much latency its own local
+ * network incurs when talking to other nodes. This can be thought of as
+ * one-quarter the minimum round-trip time to any other node. This estimate is
+ * multiplied by some fraction to determine how much to adjust the message
+ * visibility for other nodes based on their commit thresholds.
+ *
+ * Larger values reduce the effects of latency; together with
+ * praef_system_conf_commit_lag_laxness(), they can be reduced to that of a
+ * one-way trip in the absence of packet loss.
+ *
+ * Note that any non-zero value makes it possible for other nodes to see beyond
+ * their commit threshold. However, assuming that no node has an exceptionally
+ * low latency to the local node which it is able to hide, any node wishing to
+ * do so must necessarily delay comitting for the true one-way latency between
+ * the nodes, which still causes it to be deprived of further information. In
+ * most cases, this is a greater disadvantage than anything provided by the
+ * future information.
+ *
+ * For the vast majority of applications, 1/1 is reasonable, though values up
+ * to 2/1 may occasionally be desirable to further mitigate latency. The
+ * decesion of what this value should be should be based upon how useful
+ * future information is versus the additional latency that would be incurred
+ * in exchange for acquiring it.
+ *
+ * For the lax profile, this defaults to 1/1. For the strict profile, it
+ * defaults to 0/1.
+ *
+ * @param numerator The numerator of the fraction. This must be below 65536.
+ * @param denominator The denominator of the fraction. This must must be
+ * non-zero.
+ */
+void praef_system_conf_self_commit_lag_compensation(
+  praef_system*, unsigned numerator, unsigned denominator);
 
 #endif /* LIBPRAEFECTUS_SYSTEM_H_ */

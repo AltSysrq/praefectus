@@ -34,6 +34,7 @@
 #include "common.h"
 #include "system.h"
 #include "-system.h"
+#include "-system-commgr.h"
 
 static int praef_clone_net_id(PraefNetworkIdentifierPair_t*,
                               const PraefNetworkIdentifierPair_t*);
@@ -50,9 +51,10 @@ int praef_compare_extnode(const praef_extnode* pa, const praef_extnode* pb) {
 
 praef_system* praef_system_new(praef_app* app,
                                praef_message_bus* bus,
+                               const PraefNetworkIdentifierPair_t* net_id,
                                unsigned std_latency,
                                praef_system_profile profile,
-                               const PraefNetworkIdentifierPair_t* net_id) {
+                               unsigned mtu) {
   praef_system* this = calloc(1, sizeof(praef_system));
   if (!this) return NULL;
 
@@ -65,6 +67,20 @@ praef_system* praef_system_new(praef_app* app,
   if (!(this->hash_tree = praef_hash_tree_new())) goto fail;
   if (!(this->signator = praef_signator_new())) goto fail;
   if (!(this->verifier = praef_verifier_new())) goto fail;
+
+  if (!(this->cr_out = praef_outbox_new(
+          praef_hlmsg_encoder_new(praef_htf_committed_redistributable,
+                                  this->signator,
+                                  &this->packet_serial_number,
+                                  mtu,
+                                  8), mtu))) goto fail;
+  if (!(this->ur_out = praef_outbox_new(
+          praef_hlmsg_encoder_new(praef_htf_uncommitted_redistributable,
+                                  this->signator,
+                                  &this->packet_serial_number,
+                                  mtu, 0), mtu))) goto fail;
+
+  if (!praef_system_commgr_init(this, std_latency, profile)) goto fail;
 
   return this;
 
@@ -83,9 +99,13 @@ void praef_system_delete(praef_system* this) {
     praef_extnode_delete(node);
   }
 
+  praef_system_commgr_destroy(this);
+
   (*asn_DEF_PraefNetworkIdentifierPair.free_struct)(
     &asn_DEF_PraefNetworkIdentifierPair, &this->net_id, 1);
 
+  if (this->cr_out) praef_outbox_delete(this->cr_out);
+  if (this->ur_out) praef_outbox_delete(this->ur_out);
   if (this->verifier) praef_verifier_delete(this->verifier);
   if (this->signator) praef_signator_delete(this->signator);
   if (this->hash_tree) praef_hash_tree_delete(this->hash_tree);
@@ -101,6 +121,7 @@ praef_extnode* praef_extnode_new(praef_system* system,
   this->id = id;
   this->system = system;
   praef_clock_source_init(&this->clock_source, &system->clock);
+  this->disposition = praef_ed_normal;
 
   if (!praef_clone_net_id(&this->net_id, net_id)) goto fail;
   if (!(this->comchain = praef_comchain_new())) goto fail;

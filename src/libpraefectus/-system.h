@@ -41,11 +41,17 @@
 #include "commitment-chain.h"
 #include "dsa.h"
 #include "hash-tree.h"
+#include "outbox.h"
 #include "system.h"
 
 typedef struct praef_extnode_s praef_extnode;
 
 RB_HEAD(praef_extnode_map,praef_extnode_s);
+
+typedef enum {
+  praef_ed_normal,
+  praef_ed_deny
+} praef_extnode_disposition;
 
 struct praef_system_s {
   praef_app* app;
@@ -63,6 +69,39 @@ struct praef_system_s {
 
   praef_signator* signator;
   praef_verifier* verifier;
+
+  praef_outbox* cr_out, * ur_out;
+  praef_advisory_serial_number packet_serial_number;
+
+  /**
+   * The estimated upper bound of latency, in instants, incurred by this node's
+   * network.
+   */
+  unsigned self_latency;
+
+  /**
+   * Set by any component when a memory allocation fails.
+   */
+  int oom;
+
+  /* Groups below this line are managed by sub-components. */
+
+  /* Commits are built by capturing outbound committed-redistributable messages
+   * sent through cr_out, through a dummy message bus that only supports
+   * "broadcast".
+   *
+   * Managed by system-commgr.
+   */
+  praef_comchain* commit_builder;
+  praef_mq* commit_capture_mq;
+  praef_message_bus commit_capture_bus;
+  praef_instant last_commit;
+  unsigned commit_interval;
+  unsigned max_commit_lag;
+  unsigned max_validated_lag;
+  unsigned commit_lag_laxness;
+  /* 16.16 fixed-point */
+  unsigned self_commit_lag_compensation;
 };
 
 struct praef_extnode_s {
@@ -73,6 +112,8 @@ struct praef_extnode_s {
   praef_clock_source clock_source;
   praef_comchain* comchain;
   unsigned latency;
+  praef_extnode_disposition disposition;
+  praef_mq* cr_mq;
 
   RB_ENTRY(praef_extnode_s) map;
 };
