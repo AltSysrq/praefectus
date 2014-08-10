@@ -7,7 +7,15 @@ AUTOMAKE_OPTIONS = subdir-objects
 # getting Automake to comprehend that a task produces multiple header files.
 SUBDIRS = asn1-support libpraefectus/messages .
 
-AM_CFLAGS="-Iasn1-support"
+AM_CFLAGS=-Iasn1-support -D_BSD_SOURCE \
+          $(SDL_CFLAGS) $(SDLIMG_CFLAGS)
+AM_LDFLAGS=$(SDL_LIBS) $(SDLIMG_LIBS)
+
+bin_PROGRAMS = praef
+
+praef_LDADD = libpraefectus.la
+praef_SOURCES = \
+praefectus/top/main.c
 
 noinst_LTLIBRARIES = libpraefectus.la libasn1-support.la \
 libpraefectus-messages.la

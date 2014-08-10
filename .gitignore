@@ -32,3 +32,4 @@ src/libpraefectus/messages
 gen-dsa-parms
 *.t
 test/libpraefectus/clock-sim
+src/praef

@@ -31,6 +31,8 @@ LDFLAGS="$LDFLAGS -L/usr/local/lib"
 AC_SEARCH_LIBS([errc], [c bsd])
 AC_SEARCH_LIBS([sin], [c m])
 AC_SEARCH_LIBS([dlopen], [dl])
+PKG_CHECK_MODULES([SDL], [sdl2])
+PKG_CHECK_MODULES([SDLIMG], [SDL2_image])
 PKG_CHECK_MODULES([CHECK], [check], [], [:])
 AC_SEARCH_LIBS(__gmpz_powm, [gmp mpir], [],
 [AC_MSG_ERROR([cannot locate a gmp or mpir library])])
@@ -43,6 +45,7 @@ AC_SEARCH_LIBS([CryptAcquireContextW], [advapi32])
 AC_CHECK_HEADERS([sys/queue.h bsd/sys/queue.h sys/tree.h bsd/sys/tree.h dnl
                   err.h bsd/err.h sysexits.h bsd/sysexits.h bsd/string.h])
 AC_CHECK_HEADERS([gmp.h mpir.h])
+AC_CHECK_HEADERS([dlfcn.h])
 # For Windows-specific crypto functions, since that platform doesn't have
 # /dev/urandom and such.
 AC_CHECK_HEADERS([windows.h])
