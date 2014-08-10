@@ -179,10 +179,10 @@ deftest(can_delay_messages) {
   ck_assert(praef_outbox_append(outbox, &msg));
   ck_assert(praef_outbox_flush(outbox));
 
-  praef_mq_set_delay(mq0, 5);
+  praef_mq_set_threshold(mq0, 4);
   praef_mq_update(mq0);
 
-  praef_outbox_set_now(outbox, 10);
+  praef_mq_set_threshold(mq0, 5);
   bus0.broadcast = lambdav((praef_message_bus* _,
                             const void* data, size_t size),
                            hlmsg(data, size);
@@ -203,8 +203,8 @@ deftest(different_subscribers_can_have_different_delays) {
   ck_assert(praef_outbox_append(outbox, &msg));
   ck_assert(praef_outbox_flush(outbox));
 
-  praef_mq_set_delay(mq0, 1);
-  praef_mq_set_delay(mq1, 2);
+  praef_mq_set_threshold(mq0, 0);
+  praef_mq_set_threshold(mq1, 0);
 
   bus0.broadcast = lambdav((praef_message_bus* _,
                             const void* data, size_t size),
@@ -216,12 +216,12 @@ deftest(different_subscribers_can_have_different_delays) {
   praef_mq_update(mq1);
   ck_assert_int_eq(0, received);
 
-  praef_outbox_set_now(outbox, 6);
+  praef_mq_set_threshold(mq0, 5);
   praef_mq_update(mq0);
   praef_mq_update(mq1);
   ck_assert_int_eq(1, received);
 
-  praef_outbox_set_now(outbox, 7);
+  praef_mq_set_threshold(mq1, 5);
   praef_mq_update(mq0);
   praef_mq_update(mq1);
   ck_assert_int_eq(2, received);

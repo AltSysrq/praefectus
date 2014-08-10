@@ -52,7 +52,7 @@ struct praef_mq_s {
   const PraefNetworkIdentifierPair_t* unicast;
   praef_mq_entry* pending;
   unsigned pending_ix, pending_used, pending_cap;
-  unsigned delay;
+  praef_instant threshold;
 
   SLIST_ENTRY(praef_mq_s) next;
 };
@@ -88,7 +88,11 @@ static inline void praef_rc_hlmsg_decref(praef_rc_hlmsg* this) {
 
 praef_outbox* praef_outbox_new(praef_hlmsg_encoder* enc,
                                unsigned mtu) {
-  praef_outbox* this = malloc(sizeof(praef_outbox));
+  praef_outbox* this;
+
+  if (!enc) return NULL;
+
+  this = malloc(sizeof(praef_outbox));
   if (!this) {
     praef_hlmsg_encoder_delete(enc);
     return NULL;
@@ -185,7 +189,7 @@ praef_mq* praef_mq_new(praef_outbox* outbox,
   this->pending_ix = 0;
   this->pending_used = 0;
   this->pending_cap = 16;
-  this->delay = 0;
+  this->threshold = ~0u;
 
   this->pending = calloc(this->pending_cap, sizeof(praef_mq_entry));
   if (!this->pending) {
@@ -209,8 +213,8 @@ void praef_mq_delete(praef_mq* this) {
   free(this);
 }
 
-void praef_mq_set_delay(praef_mq* this, unsigned delay) {
-  this->delay = delay;
+void praef_mq_set_threshold(praef_mq* this, praef_instant threshold) {
+  this->threshold = threshold;
 }
 
 static int praef_mq_enqueue(praef_mq* this, praef_rc_hlmsg* msg) {
@@ -245,7 +249,7 @@ void praef_mq_update(praef_mq* this) {
 
   for (i = 0; i < this->pending_cap; ++i) {
     if (this->pending[i].msg &&
-        this->pending[i].queued_at + this->delay <= this->outbox->now) {
+        this->pending[i].queued_at <= this->threshold) {
       if (this->unicast)
         (*this->bus->unicast)(this->bus, this->unicast,
                               this->pending[i].msg->msg.data,

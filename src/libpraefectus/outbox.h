@@ -41,7 +41,8 @@ typedef struct praef_outbox_s praef_outbox;
 /**
  * A praef_mq object sends encoded messages received from a praef_outbox to
  * which it subscribes over a message bus, either via unicast or
- * broadcast. Messages may be delayed arbitrary lengths of time.
+ * broadcast. Messages after a certain threshold will be delayed until the
+ * threshold is advanced beyond them.
  */
 typedef struct praef_mq_s praef_mq;
 
@@ -49,7 +50,9 @@ typedef struct praef_mq_s praef_mq;
  * Constructs a new praef_outbox using the given message encoder.
  *
  * @param enc The message encoder to use. This call takes ownership of the
- * encoder, even if it fails.
+ * encoder, even if it fails. If this is NULL, this function does nothing and
+ * returns NULL. This is to permit the pattern
+ * praef_outbox_new(praef_hlmsg_encoder_new(),mtu).
  * @param mtu The maximum message size to expect to encode. This should be the
  * same mtu used to construct enc.
  * @return The new outbox, or NULL if insufficient memory is available. In the
@@ -108,11 +111,9 @@ praef_mq* praef_mq_new(praef_outbox*,
  */
 void praef_mq_delete(praef_mq*);
 /**
- * Changes the delay, in instants, for messages leaving this mq.
- *
- * Changes in delay affect all messages that have not yet been sent.
+ * Changes the threshold beyond which messages will not be sent.
  */
-void praef_mq_set_delay(praef_mq*, unsigned);
+void praef_mq_set_threshold(praef_mq*, praef_instant);
 /**
  * Advances the mq the given number of ticks into the future, sending any
  * messages whose delay has fully elapsed.
