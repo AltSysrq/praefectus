@@ -30,6 +30,7 @@
 
 #include "common.h"
 #include "object.h"
+#include "event.h"
 #include "message-bus.h"
 #include "messages/PraefNetworkIdentifierPair.h"
 
@@ -46,7 +47,11 @@ typedef struct praef_system_s praef_system;
  * Defines the callback interface between praefectus and the application.
  *
  * Callbacks suffixed with _opt may be NULL to indicate that the application
- * does not wish to do anything special on the callback.
+ * does not wish to do anything special on the callback. In the majority of
+ * cases this means that the callback effectively does nothing.
+ *
+ * Callbacks suffixed with _bridge can be implemented by the "standard system
+ * bridge", which is suitable for the vast majority of applications.
  *
  * Note that instances of this structure do not necessarily comprise the full
  * structure if the application was built against an older ABI. Optional
@@ -54,13 +59,134 @@ typedef struct praef_system_s praef_system;
  */
 typedef struct praef_app_s praef_app;
 
+/**
+ * Instructs the application to create a node-object in the underlying system
+ * with the given id. In the vast majority of applications, this corresponds to
+ * creating an instance of a praef_object with that id and adding it to the
+ * bottom-layer praef_context.
+ *
+ * @param id The id of the object to create. As long as the application has
+ * implemented permit_object_id_opt correctly (if required), this id is
+ * guaranteed not to conflict with any existing object id.
+ */
+typedef void (*praef_app_create_node_object_t)(praef_app*, praef_object_id);
+
+/**
+ * Requests the application to decode the given byte array into an
+ * application-specific event.
+ *
+ * @param instant The instant of the event to be created.
+ * @param object The target of the event to be created.
+ * @param sn The serial number of the event to be created.
+ * @param data The input data from which the event is to be decoded.
+ * @param sz The number of bytes in the data buffer.
+ * @return The decoded event. Ownership of the return value transfers to the
+ * caller. If the data is malformed, return NULL. If an internal error occurs
+ * attempting to decode the data, return NULL and arrange to destroy the
+ * system.
+ */
+typedef praef_event* (*praef_app_decode_event_t)(
+  praef_app*, praef_instant instant, praef_object_id object,
+  praef_event_serial_number sn,
+  const void* data, size_t sz);
+
+/**
+ * Inserts an event into the underlying system. The event given was produced by
+ * a call to decode_event().
+ *
+ * The standard system bridge provides a reasonable implementation of this
+ * function for most applications. It is guaranteed that the event does not
+ * conflict with another existing event at the same level of abstraction.
+ *
+ * @param event An event (produced by decode_event()) to insert into the lower
+ * system. Ownership transfers to the callee; however, the callee may not
+ * destroy the event until the system is destroyed.
+ * @see praef_app_neutralise_event_t
+ */
+typedef void (*praef_app_insert_event_t)(praef_app*, praef_event* event);
+
+/**
+ * Neutralises an event in-place in the underlying system. This is necessary
+ * when a node violates the protocol and creates conflicting events.
+ *
+ * For reasons of consistency, the event itself must continue to exist, so true
+ * redaction is impossible. A typical implementation (one provided by the
+ * standard system bridge) is to roll the bottom praef_context back to the time
+ * of the event, and then set the apply() function to one that does
+ * nothing. This may not work for all applications, however, particularly those
+ * where object rollback is dependent on the events themselves.
+ *
+ * @param event An event that was formerly passed into insert_event_bridge().
+ */
+typedef void (*praef_app_neutralise_event_t)(praef_app*, praef_event* event);
+
+/**
+ * Inquires the application as to whether the given object identifier is
+ * permissible to be used by a node.
+ *
+ * Many applications will have one or more "well-known" object identifiers that
+ * are not maintained by any node, but rather represent "environmental" state
+ * independent of any node. (For example, in a game of Pong, the ball would
+ * likely have its own id.) This callback allows the application to reserve
+ * such ids for its own use.
+ *
+ * An application may only reserve even-numbered ids. This function will not be
+ * called for endorsed (ie, odd-numbered) ids. If an id that would be
+ * commandeered (ie, even-numbered and non-zero) is reserved by the
+ * application, praefectus will try the next even-numbered identifier, until
+ * this call returns true.
+ *
+ * Note that this MUST necessarily be completely stateless. A praefectus system
+ * will diverge if any two nodes produce different responses for this call.
+ *
+ * The assumed implementation if this callback is not provided is to accept all
+ * identifiers.
+ *
+ * @param id The object identifier the system would like to use for a new
+ * node/object pair.
+ * @return Whether the application permits node-object usage of the given
+ * identifier.
+ */
+typedef int (*praef_app_permit_object_id_t)(praef_app*, praef_object_id id);
+
+/**
+ * Notifies the application that the local node has acquired a node id.
+ *
+ * @param id The new id of the local node.
+ */
+typedef void (*praef_app_acquire_id_t)(praef_app*, praef_object_id id);
+
+/**
+ * Notifies the application that a new external node has come into existence.
+ */
+typedef void (*praef_app_discover_node_t)(
+  praef_app*, const PraefNetworkIdentifierPair_t*, praef_object_id);
+
+/**
+ * Notifies the application that the route to the given existing external node
+ * is being terminated.
+ */
+typedef void (*praef_app_remove_node_t)(praef_app*, praef_object_id);
+
 struct praef_app_s {
   /**
    * Equal to the compile-time value of sizeof(praef_app). (This allows new
    * fields to be added without breaking binary compatibility).
    */
   size_t size;
-  /* TODO */
+
+  praef_app_create_node_object_t create_node_object;
+  praef_app_decode_event_t decode_event;
+  praef_app_insert_event_t insert_event_bridge;
+  praef_app_neutralise_event_t neutralise_event_bridge;
+
+  /* Optional control callbacks */
+  praef_app_permit_object_id_t permit_object_id_opt;
+
+  /* Optional notification callbacks */
+  praef_app_acquire_id_t acquire_opt;
+  praef_app_discover_node_t discover_node_opt;
+  praef_app_remove_node_t remove_node_opt;
 };
 
 /**
