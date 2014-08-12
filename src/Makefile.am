@@ -38,10 +38,7 @@ libpraefectus/virtual-bus.c \
 libpraefectus/hl-msg.c \
 libpraefectus/clock.c \
 libpraefectus/dynamic.c \
-libpraefectus/outbox.c \
-libpraefectus/system-core.c \
-libpraefectus/system-dispatch.c \
-libpraefectus/system-commgr.c
+libpraefectus/outbox.c
 
 libpraefectus_la_LIBADD = \
   libpraefectus-messages.la libasn1-support.la
