@@ -33,6 +33,7 @@
 #include "event.h"
 #include "message-bus.h"
 #include "messages/PraefNetworkIdentifierPair.h"
+#include "messages/PraefMsgJoinRequest.h"
 
 /**
  * A praef_system is a full assembly of all the smaller components of
@@ -121,6 +122,77 @@ typedef void (*praef_app_insert_event_t)(praef_app*, praef_event* event);
 typedef void (*praef_app_neutralise_event_t)(praef_app*, praef_event* event);
 
 /**
+ * Inserts a chmod into the lower layer of the system. This corresponds to
+ * praef_metatransactor_chmod().
+ *
+ * The vast majority of applications will simply use the implementation
+ * provided by the standard system bridge.
+ *
+ * @param target The node to be affected by this chmod. This is guaranteed to
+ * correspond to an already-existing node.
+ * @param voter The node voting to execute this chmod. This is guaranteed to
+ * correspond to an already-existing node.
+ * @param mask A mask with one bit set indicating which status bit is to be
+ * modified.
+ * @param when The instant at which the proposed change is to take effect.
+ */
+typedef void (*praef_app_chmod_t)(praef_app*, praef_object_id target,
+                                  praef_object_id voter, unsigned mask,
+                                  praef_instant when);
+
+/**
+ * Inserts an event vote into the lower layer of the system. This corresponds
+ * to praef_transactor_votefor().
+ *
+ * The praef_system handles filtering out duplicate votes.
+ *
+ * The vast majority of applications will sipmly use the implementation
+ * provided by the standard system bridge.
+ *
+ * @param object The object element of the event identifier triple being
+ * affirmed.
+ * @param instant The instant element of the event identifer triple being
+ * affirmed.
+ * @param serial_number The serial number element of the event identifier
+ * triple being affirmed.
+ */
+typedef void (*praef_app_vote_t)(praef_app*, praef_object_id object,
+                                 praef_instant instant,
+                                 praef_event_serial_number serial_number);
+
+/**
+ * Advances the state of the lower layer of the system by the given number of
+ * ticks.
+ *
+ * Many applications will simply wish to use the implementation provided by the
+ * standard system bridge.
+ *
+ * @param delta The number of steps to advance. This may be zero; in such a
+ * case, the application must still ensure that it has reached a consistent
+ * state before returning. The application SHOULD consider having some maximum
+ * delta it is willing to process, as advancing, eg, 3 billion steps into the
+ * future will usually take an unacceptably large amount of time and is likely
+ * indicative of an attack.
+ */
+typedef void (*praef_app_advance_t)(praef_app*, unsigned delta);
+
+/**
+ * Enquires the application as to whether the authentication on the given join
+ * request is valid.
+ *
+ * The response from this call MUST be consistent for all nodes in the system,
+ * regardless of current state.
+ *
+ * The default implementation if this callback is not provided is to consider
+ * all authentication valid.
+ *
+ * @return Whether the join request is considered by the application to have
+ * valid authentication.
+ */
+typedef int (*praef_app_is_auth_valid_t)(
+  praef_app*, const PraefMsgJoinRequest_t*);
+
+/**
  * Inquires the application as to whether the given object identifier is
  * permissible to be used by a node.
  *
@@ -168,6 +240,31 @@ typedef void (*praef_app_discover_node_t)(
  */
 typedef void (*praef_app_remove_node_t)(praef_app*, praef_object_id);
 
+/**
+ * Notifies the application that it has received an application-defined unicast
+ * message.
+ *
+ * How the application chooses to handle invalid application-defined unicast
+ * messages is entirely up to the application. No mechanism is provided for the
+ * application to inform libpraefectus about invalid messages, for example.
+ *
+ * If no implementation for this function is given, all incoming
+ * application-defined unicast messages are discarded.
+ *
+ * @param from_node The node that signed the packet containing this
+ * message. Note that there is no guarantee that that node actually sent the
+ * message to *this* node. The application MUST gracefully handle receiving
+ * unicast messages intended for another node.
+ * @param instant The instant attached to the packet containing the
+ * message. This corresponds to the time of from_node when it created the
+ * message.
+ * @param data The contents of the application-defined message.
+ * @param size The number of bytes in the data buffer.
+ */
+typedef void (*praef_app_recv_unicast_t)(praef_app*, praef_object_id from_node,
+                                         praef_instant instant,
+                                         const void* data, size_t size);
+
 struct praef_app_s {
   /**
    * Equal to the compile-time value of sizeof(praef_app). (This allows new
@@ -177,16 +274,24 @@ struct praef_app_s {
 
   praef_app_create_node_object_t create_node_object;
   praef_app_decode_event_t decode_event;
+
   praef_app_insert_event_t insert_event_bridge;
   praef_app_neutralise_event_t neutralise_event_bridge;
+  praef_app_chmod_t chmod_bridge;
+  praef_app_vote_t vote_bridge;
+  praef_app_advance_t advance_bridge;
 
   /* Optional control callbacks */
   praef_app_permit_object_id_t permit_object_id_opt;
+  praef_app_is_auth_valid_t is_auth_valid_opt;
 
   /* Optional notification callbacks */
   praef_app_acquire_id_t acquire_opt;
   praef_app_discover_node_t discover_node_opt;
   praef_app_remove_node_t remove_node_opt;
+
+  /* Optional application-defined-message callbacks */
+  praef_app_recv_unicast_t recv_unicast_opt;
 };
 
 /**
@@ -344,6 +449,40 @@ void praef_system_disconnect(praef_system*);
  */
 praef_system_status praef_system_advance(praef_system*, unsigned);
 
+/**
+ * Adds a new (encoded) event to the system, which implicitly applies to the
+ * local node's object. This call is not meaningful if the local node does not
+ * yet have an id.
+ *
+ * @param data The encoded form of the event, as decodable by the application's
+ * decode_event().
+ * @param size The size of the data buffer, in bytes.
+ * @return Whether the operation succeeds.
+ */
+int praef_system_add_event(praef_system*, const void* data, size_t size);
+
+/**
+ * Sends an application-defined unicast message to the specified node. No
+ * reliablity or synchronicity mechanism is provided through this call;
+ * messages it sends can arrive in any order and any number of times. If the
+ * application wishes to know if or when the target receives the message, it
+ * must implement such a mechanism itself.
+ *
+ * It is also possible for the receiver to forward the message to another node
+ * in the system, which will make the final receiver believe the local node
+ * sent it directly to that node. If this is a problem, the application should
+ * include destination node ids in its messages and validate them itself.
+ *
+ * @param target The id of the node that is to receive this message.
+ * @param data The encoded form of the message, as decodable by the
+ * application's recv_unicast_opt().
+ * @param size The size of the data buffer, in bytes.
+ * @return Whether the operation succeeds. ("Success" meaning that nothing
+ * surprising, such as out-of-memory, occurred when attempting to carry out the
+ * request.)
+ */
+int praef_system_send_unicast(praef_system*, praef_object_id target,
+                              const void* data, size_t size);
 
 /**
  * Configures the obsolescence interval of the clock on the given system.
