@@ -55,6 +55,7 @@
 
 #include "bsd.h"
 #include "../game-state.h"
+#include "test-state.h"
 
 /* Move this somewhere else if anything else winds up needing it. */
 SDL_PixelFormat* screen_pixel_format;
@@ -202,7 +203,6 @@ int main(int argc, char** argv) {
   SDL_Rect window_bounds;
 
   canv = NULL;
-  state = NULL;
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     errx(EX_SOFTWARE, "Unable to initialise SDL: %s", SDL_GetError());
@@ -228,6 +228,8 @@ int main(int argc, char** argv) {
          SDL_GetError());
 
   SDL_GetWindowSize(screen, (int*)&ww, (int*)&wh);
+
+  state = test_state_new();
 
   do {
     draw(canv, state, screen);

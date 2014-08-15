@@ -15,7 +15,8 @@ bin_PROGRAMS = praef
 
 praef_LDADD = libpraefectus.la
 praef_SOURCES = \
-praefectus/top/main.c
+praefectus/top/main.c \
+praefectus/top/test-state.c
 
 noinst_LTLIBRARIES = libpraefectus.la libasn1-support.la \
 libpraefectus-messages.la
