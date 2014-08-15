@@ -55,8 +55,20 @@
  * respectively.
  */
 
+/**
+ * Data type for canvas pixels. This value indexes the colour palette in use
+ * when projected to the screen.
+ */
 typedef unsigned char canvas_pixel;
 
+/**
+ * The guaranteed memory alignment of each row in a canvas.
+ */
+#define CANVAS_ALIGN 64
+
+/**
+ * The black..grey..white colour plane.
+ */
 #define CP_GREY         0x00
 #define CP_RED          0x20
 #define CP_ORANGE       0x40
@@ -64,14 +76,56 @@ typedef unsigned char canvas_pixel;
 #define CP_CYAN         0x80
 #define CP_BLUE         0xA0
 #define CP_VIOLET       0xC0
+/**
+ * The number of indices within one colour plane.
+ */
 #define CP_SIZE         0x20
+/**
+ * The offset within a colour plane of the most intense colour. For example,
+ * CP_GREY+CP_MAX is pure white in the normal palette, and CP_RED+CP_MAX is
+ * 0xFF0000 in the normal palette.
+ */
 #define CP_MAX          (CP_SIZE-1)
 
+/**
+ * Virtually all drawing operations render to a canvas. A canvas is essentially
+ * a two-dimensional array of canvas_pixels.
+ */
 typedef struct {
-  unsigned short w, h, pitch;
-  canvas_pixel data[FLEXIBLE_ARRAY_MEMBER];
+  /**
+   * The number of meaningful pixels in a horizontal scan-line of the canvas.
+   */
+  unsigned short w;
+  /**
+   * The number of rows in the canvas.
+   */
+  unsigned short h;
+  /**
+   * The width in bytes of a single row. This is often greater than w for
+   * alignment purposes.
+   */
+  unsigned short pitch;
+  /**
+   * The data for this canvas. Its usable size is equal to (pitch*h), though
+   * note that the bytes beyond (w) for each row are meaningless. For any N,
+   * (data+N*pitch) is guaranteed to have 64-byte alignment.
+   *
+   * This is in row-major order. Pixels run left-to-right, top-to-bottom.
+   */
+  canvas_pixel* data;
 } canvas;
 
+/**
+ * Allocates a new canvas of the given logical dimensions. The canvas and its
+ * data can be freed with a single free() call.
+ */
 canvas* canvas_new(unsigned short w, unsigned short h);
+
+/**
+ * Returns the byte offset in the given canvas for the given x,y coordinates.
+ */
+static inline unsigned canvas_off(const canvas* c, unsigned x, unsigned y) {
+  return y * c->pitch + x;
+}
 
 #endif /* GRAPHICS_CANVAS_H_ */
