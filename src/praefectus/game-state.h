@@ -55,9 +55,7 @@ typedef struct game_state_s game_state;
  */
 typedef game_state* (*game_state_update_t)(game_state*, unsigned elapsed);
 /**
- * Draws the graphical representation of this state onto the given canvas. This
- * call is not guaranteed to run on any particular thread, but may call into
- * uMP.
+ * Draws the graphical representation of this state onto the given canvas.
  */
 typedef void (*game_state_draw_t)(game_state*, canvas*);
 /**
