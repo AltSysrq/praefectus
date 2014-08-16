@@ -36,7 +36,7 @@
  *
  * The game renders to a virtual screen 480 pixels tall (width based upon
  * window width in order to get square pixels), using an 8-bit colour
- * palette. This video buffer is mapped into 24-bit RGB (though at only 7 bits
+ * palette. This video buffer is mapped into 24-bit RGB (though at only 6 bits
  * per pixel) and sent through a simulated degraded VGA cable, introducing low
  * levels of white noise and continuous ghosting (I'm not sure what this effect
  * is normally called) and projected onto a CRT with the same resolution. The

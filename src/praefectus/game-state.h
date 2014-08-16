@@ -31,6 +31,7 @@
 #include <SDL.h>
 
 #include "graphics/canvas.h"
+#include "graphics/crt.h"
 
 /**
  * The game_state is the high-level unit of activity control. There is exactly
@@ -55,9 +56,11 @@ typedef struct game_state_s game_state;
  */
 typedef game_state* (*game_state_update_t)(game_state*, unsigned elapsed);
 /**
- * Draws the graphical representation of this state onto the given canvas.
+ * Draws the graphical representation of this state onto the given canvas and
+ * colour palette.
  */
-typedef void (*game_state_draw_t)(game_state*, canvas*);
+typedef void (*game_state_draw_t)(game_state*, canvas*,
+                                  crt_colour* palette);
 /**
  * Called for every received keyboard event. This should not be used for
  * textual input processing.

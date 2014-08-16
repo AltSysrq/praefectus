@@ -32,61 +32,54 @@
 #include <SDL.h>
 
 #include "../alloc.h"
-#include "../graphics/canvas.h"
-#include "../graphics/crt.h"
-#include "../game-state.h"
-#include "test-state.h"
+#include "canvas.h"
+#include "crt.h"
 
-typedef struct {
-  game_state self;
-  int is_alive;
-} test_state;
+struct crt_screen_s {
+  unsigned short w, h;
+  crt_colour data[FLEXIBLE_ARRAY_MEMBER];
+};
 
-static game_state* test_state_update(test_state*, unsigned);
-static void test_state_draw(test_state*, canvas*, crt_colour*);
-static void test_state_key(test_state*, SDL_KeyboardEvent*);
-
-game_state* test_state_new(void) {
-  test_state* this = xmalloc(sizeof(test_state));
-
-  memset(this, 0, sizeof(test_state));
-  this->self.update = (game_state_update_t)test_state_update;
-  this->self.draw = (game_state_draw_t)test_state_draw;
-  this->self.key = (game_state_key_t)test_state_key;
-  this->is_alive = 1;
-  return (game_state*)this;
+static inline unsigned crt_screen_off(
+  const crt_screen*restrict crt, unsigned x, unsigned y
+) {
+  return y * crt->w + x;
 }
 
-void test_state_delete(game_state* this) {
+crt_screen* crt_screen_new(unsigned short w, unsigned short h) {
+  crt_screen* this = xmalloc(offsetof(crt_screen, data) +
+                             sizeof(crt_colour) * w * h);
+
+  this->w = w;
+  this->h = h;
+  memset(this->data, 0, sizeof(crt_colour) * w * h);
+
+  return this;
+}
+
+void crt_screen_delete(crt_screen* this) {
   free(this);
 }
 
-static game_state* test_state_update(test_state* this, unsigned et) {
-  if (this->is_alive) {
-    return (game_state*)this;
-  } else {
-    test_state_delete((game_state*)this);
-    return NULL;
-  }
-}
+void crt_screen_xfer(crt_screen* dst, const canvas*restrict src,
+                     const crt_colour*restrict palette) {
+  unsigned x, y;
 
-static void test_state_draw(test_state* this, canvas* dst,
-                            crt_colour* palette) {
-  unsigned i, c, x, y;
-
-  for (i = 0; i < 256; ++i) {
-    c = i >> 2;
-    palette[i] = (c << 16) | (c << 8) | c;
-  }
-
+  /* TODO: VGA, fade effects */
   for (y = 0; y < dst->h; ++y)
     for (x = 0; x < dst->w; ++x)
-      dst->data[canvas_off(dst, x, y)] = rand() & 0xFF;
+      dst->data[crt_screen_off(dst, x, y)] =
+        palette[src->data[canvas_off(src, x, y)]];
 }
 
-static void test_state_key(test_state* this,
-                           SDL_KeyboardEvent* evt) {
-  if (SDL_KEYDOWN == evt->type &&
-      SDLK_ESCAPE == evt->keysym.sym)
-    this->is_alive = 0;
+void crt_screen_proj(unsigned* dst, unsigned dw, unsigned dh, unsigned dpitch,
+                     const crt_screen* src) {
+  unsigned x, y;
+
+  /* TODO: Actual projection / bleed */
+  for (y = 0; y < dh; ++y)
+    for (x = 0; x < dw; ++x)
+      dst[y*dpitch + x] =
+        src->data[crt_screen_off(src, x * src->w / dw, y * src->h / dh)]
+        << 2;
 }

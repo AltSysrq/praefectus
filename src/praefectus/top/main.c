@@ -55,6 +55,7 @@
 
 #include "bsd.h"
 #include "../game-state.h"
+#include "../alloc.h"
 #include "test-state.h"
 
 /* Move this somewhere else if anything else winds up needing it. */
@@ -71,7 +72,7 @@ SDL_PixelFormat* screen_pixel_format;
 static int might_be_zaphod = 1;
 
 static game_state* update(game_state*);
-static void draw(canvas*, game_state*, SDL_Window*);
+static void draw(canvas*, crt_screen*, game_state*, SDL_Window*);
 static int handle_input(game_state*);
 
 static int parse_x11_screen(signed* screen, const char* display) {
@@ -197,12 +198,14 @@ void select_window_bounds(SDL_Rect* window_bounds) {
 int main(int argc, char** argv) {
   unsigned ww, wh;
   SDL_Window* screen;
+  SDL_Renderer* renderer;
+  SDL_Texture* rendertex;
   const int image_types = IMG_INIT_JPG | IMG_INIT_PNG;
   canvas* canv;
+  crt_screen* crt;
+  Uint32* framebuffer;
   game_state* state;
   SDL_Rect window_bounds;
-
-  canv = NULL;
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     errx(EX_SOFTWARE, "Unable to initialise SDL: %s", SDL_GetError());
@@ -229,13 +232,42 @@ int main(int argc, char** argv) {
 
   SDL_GetWindowSize(screen, (int*)&ww, (int*)&wh);
 
+  renderer = SDL_CreateRenderer(screen, -1,
+                                SDL_RENDERER_ACCELERATED |
+                                SDL_RENDERER_PRESENTVSYNC);
+  if (!renderer)
+    renderer = SDL_CreateRenderer(screen, -1, 0);
+
+  if (!renderer)
+    errx(EX_SOFTWARE, "Unable to create SDL renderer: %s",
+         SDL_GetError());
+
+  rendertex = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
+                                SDL_TEXTUREACCESS_STREAMING, ww, wh);
+  if (!rendertex)
+    errx(EX_SOFTWARE, "Unable to create SDL texture: %s",
+         SDL_GetError());
+
+  canv = canvas_new(240 * ww / wh, 240);
+  crt = crt_screen_new(canv->w, canv->h);
+  framebuffer = xmalloc(sizeof(Uint32) * ww * wh);
+
   state = test_state_new();
 
   do {
-    draw(canv, state, screen);
+    draw(canv, crt, state, screen);
+    crt_screen_proj(framebuffer, ww, wh, ww, crt);
+    SDL_UpdateTexture(rendertex, NULL, framebuffer, ww * sizeof(Uint32));
+    SDL_RenderCopy(renderer, rendertex, NULL, NULL);
+    SDL_RenderPresent(renderer);
+
     if (handle_input(state)) break; /* quit */
     state = update(state);
   } while (state);
+
+  free(canv);
+  crt_screen_delete(crt);
+  free(framebuffer);
 
   return 0;
 }
@@ -262,9 +294,12 @@ static game_state* update(game_state* state) {
   return (*state->update)(state, elapsed);
 }
 
-static void draw(canvas* canv, game_state* state,
+static void draw(canvas* canv, crt_screen* crt,
+                 game_state* state,
                  SDL_Window* screen) {
-  (*state->draw)(state, canv);
+  crt_colour palette[256];
+  (*state->draw)(state, canv, palette);
+  crt_screen_xfer(crt, canv, palette);
 }
 
 static int handle_input(game_state* state) {
