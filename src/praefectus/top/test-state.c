@@ -39,7 +39,9 @@
 
 typedef struct {
   game_state self;
+  int has_rendered;
   int is_alive;
+  signed time_till_step;
 } test_state;
 
 static game_state* test_state_update(test_state*, unsigned);
@@ -54,6 +56,8 @@ game_state* test_state_new(void) {
   this->self.draw = (game_state_draw_t)test_state_draw;
   this->self.key = (game_state_key_t)test_state_key;
   this->is_alive = 1;
+  this->has_rendered = 0;
+  this->time_till_step = 0;
   return (game_state*)this;
 }
 
@@ -62,6 +66,8 @@ void test_state_delete(game_state* this) {
 }
 
 static game_state* test_state_update(test_state* this, unsigned et) {
+  this->time_till_step -= et;
+
   if (this->is_alive) {
     return (game_state*)this;
   } else {
@@ -70,18 +76,70 @@ static game_state* test_state_update(test_state* this, unsigned et) {
   }
 }
 
+static const crt_colour demon_palette[16] = {
+  0x000000, //0
+  0x020202,
+  0x040404,
+  0x060606,
+  0x080808, //4
+  0x101010,
+  0x202020,
+  0x002020,
+  0x000020, //8
+  0x200020,
+  0x200000,
+  0x202000,
+  0x002000, //12
+  0x000010,
+  0x080008,
+  0x000400,
+};
+
 static void test_state_draw(test_state* this, canvas* dst,
                             crt_colour* palette) {
-  unsigned i, c, x, y;
+  /* For the purposes of testing, do a demon automaton directly in the
+   * canvas. The particular palette used here is designed to produce large dark
+   * regions.
+   *
+   * Note we only use the first 16 colours.
+   */
+  canvas_pixel prev[dst->pitch * dst->h];
+  unsigned x, y;
+  signed ox, oy;
+  canvas_pixel curr;
 
-  for (i = 0; i < 256; ++i) {
-    c = i >> 2;
-    palette[i] = (c << 16) | (c << 8) | c;
+  memcpy(palette, demon_palette, sizeof(demon_palette));
+
+  if (!this->has_rendered) {
+    /* Initialise the canvas randomly */
+    for (y = 0; y < dst->h; ++y)
+      for (x = 0; x < dst->w; ++x)
+        dst->data[canvas_off(dst, x, y)] = rand() & 0xF;
+
+    this->has_rendered = 1;
+  } else if (this->time_till_step <= 0) {
+    this->time_till_step += 8;
+    memcpy(prev, dst->data, sizeof(prev));
+
+    for (y = 0; y < dst->h; ++y) {
+      for (x = 0; x < dst->w; ++x) {
+        curr = prev[canvas_off(dst, x, y)];
+        for (oy = -1; oy <= +1; ++oy) {
+          if ((unsigned)oy + y >= dst->h) continue;
+          for (ox = -1; ox <= +1; ++ox) {
+            if ((unsigned)ox + x >= dst->w) continue;
+
+            if (((curr+1) & 0xF) == prev[canvas_off(dst, x+ox, y+oy)]) {
+              dst->data[canvas_off(dst, x, y)] = (curr+1) & 0xF;
+              goto next_pixel;
+            }
+          }
+        }
+
+        next_pixel:;
+      }
+    }
   }
-
-  for (y = 0; y < dst->h; ++y)
-    for (x = 0; x < dst->w; ++x)
-      dst->data[canvas_off(dst, x, y)] = rand() & 0xFF;
 }
 
 static void test_state_key(test_state* this,
