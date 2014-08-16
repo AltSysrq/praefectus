@@ -31,6 +31,9 @@
 
 #include <SDL.h>
 
+#include <string.h>
+#include <stdlib.h>
+
 #include "../alloc.h"
 #include "canvas.h"
 #include "crt.h"
@@ -126,14 +129,52 @@ void crt_screen_xfer(crt_screen* dst, const canvas*restrict src,
   }
 }
 
+#define BULGE_FACTOR 24LL
+#define BASE_FACTOR (256LL - BULGE_FACTOR)
+
+/**
+ * Projects the given coordinates (x,y), whose maximum values are (w,h),
+ * parabolically into (dst_x,dst_y), which are 16.16 fixed-point coordinates
+ * into the screen.
+ */
+static inline void crt_project_parabolic(const crt_screen* crt,
+                                         signed* dst_x, signed* dst_y,
+                                         signed x, signed y,
+                                         signed long long w,
+                                         signed long long h) {
+  signed cx = w/2, cy = h/2;
+  signed ox = x - cx, oy = y - cy;
+  signed long long fx = abs(ox)*abs(ox) * 65536LL / cx / cx;
+  signed long long fy = abs(oy)*abs(oy) * 65536LL / cy / cy;
+  signed long long f = fx + fy;
+  signed factor;
+
+  factor = BASE_FACTOR + BULGE_FACTOR * f / 65536LL;
+
+  *dst_x = crt->w * 256LL * (cx * 256LL + ox * factor) / w;
+  *dst_y = crt->h * 256LL * (cy * 256LL + oy * factor) / h;
+}
+
+static inline crt_colour crt_sample(const crt_screen* crt,
+                                    signed x, signed y) {
+  x >>= 16;
+  y >>= 16;
+
+  if (x < 0 || x >= crt->w || y < 0 || y >= crt->h) return 0;
+
+  return crt->data[crt_screen_off(crt, x, y)];
+}
+
 void crt_screen_proj(unsigned* dst, unsigned dw, unsigned dh, unsigned dpitch,
                      const crt_screen* src) {
   unsigned x, y;
+  signed px, py;
 
   /* TODO: Actual projection / bleed */
-  for (y = 0; y < dh; ++y)
-    for (x = 0; x < dw; ++x)
-      dst[y*dpitch + x] =
-        src->data[crt_screen_off(src, x * src->w / dw, y * src->h / dh)]
-        << 2;
+  for (y = 0; y < dh; ++y) {
+    for (x = 0; x < dw; ++x) {
+      crt_project_parabolic(src, &px, &py, x, y, dw, dh);
+      dst[y*dpitch + x] = crt_sample(src, px, py) << 2;
+    }
+  }
 }
