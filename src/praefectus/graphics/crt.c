@@ -61,15 +61,69 @@ void crt_screen_delete(crt_screen* this) {
   free(this);
 }
 
+static inline crt_colour maxcomp(crt_colour a, crt_colour b,
+                                 crt_colour mask) {
+  if ((a & mask) > (b & mask))
+    return a & mask;
+  else
+    return b & mask;
+}
+
+static inline crt_colour addc_clamped(crt_colour a, crt_colour b,
+                                      unsigned maxmask) {
+  if ((a & maxmask) + (b & maxmask) > maxmask) return maxmask;
+  else return (a & maxmask) + (b & maxmask);
+}
+
+static inline crt_colour add_clamped(crt_colour a, crt_colour b) {
+  return
+    addc_clamped(a, b, 0x003F0000) |
+    addc_clamped(a, b, 0x00003F00) |
+    addc_clamped(a, b, 0x0000003F);
+}
+
+static inline unsigned seepage(crt_colour c) {
+  unsigned r, g, b;
+
+  r = (c >>  0) & 0x3F;
+  g = (c >> 16) & 0x3F;
+  b = (c >> 24) & 0x3F;
+
+  return (r + g/4 + b/4)*(g + r/4 + b/4)*(b + r/4 + b/4);
+}
+
 void crt_screen_xfer(crt_screen* dst, const canvas*restrict src,
                      const crt_colour*restrict palette) {
-  unsigned x, y;
+  unsigned charge_decay = 0x40000 / dst->w;
+  unsigned x, y, noise, charge, ghosting;
+  crt_colour old, new;
 
-  /* TODO: VGA, fade effects */
-  for (y = 0; y < dst->h; ++y)
-    for (x = 0; x < dst->w; ++x)
+  for (y = 0; y < dst->h; ++y) {
+    charge = 0;
+
+    for (x = 0; x < dst->w; ++x) {
+      old = dst->data[crt_screen_off(dst, x, y)];
+      old = (old >> 1) & 0x003F3F3F;
+      new = palette[src->data[canvas_off(src, x, y)]];
+
+      ghosting = (charge >> 16) & 0x3F;
+      charge += seepage(new);
+      if (charge > charge_decay)
+        charge -= charge_decay;
+      else
+        charge = 0;
+      new = add_clamped(new, (ghosting << 16) | (ghosting << 8) | ghosting);
+
+      noise = rand() & 0x3;
+      noise = (noise << 16) | (noise << 8) | noise;
+      new = add_clamped(new, noise);
+
       dst->data[crt_screen_off(dst, x, y)] =
-        palette[src->data[canvas_off(src, x, y)]];
+        maxcomp(old, new, 0x00FF0000) |
+        maxcomp(old, new, 0x0000FF00) |
+        maxcomp(old, new, 0x000000FF);
+    }
+  }
 }
 
 void crt_screen_proj(unsigned* dst, unsigned dw, unsigned dh, unsigned dpitch,
