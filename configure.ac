@@ -57,6 +57,9 @@ AC_C_RESTRICT
 AC_C_FLEXIBLE_ARRAY_MEMBER
 AC_TYPE_SIZE_T
 
+# Checks for library functions.
+AC_CHECK_FUNCS([dlfunc dlerror])
+
 AC_CONFIG_FILES([Makefile src/Makefile src/asn1-support/Makefile
                  src/libpraefectus/messages/Makefile
                  test/Makefile])
