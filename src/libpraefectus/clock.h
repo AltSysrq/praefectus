@@ -146,7 +146,7 @@ void praef_clock_source_sample(praef_clock_source*, const praef_clock*,
  * system and mono times.
  *
  * @param delta The number of ticks to advance.
- * @param count_self Whether to count the clock's on monotime as a source.
+ * @param count_self Whether to count the clock's own monotime as a source.
  */
 void praef_clock_tick(praef_clock*, unsigned delta, int count_self);
 
