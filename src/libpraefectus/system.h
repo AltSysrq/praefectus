@@ -462,6 +462,13 @@ praef_system_status praef_system_advance(praef_system*, unsigned);
 int praef_system_add_event(praef_system*, const void* data, size_t size);
 
 /**
+ * Adds a new vote-for event to the system, indicating the local node's
+ * acceptance of an event identified by the given triple.
+ */
+int praef_system_vote_event(praef_system*, praef_object_id,
+                            praef_instant, praef_event_serial_number);
+
+/**
  * Sends an application-defined unicast message to the specified node. No
  * reliablity or synchronicity mechanism is provided through this call;
  * messages it sends can arrive in any order and any number of times. If the

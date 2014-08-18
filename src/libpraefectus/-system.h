@@ -1,0 +1,98 @@
+/*-
+ * Copyright (c) 2014 Jason Lingle
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the author nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+#ifndef LIBPRAEFECTUS__SYSTEM_H_
+#define LIBPRAEFECTUS__SYSTEM_H_
+
+/* This is an internal header file.
+ *
+ * It defines the system struct and internal interface, primarily so that tests
+ * can examine things more directly.
+ */
+
+#include "system.h"
+#include "dsa.h"
+#include "clock.h"
+
+/* The praef_system implementation is split into two layers. The routing layer
+ * takes inputs from the application and encodes messages, which are sent to
+ * other nodes and to the state layer. The state layer manages the system
+ * state, generally oblivious to the concept of a local node except for
+ * time-keeping purposes.
+ *
+ * Other "side-car" components handle isolated concerns such as RPC protocols
+ * or node joining procedures.
+ *
+ * This design does incur meaningful computational overhead, since even when
+ * the local node is alone, it still goes through the motions of encoding
+ * everything, aggregating into packets, signing packets, verifying packets,
+ * and validating the commit chain for itself. However, this makes most of the
+ * internal process a lot simpler, and ensures that the application's
+ * encoding/decoding is exercised even in local testing.
+ */
+
+#include "-system-state.h"
+#include "-system-router.h"
+
+typedef struct praef_node_s {
+  praef_object_id id;
+  PraefNetworkIdentifierPair_t net_id;
+  praef_system* sys;
+  praef_message_bus* bus;
+
+  praef_node_state state;
+  praef_node_router router;
+
+  RB_ENTRY(praef_node_s) map;
+} praef_node;
+
+RB_HEAD(praef_node_map, praef_node_s);
+
+struct praef_system_s {
+  praef_app* app;
+  praef_message_bus* bus;
+  unsigned std_latency;
+  praef_system_profile profile;
+  unsigned mtu;
+
+  praef_signator* signator;
+  praef_event_serial_number evt_serno;
+  praef_clock clock;
+
+  praef_system_state state;
+  praef_system_router router;
+
+  struct praef_node_map nodes;
+
+  praef_node* local_node;
+  int oom;
+};
+
+int praef_compare_nodes(const praef_node*, const praef_node*);
+RB_PROTOTYPE(praef_node_map, praef_node_s, map, praef_compare_nodes)
+
+#endif /* LIBPRAEFECTUS__SYSTEM_H_ */
