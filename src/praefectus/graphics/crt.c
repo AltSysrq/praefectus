@@ -35,6 +35,7 @@
 #include <stdlib.h>
 
 #include "../alloc.h"
+#include "../frac.h"
 #include "canvas.h"
 #include "crt.h"
 
@@ -138,27 +139,27 @@ void crt_screen_xfer(crt_screen* dst, const canvas*restrict src,
  * into the screen.
  */
 static inline void crt_project_parabolic(const crt_screen* crt,
-                                         signed* dst_x, signed* dst_y,
+                                         signed*restrict dst_x, signed*restrict dst_y,
                                          signed x, signed y,
-                                         signed long long w,
-                                         signed long long h) {
-  signed cx = w/2, cy = h/2;
+                                         fraction iw, fraction ih,
+                                         unsigned cx, unsigned cy,
+                                         fraction icx2, fraction icy2) {
   signed ox = x - cx, oy = y - cy;
-  signed long long fx = ox*ox * 65536LL / cx / cx;
-  signed long long fy = oy*oy * 65536LL / cy / cy;
-  signed long long f = fx + fy;
+  unsigned fx = fraction_fpmul(ox*ox, icx2, 16);
+  unsigned fy = fraction_fpmul(oy*oy, icy2, 16);
+  unsigned f = fx + fy;
   signed factor;
 
   factor = BASE_FACTOR * 256LL + BULGE_FACTOR * f / 256LL;
 
-  *dst_x = crt->w * (cx * 65536LL + ox * factor) / w;
-  *dst_y = crt->h * (cy * 65536LL + oy * factor) / h;
+  *dst_x = fraction_smul(crt->w * (cx * 65536LL + ox * factor) / 256, iw);
+  *dst_y = fraction_smul(crt->h * (cy * 65536LL + oy * factor) / 256, ih);
 }
 
 static inline crt_colour crt_sample(const crt_screen* crt,
                                     signed x, signed y) {
-  x >>= 16;
-  y >>= 16;
+  x >>= 8;
+  y >>= 8;
 
   if (x < 0 || x >= crt->w || y < 0 || y >= crt->h) return 0;
 
@@ -167,13 +168,19 @@ static inline crt_colour crt_sample(const crt_screen* crt,
 
 void crt_screen_proj(unsigned* dst, unsigned dw, unsigned dh, unsigned dpitch,
                      const crt_screen* src) {
+  fraction iw = fraction_of(dw), ih = fraction_of(dh);
+  unsigned cx = dw/2, cy = dh/2;
+  fraction icx = fraction_of(cx), icx2 = fraction_umul(icx, icx);
+  fraction icy = fraction_of(cy), icy2 = fraction_umul(icy, icy);
+
   unsigned x, y;
   signed px, py;
 
   /* TODO: Actual projection / bleed */
   for (y = 0; y < dh; ++y) {
     for (x = 0; x < dw; ++x) {
-      crt_project_parabolic(src, &px, &py, x, y, dw, dh);
+      crt_project_parabolic(src, &px, &py, x, y,
+                            iw, ih, cx, cy, icx2, icy2);
       dst[y*dpitch + x] = crt_sample(src, px, py) << 2;
     }
   }

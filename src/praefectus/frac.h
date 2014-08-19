@@ -65,6 +65,19 @@ static inline signed fraction_smul(signed numerator, fraction mult) {
 }
 
 /**
+ * Like fraction_umul(), but reduces the right-shift by fpbits, resulting in a
+ * fixed-point result.
+ */
+static inline unsigned fraction_fpmul(unsigned numerator, fraction mult,
+                                      unsigned fpbits) {
+  unsigned long long tmp64, mult64;
+  mult64 = mult;
+  tmp64 = numerator;
+  tmp64 *= mult64;
+  return tmp64 >> (FRACTION_BITS - fpbits);
+}
+
+/**
  * precise_fractions are similar to fractions, and generally follow the same
  * usage pattern. Differences are as follows:
  *
