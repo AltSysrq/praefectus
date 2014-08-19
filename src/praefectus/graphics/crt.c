@@ -134,7 +134,7 @@ void crt_screen_xfer(crt_screen* dst, const canvas*restrict src,
 
 /**
  * Projects the given coordinates (x,y), whose maximum values are (w,h),
- * parabolically into (dst_x,dst_y), which are 16.16 fixed-point coordinates
+ * parabolically into (dst_x,dst_y), which are 16.8 fixed-point coordinates
  * into the screen.
  */
 static inline void crt_project_parabolic(const crt_screen* crt,
@@ -144,15 +144,15 @@ static inline void crt_project_parabolic(const crt_screen* crt,
                                          signed long long h) {
   signed cx = w/2, cy = h/2;
   signed ox = x - cx, oy = y - cy;
-  signed long long fx = abs(ox)*abs(ox) * 65536LL / cx / cx;
-  signed long long fy = abs(oy)*abs(oy) * 65536LL / cy / cy;
+  signed long long fx = ox*ox * 65536LL / cx / cx;
+  signed long long fy = oy*oy * 65536LL / cy / cy;
   signed long long f = fx + fy;
   signed factor;
 
-  factor = BASE_FACTOR + BULGE_FACTOR * f / 65536LL;
+  factor = BASE_FACTOR * 256LL + BULGE_FACTOR * f / 256LL;
 
-  *dst_x = crt->w * 256LL * (cx * 256LL + ox * factor) / w;
-  *dst_y = crt->h * 256LL * (cy * 256LL + oy * factor) / h;
+  *dst_x = crt->w * (cx * 65536LL + ox * factor) / w;
+  *dst_y = crt->h * (cy * 65536LL + oy * factor) / h;
 }
 
 static inline crt_colour crt_sample(const crt_screen* crt,
