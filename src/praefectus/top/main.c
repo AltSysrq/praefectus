@@ -206,6 +206,7 @@ int main(int argc, char** argv) {
   Uint32* framebuffer;
   game_state* state;
   SDL_Rect window_bounds;
+  Uint32 draw_start, render_end, draw_end;
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     errx(EX_SOFTWARE, "Unable to initialise SDL: %s", SDL_GetError());
@@ -255,11 +256,21 @@ int main(int argc, char** argv) {
   state = test_state_new();
 
   do {
+    draw_start = SDL_GetTicks();
     draw(canv, crt, state, screen);
     crt_screen_proj(framebuffer, crt);
+    render_end = SDL_GetTicks();
     SDL_UpdateTexture(rendertex, NULL, framebuffer, ww * sizeof(Uint32));
     SDL_RenderCopy(renderer, rendertex, NULL, NULL);
+    draw_end = SDL_GetTicks();
     SDL_RenderPresent(renderer);
+
+    if (draw_end != draw_start)
+      printf("Drawing took %d ms (rendered in %d ms); %3d FPS\n",
+             draw_end - draw_start, render_end - draw_start,
+             1000 / (draw_end - draw_start));
+    else
+      printf("Drawing took 0 ms\n");
 
     if (handle_input(state)) break; /* quit */
     state = update(state);
