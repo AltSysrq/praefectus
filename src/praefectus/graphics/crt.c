@@ -161,7 +161,7 @@ static inline crt_colour crt_sample(const crt_screen* crt,
   x >>= 8;
   y >>= 8;
 
-  if (x < 0 || x >= crt->w || y < 0 || y >= crt->h) return 0;
+  if (x < 0 || x >= (signed)crt->w || y < 0 || y >= (signed)crt->h) return 0;
 
   return crt->data[crt_screen_off(crt, x, y)];
 }
