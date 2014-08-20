@@ -166,8 +166,14 @@ static inline crt_colour crt_sample(const crt_screen* crt,
   return crt->data[crt_screen_off(crt, x, y)];
 }
 
-void crt_screen_proj(unsigned* dst, unsigned dw, unsigned dh, unsigned dpitch,
-                     const crt_screen* src) {
+static inline void put_px(unsigned*restrict dst, unsigned dx, unsigned dy,
+                          unsigned dpitch,
+                          const crt_screen* src, unsigned sx, unsigned sy) {
+  dst[dy*dpitch + dx] = crt_sample(src, sx, sy) << 2;
+}
+
+void crt_screen_proj(unsigned*restrict dst, unsigned dw, unsigned dh,
+                     unsigned dpitch, const crt_screen* src) {
   fraction iw = fraction_of(dw), ih = fraction_of(dh);
   unsigned cx = dw/2, cy = dh/2;
   fraction icx = fraction_of(cx), icx2 = fraction_umul(icx, icx);
@@ -176,12 +182,20 @@ void crt_screen_proj(unsigned* dst, unsigned dw, unsigned dh, unsigned dpitch,
   unsigned x, y;
   signed px, py;
 
-  /* TODO: Actual projection / bleed */
-  for (y = 0; y < dh; ++y) {
-    for (x = 0; x < dw; ++x) {
+  /* TODO: bleed/glow/scanlines */
+
+  /* Only iterate over the upper quarter of the screen (including the centre
+   * lines in the extremely rare case of an odd resolution), since the other
+   * quarters are symmetric. This saves us 75% of the projection calculations.
+   */
+  for (y = 0; y < (dh+1)/2; ++y) {
+    for (x = 0; x < (dw+1)/2; ++x) {
       crt_project_parabolic(src, &px, &py, x, y,
                             iw, ih, cx, cy, icx2, icy2);
-      dst[y*dpitch + x] = crt_sample(src, px, py) << 2;
+      put_px(dst, x,      y,      dpitch, src, px,                py);
+      put_px(dst, dw-x-1, y,      dpitch, src, src->w*256-px-256, py);
+      put_px(dst, x,      dh-y-1, dpitch, src, px,                src->h*256-py-256);
+      put_px(dst, dw-x-1, dh-y-1, dpitch, src, src->w*256-px-256, src->h*256-py-256);
     }
   }
 }

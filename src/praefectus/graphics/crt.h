@@ -76,7 +76,8 @@ void crt_screen_xfer(crt_screen* dst, const canvas*restrict src,
  * assumed to be in ARGB8888 format. It is assumed that the two have
  * approximately the same aspect ratio.
  */
-void crt_screen_proj(unsigned* dst, unsigned dw, unsigned dh, unsigned dpitch,
+void crt_screen_proj(unsigned*restrict dst,
+                     unsigned dw, unsigned dh, unsigned dpitch,
                      const crt_screen* src);
 
 #endif /* GRAPHICS_CRT_H_ */
