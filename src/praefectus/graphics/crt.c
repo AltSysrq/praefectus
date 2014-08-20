@@ -39,9 +39,15 @@
 #include "canvas.h"
 #include "crt.h"
 
+typedef struct {
+  signed x, y;
+} crt_screen_proj_point;
+
 struct crt_screen_s {
   unsigned short w, h;
-  crt_colour data[FLEXIBLE_ARRAY_MEMBER];
+  unsigned dw, dh, dpitch;
+  crt_screen_proj_point* proj;
+  crt_colour* data;
 };
 
 static inline unsigned crt_screen_off(
@@ -50,13 +56,58 @@ static inline unsigned crt_screen_off(
   return y * crt->w + x;
 }
 
-crt_screen* crt_screen_new(unsigned short w, unsigned short h) {
-  crt_screen* this = xmalloc(offsetof(crt_screen, data) +
-                             sizeof(crt_colour) * w * h);
+#define BULGE_FACTOR 24LL
+#define BASE_FACTOR (256LL - BULGE_FACTOR)
 
+/**
+ * Projects the given coordinates (x,y), whose maximum values are (w,h),
+ * parabolically into (dst_x,dst_y), which are 16.8 fixed-point coordinates
+ * into the screen.
+ */
+static inline void crt_project_parabolic(const crt_screen* crt,
+                                         signed*restrict dst_x, signed*restrict dst_y,
+                                         signed x, signed y,
+                                         fraction iw, fraction ih,
+                                         unsigned cx, unsigned cy,
+                                         fraction icx2, fraction icy2) {
+  signed ox = x - cx, oy = y - cy;
+  unsigned fx = fraction_fpmul(ox*ox, icx2, 16);
+  unsigned fy = fraction_fpmul(oy*oy, icy2, 16);
+  unsigned f = fx + fy;
+  signed factor;
+
+  factor = BASE_FACTOR * 256LL + BULGE_FACTOR * f / 256LL;
+
+  *dst_x = fraction_smul(crt->w * (cx * 65536LL + ox * factor) / 256, iw);
+  *dst_y = fraction_smul(crt->h * (cy * 65536LL + oy * factor) / 256, ih);
+}
+
+crt_screen* crt_screen_new(unsigned short w, unsigned short h,
+                           unsigned dw, unsigned dh, unsigned dpitch) {
+  unsigned x, y;
+  fraction iw = fraction_of(dw), ih = fraction_of(dh);
+  unsigned cx = dw/2, cy = dh/2;
+  fraction icx = fraction_of(cx), icx2 = fraction_umul(icx, icx);
+  fraction icy = fraction_of(cy), icy2 = fraction_umul(icy, icy);
+  crt_screen* this = xmalloc(sizeof(crt_screen) +
+                             sizeof(crt_colour) * w * h +
+                             sizeof(crt_screen_proj_point) * dw * dh);
   this->w = w;
   this->h = h;
+  this->dw = dw;
+  this->dh = dh;
+  this->dpitch = dpitch;
+  this->proj = (crt_screen_proj_point*)(this + 1);
+  this->data = (crt_colour*)(this->proj + dw*dh);
   memset(this->data, 0, sizeof(crt_colour) * w * h);
+
+  for (y = 0; y < dh; ++y)
+    for (x = 0; x < dw; ++x)
+      crt_project_parabolic(this,
+                            &this->proj[y*dw + x].x,
+                            &this->proj[y*dw + x].y,
+                            x, y,
+                            iw, ih, cx, cy, icx2, icy2);
 
   return this;
 }
@@ -130,32 +181,6 @@ void crt_screen_xfer(crt_screen* dst, const canvas*restrict src,
   }
 }
 
-#define BULGE_FACTOR 24LL
-#define BASE_FACTOR (256LL - BULGE_FACTOR)
-
-/**
- * Projects the given coordinates (x,y), whose maximum values are (w,h),
- * parabolically into (dst_x,dst_y), which are 16.8 fixed-point coordinates
- * into the screen.
- */
-static inline void crt_project_parabolic(const crt_screen* crt,
-                                         signed*restrict dst_x, signed*restrict dst_y,
-                                         signed x, signed y,
-                                         fraction iw, fraction ih,
-                                         unsigned cx, unsigned cy,
-                                         fraction icx2, fraction icy2) {
-  signed ox = x - cx, oy = y - cy;
-  unsigned fx = fraction_fpmul(ox*ox, icx2, 16);
-  unsigned fy = fraction_fpmul(oy*oy, icy2, 16);
-  unsigned f = fx + fy;
-  signed factor;
-
-  factor = BASE_FACTOR * 256LL + BULGE_FACTOR * f / 256LL;
-
-  *dst_x = fraction_smul(crt->w * (cx * 65536LL + ox * factor) / 256, iw);
-  *dst_y = fraction_smul(crt->h * (cy * 65536LL + oy * factor) / 256, ih);
-}
-
 static inline crt_colour crt_sample(const crt_screen* crt,
                                     signed x, signed y) {
   x >>= 8;
@@ -172,30 +197,15 @@ static inline void put_px(unsigned*restrict dst, unsigned dx, unsigned dy,
   dst[dy*dpitch + dx] = crt_sample(src, sx, sy) << 2;
 }
 
-void crt_screen_proj(unsigned*restrict dst, unsigned dw, unsigned dh,
-                     unsigned dpitch, const crt_screen* src) {
-  fraction iw = fraction_of(dw), ih = fraction_of(dh);
-  unsigned cx = dw/2, cy = dh/2;
-  fraction icx = fraction_of(cx), icx2 = fraction_umul(icx, icx);
-  fraction icy = fraction_of(cy), icy2 = fraction_umul(icy, icy);
-
+void crt_screen_proj(unsigned*restrict dst, const crt_screen* src) {
+  unsigned dw = src->dw, dh = src->dh, dpitch = src->dpitch;
   unsigned x, y;
-  signed px, py;
 
   /* TODO: bleed/glow/scanlines */
-
-  /* Only iterate over the upper quarter of the screen (including the centre
-   * lines in the extremely rare case of an odd resolution), since the other
-   * quarters are symmetric. This saves us 75% of the projection calculations.
-   */
-  for (y = 0; y < (dh+1)/2; ++y) {
-    for (x = 0; x < (dw+1)/2; ++x) {
-      crt_project_parabolic(src, &px, &py, x, y,
-                            iw, ih, cx, cy, icx2, icy2);
-      put_px(dst, x,      y,      dpitch, src, px,                py);
-      put_px(dst, dw-x-1, y,      dpitch, src, src->w*256-px-256, py);
-      put_px(dst, x,      dh-y-1, dpitch, src, px,                src->h*256-py-256);
-      put_px(dst, dw-x-1, dh-y-1, dpitch, src, src->w*256-px-256, src->h*256-py-256);
+  for (y = 0; y < dh; ++y) {
+    for (x = 0; x < dw; ++x) {
+      put_px(dst, x, y, dpitch, src,
+             src->proj[y*dw+x].x, src->proj[y*dw+x].y);
     }
   }
 }

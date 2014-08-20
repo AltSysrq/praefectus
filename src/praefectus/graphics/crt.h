@@ -52,8 +52,16 @@ typedef unsigned crt_colour;
 
 /**
  * Allocates a new, black CRT screen of the given dimensions.
+ *
+ * @param w The logical width of the CRT.
+ * @param w The logical height of the CRT.
+ * @param dw The width of the framebuffer to which the CRT will be projected.
+ * @param dh The height of the framebuffer to which the CRT will be projected.
+ * @param dpitch The pitch of the framebuffer to which the CRT will be
+ * projected.
  */
-crt_screen* crt_screen_new(unsigned short w, unsigned short h);
+crt_screen* crt_screen_new(unsigned short w, unsigned short h,
+                           unsigned dw, unsigned dh, unsigned dpitch);
 /**
  * Frees the memory held by the given crt_screen.
  */
@@ -77,7 +85,6 @@ void crt_screen_xfer(crt_screen* dst, const canvas*restrict src,
  * approximately the same aspect ratio.
  */
 void crt_screen_proj(unsigned*restrict dst,
-                     unsigned dw, unsigned dh, unsigned dpitch,
                      const crt_screen* src);
 
 #endif /* GRAPHICS_CRT_H_ */

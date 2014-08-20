@@ -249,14 +249,14 @@ int main(int argc, char** argv) {
          SDL_GetError());
 
   canv = canvas_new(240 * ww / wh, 240);
-  crt = crt_screen_new(canv->w, canv->h);
+  crt = crt_screen_new(canv->w, canv->h, ww, wh, ww);
   framebuffer = xmalloc(sizeof(Uint32) * ww * wh);
 
   state = test_state_new();
 
   do {
     draw(canv, crt, state, screen);
-    crt_screen_proj(framebuffer, ww, wh, ww, crt);
+    crt_screen_proj(framebuffer, crt);
     SDL_UpdateTexture(rendertex, NULL, framebuffer, ww * sizeof(Uint32));
     SDL_RenderCopy(renderer, rendertex, NULL, NULL);
     SDL_RenderPresent(renderer);
