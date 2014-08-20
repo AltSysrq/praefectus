@@ -182,13 +182,13 @@ void crt_screen_xfer(crt_screen* dst, const canvas*restrict src,
 }
 
 static inline crt_colour crt_sample(const crt_screen* crt,
-                                    signed x, signed y) {
-  x >>= 8;
-  y >>= 8;
+                                    signed fx, signed fy) {
+  signed x = fx >> 8, y = fy >> 8;
 
   if (x < 0 || x >= (signed)crt->w || y < 0 || y >= (signed)crt->h) return 0;
 
-  return crt->data[crt_screen_off(crt, x, y)];
+  return (crt->data[crt_screen_off(crt, x, y)]
+          >> (((fy - 64) & 0xFF) > 128)) & 0x003F3F3F;
 }
 
 static inline void put_px(unsigned*restrict dst, unsigned dx, unsigned dy,
@@ -201,7 +201,7 @@ void crt_screen_proj(unsigned*restrict dst, const crt_screen* src) {
   unsigned dw = src->dw, dh = src->dh, dpitch = src->dpitch;
   unsigned x, y;
 
-  /* TODO: bleed/glow/scanlines */
+  /* TODO: bleed/glow */
   for (y = 0; y < dh; ++y) {
     for (x = 0; x < dw; ++x) {
       put_px(dst, x, y, dpitch, src,
