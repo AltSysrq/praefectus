@@ -233,6 +233,39 @@ int main(int argc, char** argv) {
 
   SDL_GetWindowSize(screen, (int*)&ww, (int*)&wh);
 
+  /* For lack of a better place, the reasons behind the SDL rendering used in
+   * Praefectus follows.
+   *
+   * The original code simply used an accelerated renderer if possible, and
+   * then fell back on "whatever". However, at high resolutions, it pegged the
+   * CPU completely, so I investigated software blitting, including with the
+   * older SDL 1.2 version. Results on my desktop follow. CPU percentages are
+   * Praefectus+Xorg, though Xorg is omitted for hardware blitting. "Overhead"
+   * refers to the time between completing the rendering pass and the instant
+   * before the call to SDL_RenderPresent()/SDL_Flip().
+   *
+   * Blitting           1280x1024                       1920x1080
+   * SDL1.2 Soft        50%+47%; 1ms overhead           70%+40%; 2ms overhead
+   * SDL2.0 Hard        80%; 6ms overhead               pegged; 10ms overhead
+   * SDL2.0 Soft        50%+45%; 4ms overhead           60%+40%; 7ms overhead
+   *
+   * SDL2.0 software somehow interacts more poorly with the FreeBSD scheduler
+   * than SDL1.2. The former runs smoothely at 1280x1024 and is only mildly
+   * jerky at 1920x1080. The latter is jerky at both. The fact that SDL2.0 only
+   * supports synchronous blits makes things even worse, as X and the
+   * application end up alternately blocking on each other, while 110% of the
+   * CPU is really required to run at the full frame-rate. Thus SDL2.0 Software
+   * should be avoided.
+   *
+   * Though SDL2.0 hardware blitting incurs greater raw overhead than SDL1.2
+   * software, it actually runs smoother (at least with NVidia GLX) since it
+   * avoids lots of context switches. The biggest advantage of SDL1.2 software
+   * is its support for async blitting. However, we can get most of this
+   * benefit by rendering the next frame on a separate thread while the
+   * previous one is blitted. In this case, the overhead is effectively
+   * eliminated since it is below the time spent rendering a frame. The only
+   * real cost is some extra latency in getting things onto the screen.
+   */
   renderer = SDL_CreateRenderer(screen, -1,
                                 SDL_RENDERER_ACCELERATED |
                                 SDL_RENDERER_PRESENTVSYNC);
