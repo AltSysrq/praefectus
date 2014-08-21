@@ -77,22 +77,22 @@ static game_state* test_state_update(test_state* this, unsigned et) {
 }
 
 static const crt_colour demon_palette[16] = {
-  0x000000, //0
+  0x000000, /* 0 */
   0x020202,
   0x040404,
   0x060606,
-  0x080808, //4
+  0x080808, /* 4 */
   0x101010,
   0x202020,
-  0x002020,
-  0x000020, //8
-  0x200020,
-  0x200000,
-  0x202000,
-  0x002000, //12
-  0x000010,
-  0x080008,
-  0x000400,
+  0x3F3F3F,
+  0x003F3F, /* 8 */
+  0x00003F,
+  0x3F003F,
+  0x3F0000,
+  0x3F3F00, /* 12 */
+  0x003F00,
+  0x001010,
+  0x000004,
 };
 
 static void test_state_draw(test_state* this, canvas* dst,

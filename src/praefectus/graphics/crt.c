@@ -149,7 +149,7 @@ static inline unsigned seepage(crt_colour c) {
 
 void crt_screen_xfer(crt_screen* dst, const canvas*restrict src,
                      const crt_colour*restrict palette) {
-  unsigned charge_decay = 0x40000 / dst->w;
+  unsigned charge_decay = 0x60000 / dst->w;
   unsigned x, y, noise, charge, ghosting;
   crt_colour old, new;
 
@@ -161,7 +161,7 @@ void crt_screen_xfer(crt_screen* dst, const canvas*restrict src,
       old = (old >> 1) & 0x003F3F3F;
       new = palette[src->data[canvas_off(src, x, y)]];
 
-      ghosting = (charge >> 16) & 0x3F;
+      ghosting = (charge >> 19) & 0x3F;
       charge += seepage(new);
       if (charge > charge_decay)
         charge -= charge_decay;
