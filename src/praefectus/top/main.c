@@ -195,6 +195,26 @@ void select_window_bounds(SDL_Rect* window_bounds) {
   window_bounds->h = 480;
 }
 
+/* Since surface blits in SDL2 aren't async (as they could be in SDL1.2), we
+ * instead perform the CRT rendering for the next frame while the current one
+ * blits on a separate thread.
+ *
+ * The background thread waits on the crt_ready semaphore. Once acquired
+ * (decrementing it back to zero), it renders into the framebuffer_back global,
+ * then posts the framebuffer_ready semaphore.
+ *
+ * The main thread waits on the framebuffer_ready semaphore, then swaps the
+ * framebuffers and posts the crt_ready semaphore, then blits the front
+ * framebuffer (which isn't global).
+ *
+ * Initially, the framebuffer_ready has a value of 1, and the crt_ready of
+ * zero.
+ */
+static crt_screen* crt;
+static Uint32* framebuffer_back;
+static SDL_sem* crt_ready, * framebuffer_ready;
+static int render_crt_background(void*);
+
 int main(int argc, char** argv) {
   unsigned ww, wh;
   SDL_Window* screen;
@@ -202,11 +222,11 @@ int main(int argc, char** argv) {
   SDL_Texture* rendertex;
   const int image_types = IMG_INIT_JPG | IMG_INIT_PNG;
   canvas* canv;
-  crt_screen* crt;
-  Uint32* framebuffer;
+  Uint32* framebuffer_front, * framebuffer_tmp, * framebuffer_both;
   game_state* state;
   SDL_Rect window_bounds;
-  Uint32 draw_start, render_end, draw_end;
+  SDL_Thread* crt_render_thread;
+  unsigned num_frames_since_fps_report = 0, last_fps_report = SDL_GetTicks();
 
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     errx(EX_SOFTWARE, "Unable to initialise SDL: %s", SDL_GetError());
@@ -282,36 +302,53 @@ int main(int argc, char** argv) {
     errx(EX_SOFTWARE, "Unable to create SDL texture: %s",
          SDL_GetError());
 
+  crt_ready = SDL_CreateSemaphore(0);
+  framebuffer_ready = SDL_CreateSemaphore(1);
+  if (!crt_ready || !framebuffer_ready)
+    errx(EX_UNAVAILABLE, "Failed to create semaphores: %s",
+         SDL_GetError());
+
+  crt_render_thread = SDL_CreateThread(render_crt_background,
+                                       "render-crt-background",
+                                       NULL);
+  if (!crt_render_thread)
+    errx(EX_UNAVAILABLE, "Failed to spawn render thread: %s",
+         SDL_GetError());
+
   canv = canvas_new(240 * ww / wh, 240);
   crt = crt_screen_new(canv->w, canv->h, ww, wh, ww);
-  framebuffer = xmalloc(sizeof(Uint32) * ww * wh);
+  framebuffer_both = xmalloc(2 * sizeof(Uint32) * ww * wh);
+  framebuffer_back = framebuffer_both;
+  framebuffer_front = framebuffer_both + ww*wh;
+  memset(framebuffer_back, 0, 2 * sizeof(Uint32) * ww * wh);
 
   state = test_state_new();
 
   do {
-    draw_start = SDL_GetTicks();
     draw(canv, crt, state, screen);
-    crt_screen_proj(framebuffer, crt);
-    render_end = SDL_GetTicks();
-    SDL_UpdateTexture(rendertex, NULL, framebuffer, ww * sizeof(Uint32));
+    SDL_SemWait(framebuffer_ready);
+    framebuffer_tmp = framebuffer_front;
+    framebuffer_front = framebuffer_back;
+    framebuffer_back = framebuffer_tmp;
+    SDL_SemPost(crt_ready);
+    SDL_UpdateTexture(rendertex, NULL, framebuffer_front, ww * sizeof(Uint32));
     SDL_RenderCopy(renderer, rendertex, NULL, NULL);
-    draw_end = SDL_GetTicks();
     SDL_RenderPresent(renderer);
-
-    if (draw_end != draw_start)
-      printf("Drawing took %d ms (rendered in %d ms); %3d FPS\n",
-             draw_end - draw_start, render_end - draw_start,
-             1000 / (draw_end - draw_start));
-    else
-      printf("Drawing took 0 ms\n");
 
     if (handle_input(state)) break; /* quit */
     state = update(state);
+
+    ++num_frames_since_fps_report;
+    if (SDL_GetTicks() - last_fps_report > 3000) {
+      last_fps_report = SDL_GetTicks();
+      printf("FPS: %3d\n", num_frames_since_fps_report / 3);
+      num_frames_since_fps_report = 0;
+    }
   } while (state);
 
   free(canv);
   crt_screen_delete(crt);
-  free(framebuffer);
+  free(framebuffer_both);
 
   return 0;
 }
@@ -344,6 +381,17 @@ static void draw(canvas* canv, crt_screen* crt,
   crt_colour palette[256];
   (*state->draw)(state, canv, palette);
   crt_screen_xfer(crt, canv, palette);
+}
+
+static int render_crt_background(void* _) {
+  for (;;) {
+    SDL_SemWait(crt_ready);
+    crt_screen_proj(framebuffer_back, crt);
+    SDL_SemPost(framebuffer_ready);
+  }
+
+  /* unreachable */
+  abort();
 }
 
 static int handle_input(game_state* state) {
