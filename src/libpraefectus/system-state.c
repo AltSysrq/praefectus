@@ -29,6 +29,7 @@
 #include <config.h>
 #endif
 
+#include "messages/PraefMsg.h"
 #include "system.h"
 #include "-system.h"
 #include "-system-state.h"
@@ -43,6 +44,13 @@ static void praef_system_state_loopback_broadcast(
 
 static void praef_system_state_recv_message(
   praef_system*, praef_hlmsg*);
+static void praef_system_state_process_message(
+  praef_system*, praef_node*, praef_instant, PraefMsg_t*);
+
+static void praef_system_state_process_appevt(
+  praef_system*, praef_node*, praef_instant, PraefMsgAppEvent_t*);
+static void praef_system_state_process_vote(
+  praef_system*, praef_node*, praef_instant, PraefMsgVote_t*);
 
 int praef_system_state_init(praef_system* sys) {
   sys->state.loopback.unicast = praef_system_state_loopback_unicast;
@@ -117,5 +125,90 @@ static void praef_system_state_loopback_unicast(
 static void praef_system_state_recv_message(
   praef_system* sys, praef_hlmsg* msg
 ) {
-  /* TODO */
+  praef_object_id sender_id;
+  praef_node* sender;
+  const praef_hlmsg_segment* seg;
+  PraefMsg_t* decoded;
+  praef_instant instant;
+
+  if (!praef_hlmsg_is_valid(msg)) return;
+
+  /* TODO (probably not exhastive):
+   *
+   * - Add messages to hash tree when appropriate
+   * - Add messages to commitment chains when appropriate
+   * - Drop duplicated messages (ie, those already in the hash tree)
+   * - Filter messages by time (in some cases)
+   */
+
+  sender_id = praef_verifier_verify(
+    sys->verifier, praef_hlmsg_pubkey_hint(msg),
+    praef_hlmsg_signature(msg),
+    praef_hlmsg_signable(msg), praef_hlmsg_signable_sz(msg));
+  if (sender_id)
+    sender = RB_FIND(praef_node_map, &sys->nodes, (praef_node*)&sender_id);
+  else
+    sender = NULL;
+
+  instant = praef_hlmsg_instant(msg);
+
+  for (seg = praef_hlmsg_first(msg); seg; seg = praef_hlmsg_snext(seg)) {
+    decoded = praef_hlmsg_sdec(seg);
+    if (!decoded) {
+      sys->oom = 1;
+    } else {
+      praef_system_state_process_message(sys, sender, instant, decoded);
+      (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, decoded, 0);
+    }
+  }
+}
+
+static void praef_system_state_process_message(
+  praef_system* sys, praef_node* sender, praef_instant instant, PraefMsg_t* msg
+) {
+  switch (msg->present) {
+  case PraefMsg_PR_NOTHING: abort();
+  case PraefMsg_PR_appevt:
+    if (sender)
+      praef_system_state_process_appevt(sys, sender, instant, &msg->choice.appevt);
+    break;
+
+  case PraefMsg_PR_vote:
+    if (sender)
+      praef_system_state_process_vote(sys, sender, instant, &msg->choice.vote);
+    break;
+
+  /* TODO: Handle all cases, remove default */
+  default:
+    abort();
+  }
+}
+
+static void praef_system_state_process_appevt(
+  praef_system* sys, praef_node* sender, praef_instant instant,
+  PraefMsgAppEvent_t* msg
+) {
+  /* TODO: Check for duplicate event */
+  praef_event* evt = (*sys->app->decode_event)(
+    sys->app, instant, sender->id,
+    msg->serialnumber,
+    msg->data.buf, msg->data.size);
+  if (!evt) {
+    /* Invalid event */
+    sender->disposition = praef_nd_negative;
+    return;
+  }
+
+  /* TODO: Store the event somewhere for duplicate checking */
+  (*sys->app->insert_event_bridge)(sys->app, evt);
+}
+
+
+static void praef_system_state_process_vote(
+  praef_system* sys, praef_node* sender, praef_instant instant,
+  PraefMsgVote_t* msg
+) {
+  /* TODO: Enforce time boundaries on msg->instant vs hlmsg instant */
+  (*sys->app->vote_bridge)(sys->app, sender->id, msg->instant,
+                           msg->serialnumber);
 }

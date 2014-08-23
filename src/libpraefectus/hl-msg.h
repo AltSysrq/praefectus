@@ -167,7 +167,8 @@ const praef_hlmsg_segment* praef_hlmsg_first(const praef_hlmsg*);
 const praef_hlmsg_segment* praef_hlmsg_snext(const praef_hlmsg_segment*);
 /**
  * Decodes the data behind the given hlmsg segment. This is guaranteed to be
- * non-NULL and is a message type appropriate for this hlmsg.
+ * non-NULL (unless allocation fails) and is a message type appropriate for
+ * this hlmsg.
  */
 PraefMsg_t* praef_hlmsg_sdec(const praef_hlmsg_segment*);
 

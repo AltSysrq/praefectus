@@ -60,6 +60,7 @@ praef_system* praef_system_new(praef_app* app,
   RB_INIT(&this->nodes);
 
   if (!(this->signator = praef_signator_new()) ||
+      !(this->verifier = praef_verifier_new()) ||
       !praef_system_router_init(this) ||
       !praef_system_state_init(this)) {
     praef_system_delete(this);
@@ -85,6 +86,7 @@ void praef_system_delete(praef_system* this) {
   praef_system_state_destroy(this);
   praef_system_router_destroy(this);
 
+  if (this->verifier) praef_verifier_delete(this->verifier);
   if (this->signator) praef_signator_delete(this->signator);
   free(this);
 }
@@ -116,4 +118,69 @@ int praef_system_vote_event(praef_system* this, praef_object_id oid,
   msg.choice.vote.serialnumber = serno;
 
   return praef_outbox_append(this->router.cr_out, &msg);
+}
+
+static void praef_system_register_node(
+  praef_system* this, praef_node* node,
+  const unsigned char pubkey[PRAEF_PUBKEY_SIZE]
+) {
+  /* TODO: Properly handle duplicate public key */
+  this->oom |= !praef_verifier_assoc(this->verifier, pubkey, node->id);
+  RB_INSERT(praef_node_map, &this->nodes, node);
+  (*this->app->create_node_object)(this->app, node->id);
+}
+
+void praef_system_bootstrap(praef_system* this) {
+  praef_node* node = calloc(1, sizeof(praef_node));
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE];
+  if (!node) {
+    this->oom = 1;
+    return;
+  }
+
+  node->id = 1;
+  node->sys = this;
+  node->bus = &this->state.loopback;
+  node->disposition = praef_nd_positive;
+  this->local_node = node;
+
+  praef_signator_pubkey(pubkey, this->signator);
+  praef_system_register_node(this, node, pubkey);
+
+  this->oom |=
+    !praef_node_router_init(node) ||
+    !praef_node_state_init(node);
+
+  if (PRAEF_APP_HAS(this->app, acquire_id_opt))
+    (*this->app->acquire_id_opt)(this->app, 1);
+}
+
+static int praef_system_self_alive(praef_system* this) {
+  if (!this->local_node) return 0;
+
+  return
+    (this->clock.monotime <
+     (*this->app->get_node_grant_bridge)(this->app, this->local_node->id)) &&
+    (this->clock.monotime >=
+     (*this->app->get_node_deny_bridge)(this->app, this->local_node->id));
+}
+
+praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
+  unsigned old_monotime = this->clock.monotime, elapsed_monotime;
+  praef_node* node;
+  praef_clock_tick(&this->clock, elapsed, praef_system_self_alive(this));
+  elapsed_monotime = this->clock.monotime - old_monotime;
+
+  RB_FOREACH(node, praef_node_map, &this->nodes) {
+    praef_node_state_update(node, elapsed);
+    praef_node_router_update(node, elapsed);
+  }
+
+  praef_system_state_update(this, elapsed);
+  (*this->app->advance_bridge)(this->app, elapsed_monotime);
+  praef_system_router_update(this, elapsed);
+
+  if (this->oom) return praef_ss_oom;
+  /* TODO: Other stati */
+  return praef_ss_ok;
 }

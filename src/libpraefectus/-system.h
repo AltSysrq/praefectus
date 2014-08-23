@@ -28,6 +28,8 @@
 #ifndef LIBPRAEFECTUS__SYSTEM_H_
 #define LIBPRAEFECTUS__SYSTEM_H_
 
+#include <stddef.h>
+
 /* This is an internal header file.
  *
  * It defines the system struct and internal interface, primarily so that tests
@@ -58,11 +60,19 @@
 #include "-system-state.h"
 #include "-system-router.h"
 
+typedef enum {
+  praef_nd_neutral = 0,
+  praef_nd_positive,
+  praef_nd_negative
+} praef_node_disposition;
+
 typedef struct praef_node_s {
   praef_object_id id;
   PraefNetworkIdentifierPair_t net_id;
   praef_system* sys;
   praef_message_bus* bus;
+
+  praef_node_disposition disposition;
 
   praef_node_state state;
   praef_node_router router;
@@ -80,6 +90,7 @@ struct praef_system_s {
   unsigned mtu;
 
   praef_signator* signator;
+  praef_verifier* verifier;
   praef_event_serial_number evt_serno;
   praef_clock clock;
 
@@ -94,5 +105,9 @@ struct praef_system_s {
 
 int praef_compare_nodes(const praef_node*, const praef_node*);
 RB_PROTOTYPE(praef_node_map, praef_node_s, map, praef_compare_nodes)
+
+#define PRAEF_APP_HAS(app, method)                      \
+  (((app)->size >= offsetof(praef_app, method)) &&      \
+   (app)->method)
 
 #endif /* LIBPRAEFECTUS__SYSTEM_H_ */

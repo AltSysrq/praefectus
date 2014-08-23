@@ -73,6 +73,36 @@ typedef struct praef_app_s praef_app;
 typedef void (*praef_app_create_node_object_t)(praef_app*, praef_object_id);
 
 /**
+ * Returns the time at which the given node gained the GRANT status. A time in
+ * the future or at the current instant indicates it does not have
+ * GRANT. Typically, ~0 is used in this case.
+ *
+ * Most applications will simply use the implementation provided by the
+ * standard system bridge.
+ *
+ * @param id The id of the node being queried.
+ * @return The time at which GRANT was gained by the node, or a future time if
+ * the node does not have GRANT.
+ */
+typedef praef_instant (*praef_app_get_node_grant_t)(
+  praef_app*, praef_object_id);
+
+/**
+ * Returns the time at which the given node gained the DENY status. A time in
+ * the future or at the current instant indicates it does not have
+ * DENY. Typically, ~0 is used in this case.
+ *
+ * Most applications will simply use the implementation provided by the
+ * standard system bridge.
+ *
+ * @param id The id of the node being queried.
+ * @return The time at which DENY was gained by the node, or a future time if
+ * the node does not have DENY.
+ */
+typedef praef_instant (*praef_app_get_node_deny_t)(
+  praef_app*, praef_object_id);
+
+/**
  * Requests the application to decode the given byte array into an
  * application-specific event.
  *
@@ -275,6 +305,8 @@ struct praef_app_s {
   praef_app_create_node_object_t create_node_object;
   praef_app_decode_event_t decode_event;
 
+  praef_app_get_node_grant_t get_node_grant_bridge;
+  praef_app_get_node_deny_t get_node_deny_bridge;
   praef_app_insert_event_t insert_event_bridge;
   praef_app_neutralise_event_t neutralise_event_bridge;
   praef_app_chmod_t chmod_bridge;
@@ -286,7 +318,7 @@ struct praef_app_s {
   praef_app_is_auth_valid_t is_auth_valid_opt;
 
   /* Optional notification callbacks */
-  praef_app_acquire_id_t acquire_opt;
+  praef_app_acquire_id_t acquire_id_opt;
   praef_app_discover_node_t discover_node_opt;
   praef_app_remove_node_t remove_node_opt;
 
