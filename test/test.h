@@ -112,10 +112,17 @@ static inline void run_suite(Suite* suite) {
 #define ANONYMOUS GLUE(_anon_,__LINE__)
 #define _ID(...) __VA_ARGS__
 #define STRIP_PARENS(x) _ID(_ID x)
-#define lambda(args, expr)                              \
-  ({typeof(({STRIP_PARENS(args); expr;}))               \
-  GLUE(_lambda_,ANONYMOUS) args {                       \
-      return expr;                                      \
+/* Yes, we're using K&R style declarations right in the middle of C99 with a
+ * bunch of GNU extensions. It's seemingly the cleanest way to do lambda() with
+ * more than one parameter.
+ *
+ * To be honest, I was kind of suprised that GCC actually accepts this syntax
+ * in this context.
+ */
+#define lambda(arg_names, args, expr)                   \
+  ({typeof(({args; expr;}))                             \
+  GLUE(_lambda_,ANONYMOUS) arg_names args; {            \
+      return ({expr;});                                 \
     }                                                   \
   GLUE(_lambda_,ANONYMOUS); })
 #define lambdav(args, expr)                     \

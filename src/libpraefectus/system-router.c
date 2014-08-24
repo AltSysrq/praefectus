@@ -78,8 +78,8 @@ void praef_node_router_destroy(praef_node* node) {
 }
 
 void praef_system_router_update(praef_system* sys, unsigned delta) {
-  sys->oom |= praef_outbox_flush(sys->router.cr_out);
-  sys->oom |= praef_outbox_flush(sys->router.ur_out);
+  sys->oom |= !praef_outbox_flush(sys->router.cr_out);
+  sys->oom |= !praef_outbox_flush(sys->router.ur_out);
 
   praef_outbox_set_now(sys->router.cr_out, sys->clock.monotime);
   praef_outbox_set_now(sys->router.ur_out, sys->clock.monotime);
@@ -88,7 +88,7 @@ void praef_system_router_update(praef_system* sys, unsigned delta) {
 
 
 void praef_node_router_update(praef_node* node, unsigned delta) {
-  node->sys->oom |= praef_outbox_flush(node->router.rpc_out);
+  node->sys->oom |= !praef_outbox_flush(node->router.rpc_out);
 
   praef_outbox_set_now(node->router.rpc_out, node->sys->clock.monotime);
   praef_mq_update(node->router.rpc_mq);

@@ -111,8 +111,10 @@ static void praef_system_state_loopback_broadcast(
 
   msg.data = data;
   msg.size = size+1;
-  praef_system_state_recv_message(UNDOT(praef_system, bus, bus),
-                                  &msg);
+  praef_system_state_recv_message(
+    UNDOT(praef_system, state,
+          UNDOT(praef_system_state, loopback, bus)),
+    &msg);
 }
 
 static void praef_system_state_loopback_unicast(
@@ -139,6 +141,7 @@ static void praef_system_state_recv_message(
    * - Add messages to commitment chains when appropriate
    * - Drop duplicated messages (ie, those already in the hash tree)
    * - Filter messages by time (in some cases)
+   * - Sample clock source
    */
 
   sender_id = praef_verifier_verify(
@@ -211,4 +214,7 @@ static void praef_system_state_process_vote(
   /* TODO: Enforce time boundaries on msg->instant vs hlmsg instant */
   (*sys->app->vote_bridge)(sys->app, sender->id, msg->instant,
                            msg->serialnumber);
+}
+
+void praef_node_state_update(praef_node* node, unsigned delta) {
 }

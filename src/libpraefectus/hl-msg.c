@@ -93,7 +93,7 @@ int praef_hlmsg_is_valid(const praef_hlmsg* message) {
   const unsigned char* data = message->data;
   unsigned offset;
   praef_hlmsg_type_flag expected_type;
-  PraefMsg_t deserialised, * deserialised_ptr = & deserialised;;
+  PraefMsg_t deserialised, * deserialised_ptr = &deserialised;;
   asn_dec_rval_t decode_result;
   int ok;
 
@@ -247,7 +247,7 @@ const praef_hlmsg_segment* praef_hlmsg_snext(const praef_hlmsg_segment* seg) {
 }
 
 PraefMsg_t* praef_hlmsg_sdec(const praef_hlmsg_segment* segment) {
-  PraefMsg_t* result;
+  PraefMsg_t* result = NULL;
   const unsigned char* data = (const unsigned char*)segment;
   asn_dec_rval_t decode_result;
 

@@ -6,7 +6,7 @@ libpraefectus/transactor.t libpraefectus/metatransactor.t \
 libpraefectus/hash-tree.t libpraefectus/commitment-chain.t \
 libpraefectus/dsa.t libpraefectus/virtual-bus.t \
 libpraefectus/hl-msg.t libpraefectus/clock.t libpraefectus/dynamic.t \
-libpraefectus/outbox.t
+libpraefectus/outbox.t libpraefectus/system.t
 AM_CFLAGS = $(CHECK_CFLAGS) -I$(top_builddir)/src \
   -I$(top_builddir)/src/asn1-support -Wall -Wextra \
   -Wno-unused-parameter -Wno-long-long -Wno-missing-field-initializers \
@@ -42,6 +42,8 @@ libpraefectus_dynamic_t_SOURCES = libpraefectus/dynamic.c
 libpraefectus_dynamic_t_LDADD = $(TEST_LIBS)
 libpraefectus_outbox_t_SOURCES = libpraefectus/outbox.c
 libpraefectus_outbox_t_LDADD = $(TEST_LIBS)
+libpraefectus_system_t_SOURCES = libpraefectus/system.c
+libpraefectus_system_t_LDADD = $(TEST_LIBS)
 
 libpraefectus_clock_sim_SOURCES = libpraefectus/clock-sim.c
 libpraefectus_clock_sim_LDADD = ../src/libpraefectus.la
