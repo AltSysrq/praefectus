@@ -127,7 +127,11 @@ static void praef_system_register_node(
   /* TODO: Properly handle duplicate public key */
   this->oom |= !praef_verifier_assoc(this->verifier, pubkey, node->id);
   RB_INSERT(praef_node_map, &this->nodes, node);
-  (*this->app->create_node_object)(this->app, node->id);
+  if ((*this->app->create_node_bridge)(this->app, node->id)) {
+    (*this->app->create_node_object)(this->app, node->id);
+  } else {
+    this->oom = 1;
+  }
 }
 
 void praef_system_bootstrap(praef_system* this) {
@@ -183,4 +187,8 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
   if (this->oom) return praef_ss_oom;
   /* TODO: Other stati */
   return praef_ss_ok;
+}
+
+void praef_system_oom(praef_system* this) {
+  this->oom = 1;
 }

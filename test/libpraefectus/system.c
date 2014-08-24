@@ -94,7 +94,8 @@ defteardown {
 }
 
 deftest(can_send_minimal_events) {
-  int has_created_obj = 0, has_received_evt = 0, has_received_vote = 0;
+  int has_created_node = 0, has_created_obj = 0;
+  int has_received_evt = 0, has_received_vote = 0;
   praef_event* evt_to_free;
 
   app[0].get_node_grant_bridge = lambda(
@@ -109,10 +110,19 @@ deftest(can_send_minimal_events) {
     ck_assert_ptr_eq(app, this);
     ck_assert_int_eq(1, node);
     (praef_instant)~0);
+  app[0].create_node_bridge = lambda(
+    (this, node),
+    praef_app* this; praef_object_id node,
+    ck_assert_ptr_eq(app, this);
+    ck_assert_int_eq(1, node);
+    ck_assert(!has_created_node);
+    has_created_node = 1;
+    1);
   app[0].create_node_object = lambdav(
     (praef_app* this, praef_object_id node),
     ck_assert_ptr_eq(app, this);
     ck_assert_int_eq(1, node);
+    ck_assert(has_created_node);
     ck_assert(!has_created_obj);
     has_created_obj = 1);
   app[0].insert_event_bridge = lambdav(
@@ -125,11 +135,13 @@ deftest(can_send_minimal_events) {
     evt_to_free = evt;
     has_received_evt = 1);
   app[0].vote_bridge = lambdav(
-    (praef_app* this, praef_object_id object,
+    (praef_app* this, praef_object_id voter,
+     praef_object_id object,
      praef_instant instant,
      praef_event_serial_number serno),
     ck_assert_ptr_eq(app, this);
     ck_assert(!has_received_vote);
+    ck_assert_int_eq(1, voter);
     ck_assert_int_eq(1, object);
     ck_assert_int_eq(0, instant);
     ck_assert_int_eq(123, serno);
@@ -144,6 +156,7 @@ deftest(can_send_minimal_events) {
   ck_assert_int_eq(praef_ss_ok, praef_system_advance(sys[0], 10));
   ck_assert_int_eq(praef_ss_ok, praef_system_advance(sys[0], 10));
 
+  ck_assert(has_created_node);
   ck_assert(has_created_obj);
   ck_assert(has_received_evt);
   ck_assert(has_received_vote);

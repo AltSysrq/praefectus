@@ -212,7 +212,10 @@ static void praef_system_state_process_vote(
   PraefMsgVote_t* msg
 ) {
   /* TODO: Enforce time boundaries on msg->instant vs hlmsg instant */
-  (*sys->app->vote_bridge)(sys->app, sender->id, msg->instant,
+  /* TODO: Check for duplicate voting */
+  (*sys->app->vote_bridge)(sys->app, sender->id,
+                           msg->node,
+                           msg->instant,
                            msg->serialnumber);
 }
 

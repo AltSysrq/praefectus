@@ -44,7 +44,8 @@ libpraefectus/dynamic.c \
 libpraefectus/outbox.c \
 libpraefectus/system-state.c \
 libpraefectus/system-router.c \
-libpraefectus/system.c
+libpraefectus/system.c \
+libpraefectus/stdsys.c
 
 libpraefectus_la_LIBADD = \
   libpraefectus-messages.la libasn1-support.la

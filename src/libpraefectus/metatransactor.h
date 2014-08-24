@@ -165,6 +165,23 @@ int praef_metatransactor_chmod(praef_metatransactor*,
                                praef_instant when);
 
 /**
+ * Returns the instant at which the given node gained/will gain the GRANT bit,
+ * though usually the only future time returned will be ~0.
+ *
+ * @param node The id of the node being queried. This MUST be an existing node.
+ */
+praef_instant praef_metatransactor_get_grant(praef_metatransactor*,
+                                             praef_object_id node);
+/**
+ * Returns the instant at which the given node gained/will gain the DENY bit,
+ * though usually the only future time returned will be ~0.
+ *
+ * @param node The id of the node being queried. This MUST be an existing node.
+ */
+praef_instant praef_metatransactor_get_deny(praef_metatransactor*,
+                                            praef_object_id node);
+
+/**
  * Advances the time of the given metatransactor.
  */
 void praef_metatransactor_advance(praef_metatransactor*, unsigned);

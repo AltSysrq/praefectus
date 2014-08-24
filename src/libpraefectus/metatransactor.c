@@ -622,3 +622,15 @@ int praef_metatransactor_chmod(praef_metatransactor* this,
   praef_context_rewind(this->context, instant);
   return 1;
 }
+
+praef_instant praef_metatransactor_get_grant(praef_metatransactor* this,
+                                             praef_object_id node) {
+  return ((praef_metatransactor_node*)praef_context_get_object(
+            this->context, node))->bits_set[GRANT_BIT];
+}
+
+praef_instant praef_metatransactor_get_deny(praef_metatransactor* this,
+                                            praef_object_id node) {
+  return ((praef_metatransactor_node*)praef_context_get_object(
+            this->context, node))->bits_set[DENY_BIT];
+}

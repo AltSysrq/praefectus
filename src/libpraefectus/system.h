@@ -73,6 +73,18 @@ typedef struct praef_app_s praef_app;
 typedef void (*praef_app_create_node_object_t)(praef_app*, praef_object_id);
 
 /**
+ * Instructs the application to initialise data for a new node with the given
+ * id. This is always called immediately before create_node_object().
+ *
+ * Unlike create_node_object(), most applications will simply let the standard
+ * system bridge implement this method, hence its separation.
+ *
+ * @return Whether the operation succeeds. If it fails, create_node_object()
+ * will not be called and the OOM flag on the system will be set.
+ */
+typedef int (*praef_app_create_node_t)(praef_app*, praef_object_id);
+
+/**
  * Returns the time at which the given node gained the GRANT status. A time in
  * the future or at the current instant indicates it does not have
  * GRANT. Typically, ~0 is used in this case.
@@ -179,6 +191,7 @@ typedef void (*praef_app_chmod_t)(praef_app*, praef_object_id target,
  * The vast majority of applications will sipmly use the implementation
  * provided by the standard system bridge.
  *
+ * @param voter The node which is casting the vote.
  * @param object The object element of the event identifier triple being
  * affirmed.
  * @param instant The instant element of the event identifer triple being
@@ -186,7 +199,9 @@ typedef void (*praef_app_chmod_t)(praef_app*, praef_object_id target,
  * @param serial_number The serial number element of the event identifier
  * triple being affirmed.
  */
-typedef void (*praef_app_vote_t)(praef_app*, praef_object_id object,
+typedef void (*praef_app_vote_t)(praef_app*,
+                                 praef_object_id voter,
+                                 praef_object_id object,
                                  praef_instant instant,
                                  praef_event_serial_number serial_number);
 
@@ -305,6 +320,7 @@ struct praef_app_s {
   praef_app_create_node_object_t create_node_object;
   praef_app_decode_event_t decode_event;
 
+  praef_app_create_node_t create_node_bridge;
   praef_app_get_node_grant_t get_node_grant_bridge;
   praef_app_get_node_deny_t get_node_deny_bridge;
   praef_app_insert_event_t insert_event_bridge;
@@ -522,6 +538,12 @@ int praef_system_vote_event(praef_system*, praef_object_id,
  */
 int praef_system_send_unicast(praef_system*, praef_object_id target,
                               const void* data, size_t size);
+
+/**
+ * Sets the Out-of-Memory flag on the given praef_system. All further calls to
+ * praef_system_advance() will return praef_ss_oom.
+ */
+void praef_system_oom(praef_system*);
 
 /**
  * Configures the obsolescence interval of the clock on the given system.
