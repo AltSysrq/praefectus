@@ -68,8 +68,10 @@ defsetup {
   unsigned i;
 
   memset(app, 0, sizeof(app));
-  for (i = 0; i < 4; ++i)
+  for (i = 0; i < 4; ++i) {
+    app[i].size = sizeof(praef_app);
     app[i].decode_event = decode_event;
+  }
 
   vnet = praef_virtual_network_new();
   for (i = 0; i < 4; ++i) {
