@@ -346,6 +346,15 @@ int main(int argc, char** argv) {
     }
   } while (state);
 
+  /* Before freeing stuff, wait for the background thread to have finished its
+   * final pass.
+   *
+   * (Don't bother trying to stop it; after this call, it'll be eternally
+   * frozen on that semaphore while we finish cleanup up, and then it'll die
+   * along with the whole process.)
+   */
+  SDL_SemWait(framebuffer_ready);
+
   free(canv);
   crt_screen_delete(crt);
   free(framebuffer_both);
