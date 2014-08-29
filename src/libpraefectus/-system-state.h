@@ -32,6 +32,7 @@
 #include "clock.h"
 #include "message-bus.h"
 #include "outbox.h"
+#include "hash-tree.h"
 
 struct praef_node_s;
 
@@ -51,6 +52,7 @@ typedef struct {
    * methods implemented.
    */
   praef_message_bus loopback;
+  praef_hash_tree* hash_tree;
 } praef_system_state;
 
 typedef struct {

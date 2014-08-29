@@ -58,14 +58,16 @@ int praef_system_state_init(praef_system* sys) {
 
   if (!(sys->state.ur_mq = praef_mq_new(sys->router.ur_out,
                                         &sys->state.loopback,
-                                        NULL)))
+                                        NULL)) ||
+      !(sys->state.hash_tree = praef_hash_tree_new()))
     return 0;
 
   return 1;
 }
 
 void praef_system_state_destroy(praef_system* sys) {
-  praef_mq_delete(sys->state.ur_mq);
+  if (sys->state.ur_mq) praef_mq_delete(sys->state.ur_mq);
+  if (sys->state.hash_tree) praef_hash_tree_delete(sys->state.hash_tree);
 }
 
 void praef_system_state_update(praef_system* sys, unsigned delta) {
@@ -132,14 +134,31 @@ static void praef_system_state_recv_message(
   const praef_hlmsg_segment* seg;
   PraefMsg_t* decoded;
   praef_instant instant;
+  praef_hash_tree_objref ht_objref;
 
   if (!praef_hlmsg_is_valid(msg)) return;
 
+  if (praef_htf_rpc_type != praef_hlmsg_type(msg)) {
+    ht_objref.size = msg->size - 1;
+    ht_objref.data = msg->data;
+    switch (praef_hash_tree_add(sys->state.hash_tree, &ht_objref)) {
+    case praef_htar_failed:
+      sys->oom = 1;
+      return;
+
+    case praef_htar_already_present:
+      /* Duplicate message, no more processing needed */
+      return;
+
+    case praef_htar_added:
+      /* Continue processing as normal */
+      break;
+    }
+  }
+
   /* TODO (probably not exhastive):
    *
-   * - Add messages to hash tree when appropriate
    * - Add messages to commitment chains when appropriate
-   * - Drop duplicated messages (ie, those already in the hash tree)
    * - Filter messages by time (in some cases)
    * - Sample clock source
    */
