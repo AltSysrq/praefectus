@@ -44,6 +44,7 @@ libpraefectus/dynamic.c \
 libpraefectus/outbox.c \
 libpraefectus/system-state.c \
 libpraefectus/system-router.c \
+libpraefectus/system-join.c \
 libpraefectus/system.c \
 libpraefectus/stdsys.c
 

@@ -59,6 +59,7 @@
 
 #include "-system-state.h"
 #include "-system-router.h"
+#include "-system-join.h"
 
 typedef enum {
   praef_nd_neutral = 0,
@@ -76,6 +77,7 @@ typedef struct praef_node_s {
 
   praef_node_state state;
   praef_node_router router;
+  praef_node_join join;
 
   RB_ENTRY(praef_node_s) map;
 } praef_node;
@@ -96,6 +98,7 @@ struct praef_system_s {
 
   praef_system_state state;
   praef_system_router router;
+  praef_system_join join;
 
   struct praef_node_map nodes;
 

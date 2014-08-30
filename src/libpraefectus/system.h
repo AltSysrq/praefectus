@@ -286,6 +286,16 @@ typedef void (*praef_app_discover_node_t)(
 typedef void (*praef_app_remove_node_t)(praef_app*, praef_object_id);
 
 /**
+ * Notifies the application that traversal of the full node-join tree is
+ * believed to be complete. At this point the local node will begin connecting
+ * to other nodes in the system and actively synchronising with them.
+ *
+ * This is only ever called once at some point after a call to
+ * praef_system_connect().
+ */
+typedef void (*praef_app_join_tree_traversed_t)(praef_app*);
+
+/**
  * Notifies the application that it has received an application-defined unicast
  * message.
  *
@@ -337,6 +347,7 @@ struct praef_app_s {
   praef_app_acquire_id_t acquire_id_opt;
   praef_app_discover_node_t discover_node_opt;
   praef_app_remove_node_t remove_node_opt;
+  praef_app_join_tree_traversed_t join_tree_traversed_opt;
 
   /* Optional application-defined-message callbacks */
   praef_app_recv_unicast_t recv_unicast_opt;
@@ -479,8 +490,12 @@ void praef_system_bootstrap(praef_system*);
  * existing node at the given network address. This is asynchronous (ie,
  * proceeds during successive calls to praef_system_advance()). If it succeeds,
  * the system will transition away from the "anonymous" status.
+ *
+ * @param target The network identifier to use to initiate the connection. The
+ * system object takes ownership of this pointer.
  */
-void praef_system_connect(praef_system*, const PraefNetworkIdentifierPair_t*);
+void praef_system_connect(praef_system*,
+                          const PraefNetworkIdentifierPair_t* target);
 
 /**
  * Initiates a graceful disconnect from the system. The graceful disconnect
@@ -660,5 +675,17 @@ void praef_system_conf_commit_lag_laxness(praef_system*, unsigned);
  */
 void praef_system_conf_self_commit_lag_compensation(
   praef_system*, unsigned numerator, unsigned denominator);
+/**
+ * Configures the interval upon which queries to the node join tree are
+ * retried.
+ *
+ * Smaller values will allow the traversal of the join tree to recover more
+ * quickly from dropped packets, reducing the time it takes to become a
+ * fully-functional member of a system, but may make the network noisier.
+ *
+ * The default is std_latency.
+ */
+void praef_system_conf_join_tree_query_interval(
+  praef_system*, unsigned interval);
 
 #endif /* LIBPRAEFECTUS_SYSTEM_H_ */

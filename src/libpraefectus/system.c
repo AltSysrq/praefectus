@@ -62,7 +62,8 @@ praef_system* praef_system_new(praef_app* app,
   if (!(this->signator = praef_signator_new()) ||
       !(this->verifier = praef_verifier_new()) ||
       !praef_system_router_init(this) ||
-      !praef_system_state_init(this)) {
+      !praef_system_state_init(this) ||
+      !praef_system_join_init(this)) {
     praef_system_delete(this);
     return NULL;
   }
@@ -78,11 +79,13 @@ void praef_system_delete(praef_system* this) {
     tmp = RB_NEXT(praef_node_map, &this->nodes, node);
     RB_REMOVE(praef_node_map, &this->nodes, node);
 
+    praef_node_join_destroy(node);
     praef_node_state_destroy(node);
     praef_node_router_destroy(node);
     free(node);
   }
 
+  praef_system_join_destroy(this);
   praef_system_state_destroy(this);
   praef_system_router_destroy(this);
 
@@ -155,6 +158,8 @@ void praef_system_bootstrap(praef_system* this) {
     !praef_node_router_init(node) ||
     !praef_node_state_init(node);
 
+  this->join.join_tree_traversal_complete = 1;
+
   if (PRAEF_APP_HAS(this->app, acquire_id_opt))
     (*this->app->acquire_id_opt)(this->app, 1);
 }
@@ -180,6 +185,7 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
     praef_node_router_update(node, elapsed);
   }
 
+  praef_system_join_update(this, elapsed);
   praef_system_state_update(this, elapsed);
   (*this->app->advance_bridge)(this->app, elapsed_monotime);
   praef_system_router_update(this, elapsed);
