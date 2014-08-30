@@ -311,6 +311,17 @@ int praef_verifier_disassoc(praef_verifier* this,
   return !!to_remove;
 }
 
+int praef_verifier_is_assoc(praef_verifier* this,
+                            const unsigned char key[PRAEF_PUBKEY_SIZE]) {
+  praef_verifier_entry example;
+  int result;
+
+  praef_verifier_entry_init(&example, key, 0);
+  result = !!RB_FIND(praef_verifier_entry_tree, &this->entries, &example);
+  praef_verifier_entry_clear(&example);
+  return result;
+}
+
 /**
  * Checks whether the given entry can verify a signature. It is assumed the
  * (h,r,s) variables of the verifier have been populated, that (u1,u2) have

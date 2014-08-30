@@ -168,6 +168,13 @@ int praef_verifier_disassoc(praef_verifier*,
                             const unsigned char key[PRAEF_PUBKEY_SIZE]);
 
 /**
+ * Returns whether the given public key has already been registered with the
+ * given verifier.
+ */
+int praef_verifier_is_assoc(praef_verifier*,
+                            const unsigned char key[PRAEF_PUBKEY_SIZE]);
+
+/**
  * Attempts to identify the source node of a message and verify its signature.
  *
  * @param hint The public-key hint attached to the message.

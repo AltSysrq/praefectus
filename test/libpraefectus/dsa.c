@@ -59,6 +59,7 @@ deftest(can_recognise_own_signature) {
 
   praef_signator_pubkey(pubkey, signators[0]);
   ck_assert(praef_verifier_assoc(verifier, pubkey, 1));
+  ck_assert(praef_verifier_is_assoc(verifier, pubkey));
 
   praef_signator_sign(signature, signators[0], pubkey, sizeof(pubkey));
   ck_assert_int_eq(1, praef_verifier_verify(
@@ -165,6 +166,7 @@ deftest(can_remove_signator) {
   }
 
   ck_assert(praef_verifier_disassoc(verifier, pubkey));
+  ck_assert(!praef_verifier_is_assoc(verifier, pubkey));
   for (i = 0; i < 4; ++i) {
     praef_signator_sign(signature, signators[i], pubkey, sizeof(pubkey));
     ck_assert_int_eq(3 == i? 0 : i+1, praef_verifier_verify(
