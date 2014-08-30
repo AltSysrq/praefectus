@@ -150,8 +150,7 @@ int praef_hlmsg_is_valid(const praef_hlmsg* message) {
 
     if (ok) {
       switch (deserialised.present) {
-      case PraefMsg_PR_endorsement:
-      case PraefMsg_PR_commandeer:
+      case PraefMsg_PR_accept:
         ok &= (message->size <= 129 /* plus one for extra trailing zero */);
         break;
 
@@ -422,8 +421,7 @@ static praef_hlmsg_type_flag praef_hlmsg_type_flag_for(PraefMsg_PR present) {
   case PraefMsg_PR_jtentry:
     return praef_htf_rpc_type;
 
-  case PraefMsg_PR_endorsement:
-  case PraefMsg_PR_commandeer:
+  case PraefMsg_PR_accept:
   case PraefMsg_PR_commit:
   case PraefMsg_PR_route:
     return praef_htf_uncommitted_redistributable;

@@ -242,7 +242,21 @@ PraefMsgJoinRequest ::= SEQUENCE {
   auth          OCTET STRING SIZE(1..64) OPTIONAL
 }
 
-PraefJoinAccept ::= SEQUENCE {
+-- Joins a new node to the system via commandeerment.
+--
+-- In this model of joining, a timestamp is hashed with the node's information
+-- and a system-specific salt to produce a hopefully-unique even id for the new
+-- node. Specifically, this hash is the first 32 bits output by SHA-3 after
+-- inputing the system's salt, the public key of the new node. If this would
+-- produce an id of 0, the value 2 is used instead. Furthermore, if the id this
+-- process would produce is otherwise reserved by the application, the next id
+-- in sequence is used.
+--
+-- This SHOULD be the only message within the containing high-level message,
+-- and the containing high-level message MUST NOT exceed 128 bytes in length.
+--
+-- This is an uncommitted redistributable message.
+PraefMsgJoinAccept ::= SEQUENCE {
   -- The original JoinRequest message, used to validate the signature.
   request       PraefMsgJoinRequest,
   -- The signature of the high-level message envelope containing the original
@@ -252,52 +266,6 @@ PraefJoinAccept ::= SEQUENCE {
   -- the encoded form of request itself, padded to an octet boundary with
   -- zeroes.) The signature MUST be valid.
   signature     PraefSignature
-}
-
--- Endorses the joining of a new node to the system.
---
--- In this model of joining, the transimitter allocates one of a small pool of
--- node ids which it is allowed to endorse and assigns it to the new
--- node. Nodes SHOULD prefer endorsement over commandeerment.
---
--- This SHOULD be the only message within the containing high-level message,
--- and the containing high-level message MUST NOT exceed 128 bytes in length.
---
--- This is an uncommitted redistributable message.
-PraefMsgJoinEndorsement ::= SEQUENCE {
-  -- Information on the JoinRequest being accepted
-  accepted      PraefJoinAccept,
-  -- The new id of the node being endorsed. This is subject to strict
-  -- constraints, which MUST be met, based upon the id of the endorsing node
-  -- ("source_id" below)
-  --
-  -- 1. (id & ~source_id) MUST be a power of two
-  -- 2. (id > source_id) MUST be true
-  -- 3. (source_id & 1) MUST be 1
-  --
-  -- In other words, the new id shall have exactly one bit set that was not in
-  -- the endorsing node's id, and it must be to the left of the left-most set
-  -- bit in the endorsing node's id. Furthermore, the endorsing node's id must
-  -- be odd. Endorsing always produces odd ids.
-  id            PraefNodeId
-}
-
--- Joins a new node to the system via commandeerment.
---
--- In this model of joining, a timestamp is hashed with the node's information
--- and a system-specific salt to produce a hopefully-unique even id for the new
--- node. Specifically, this hash is the first 31 bits output by SHA-3 after
--- inputing the system's salt, the public key of the new node, and the
--- timestamp of the envelope (a 4-byte little-endian integer) followed by a
--- zero bit. If this would produce an id of 0, the value 2 is used instead.
---
--- This SHOULD be the only message within the containing high-level message,
--- and the containing high-level message MUST NOT exceed 128 bytes in length.
---
--- This is an uncommitted redistributable message.
-PraefMsgJoinCommandeerment ::= SEQUENCE {
-  -- Information on the JoinRequest being accepted.
-  accepted      PraefJoinAccept
 }
 
 -- Requests the contents of a high-level message which represented the
@@ -660,8 +628,7 @@ PraefMsg ::= CHOICE {
   getnetinfo    PraefMsgGetNetworkInfo,
   netinfo       PraefMsgNetworkInfo,
   joinreq       PraefMsgJoinRequest,
-  endorsement   PraefMsgJoinEndorsement,
-  commandeer    PraefMsgJoinCommandeerment,
+  accept        PraefMsgJoinAccept,
   chmod         PraefMsgChmod,
   vote          PraefMsgVote,
   appevt        PraefMsgAppEvent,

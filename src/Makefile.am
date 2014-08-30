@@ -60,7 +60,6 @@ libpraefectus/messages/PraefHashPrefix.c \
 libpraefectus/messages/PraefHtdirEntry.c \
 libpraefectus/messages/PraefInstant.c \
 libpraefectus/messages/PraefIpAddress.c \
-libpraefectus/messages/PraefJoinAccept.c \
 libpraefectus/messages/PraefMsg.c \
 libpraefectus/messages/PraefMsgAppEvent.c \
 libpraefectus/messages/PraefMsgAppUnicast.c \
@@ -71,8 +70,7 @@ libpraefectus/messages/PraefMsgHtDir.c \
 libpraefectus/messages/PraefMsgHtLs.c \
 libpraefectus/messages/PraefMsgHtRange.c \
 libpraefectus/messages/PraefMsgHtRead.c \
-libpraefectus/messages/PraefMsgJoinCommandeerment.c \
-libpraefectus/messages/PraefMsgJoinEndorsement.c \
+libpraefectus/messages/PraefMsgJoinAccept.c \
 libpraefectus/messages/PraefMsgJoinRequest.c \
 libpraefectus/messages/PraefMsgJoinTree.c \
 libpraefectus/messages/PraefMsgJoinTreeEntry.c \

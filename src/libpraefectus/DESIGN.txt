@@ -171,73 +171,26 @@ count is correct, which eliminates the possibility of using consensus. This is
 further complicated by the need (or at least strong desirability) for nodes to
 have unique 32-bit identifiers within the system.
 
-The primary means of node addition is by endorsement. In endorsement, one node
-single-handedly introduces a new node to the system, choosing an id for that
-new node. This id is restricted according to the id of the endorsing node:
+In order to avoid problems posed by systems in which nodes chose their own or
+others' ids, node id generation is based upon consistent hashing. It guarantees
+the insertion of the new node, but is vulnerable to producing chimeras via
+random (or potentially deliberate) collisions.
 
-- All bits to the right of and including the left-most 1 bit on the must remain
-  the same.
+Every network topology has a random 256-bit salt. In order to join a topology,
+a prospective node first queries an existing node for this salt and the current
+instant. The node then hashes this identifier and its own public key (encoded
+as a little-endian 512-bit integer), and populates the 32 bits of the id with
+the first 32 bits of output from SHA-3; bit 0 is clear. If this produces an id
+of 0, 2 is used instead. The node then gets its information signed by an
+existing member of the network and can proceed with the joining process.
 
-- Exactly one bit to the right of the left-most 1 bit shall be set.
-
-For example, if ids were only 8 bits wide, node 1 (the bootstrap node) could
-endorse nodes with the following ids:
-
-- 00000011 (3)
-- 00000101 (5)
-- 00001001 (9)
-- 00010001 (17)
-- 00100001 (33)
-- 01000001 (65)
-- 10000001 (129)
-
-The node with id 9 could endorse:
-
-- 00011001 (23)
-- 00101001 (41)
-- 01001001 (73)
-- 10001001 (137)
-
-Note that all ids produced by endorsement are odd. Only nodes with odd ids may
-endorse new nodes.
-
-Endorsement allows new nodes to join the system very quickly while still
-guaranteeing that their ids are unique. It also serves to limit the rate at
-which new nodes are introduced. However, it is vulnerable to exhaustion, since
-even the bootstrap node can only endorse up to 31 other nodes. Furthermore, the
-disconnection of a node leaks all remaining ids it could have endorsed as well
-as all descendents of those ids. This means that eventually the pool of
-endorsable ids will dry up (though this will be rare outside of attack
-situations).
-
-Note that there is nothing stopping an endorsing node from endorsing multiple
-new nodes with the same id. If this occurs, other nodes MUST accept messages
-from both as if they were the same node, regardless of how nonsensical the
-result should be. Such a configuration is a "chimera node".  Furthermore, other
-nodes SHOULD begin voting to DENY the chimera, and the constituent parts of the
-chimera SHOULD immediately restart the connection upon discovering the
-situation.
-
-In order to keep the system open even after endorsable ids have been exhausted,
-an alternate (but much slower) system for obtaining node ids is provided, which
-allocates non-zero, even node ids. It guarantees the insertion of the new node,
-but is vulnerable to producing chimeras via random (or potentially deliberate)
-collisions. This method of id generation is referred to as id commandeering.
-
-Every network topology has a random 256-bit identifier. In order to join a
-topology, a prospective node first queries an existing node for this identifier
-and the current instant. The node then hashes this identifier, the current time
-(encoded as a little-endian 4-byte integer), and its own public key (encoded
-as a little-endian 512-bit integer), and populates the upper 31 bits of the id
-with the first 31 bits of output from SHA-3; bit 0 is clear. If this produces
-an id of 0, 2 is used instead. The node then gets its information signed by an
-existing member of the network and can proceed with the joining process. The
-same remarks regarding chimeras produced by endorsement applies here as well.
-
-If a node receives a signed id commandeering message too far into the future or
-the past, it SHOULD begin voting to DENY both the node that signed the
-commandeerment and the node that commandeered the id. It MUST, however, accept
-the message as-is.
+This system is capable of producing two nodes with the same id, though this is
+extremely difficult due to the use of the system salt. If it does occur, the
+resulting pair of conjoined nodes is referred to as a "chimera node". When a
+node detects that another node has become a chimera (ie, has more than one
+associated public key), it SHOULD begin voting to DENY that node. However, it
+MUST continue to accept and process messegase for that node from all associated
+public keys, regardless of how nonsensical the results may be.
 
 Regardless of how a node id is derived, an existing member of the network signs
 the information about the new node (including its network address, public key,
@@ -245,8 +198,20 @@ and information to derive the id). A node which receives such a valid signed
 message MUST accept the new node into the system and continue proliferating
 this message.
 
-An endorsement messages is not considered valid if the endorser cannot endorse
-the specified node id.
+Historical notes: The method of id generation outlined above was previously
+referred to as "commandeerment", and was a fallback method used if
+"endorsement" was unavailable. Endorsement assigned most nodes a certain space
+of node ids they could give to other nodes, ensuring id uniqueness in the case
+of cooperating nodes. However, it would also have been possible for a malicious
+node in this set-up to assign multiple ids to a single node. This condition is
+substantially harder to handle consistently, since it would require turning the
+verifier into a multimap. Therefore endorsement has been removed entirely,
+leaving only commandeerment, which no longer needs a name to distinguish it.
+
+The current method also orignally included the timestamp in the hash for
+choosing the id, on the grounds that it would make it even harder to
+deliberately create a chimera. This would also have led to hydra nodes, though,
+and as such has been removed.
 
 Node Join Proceedure
 --------------------

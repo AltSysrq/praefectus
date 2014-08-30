@@ -33,8 +33,7 @@
 #include "messages/PraefMsgJoinTreeEntry.h"
 #include "messages/PraefMsgGetNetworkInfo.h"
 #include "messages/PraefMsgJoinRequest.h"
-#include "messages/PraefMsgJoinEndorsement.h"
-#include "messages/PraefMsgJoinCommandeerment.h"
+#include "messages/PraefMsgJoinAccept.h"
 
 typedef struct praef_join_tree_entry_s {
   unsigned char data[128];
@@ -61,8 +60,6 @@ typedef struct {
    */
   praef_instant last_join_tree_query;
   int join_tree_traversal_complete;
-
-  unsigned num_endorsements_given;
 } praef_system_join;
 
 typedef struct {
@@ -87,11 +84,8 @@ void praef_system_join_recv_msg_network_info(
   praef_system*, const PraefMsgNetworkInfo_t*);
 void praef_system_join_recv_join_request(
   praef_system*, const PraefMsgJoinRequest_t*, const praef_hlmsg*);
-void praef_system_join_recv_join_endorsement(
-  praef_system*, struct praef_node_s*, const PraefMsgJoinEndorsement_t*,
-  const praef_hlmsg*);
-void praef_system_join_recv_node_commandeerment(
-  praef_system*, struct praef_node_s*, const PraefMsgJoinCommandeerment_t*,
+void praef_system_join_recv_node_accept(
+  praef_system*, struct praef_node_s*, const PraefMsgJoinAccept_t*,
   const praef_hlmsg*);
 
 #endif /* LIBPRAEFECTUS__SYSTEM_JOIN_H_ */
