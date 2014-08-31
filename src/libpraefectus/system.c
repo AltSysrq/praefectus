@@ -79,10 +79,7 @@ void praef_system_delete(praef_system* this) {
     tmp = RB_NEXT(praef_node_map, &this->nodes, node);
     RB_REMOVE(praef_node_map, &this->nodes, node);
 
-    praef_node_join_destroy(node);
-    praef_node_state_destroy(node);
-    praef_node_router_destroy(node);
-    free(node);
+    praef_node_delete(node);
   }
 
   praef_system_join_destroy(this);
@@ -92,6 +89,37 @@ void praef_system_delete(praef_system* this) {
   if (this->verifier) praef_verifier_delete(this->verifier);
   if (this->signator) praef_signator_delete(this->signator);
   free(this);
+}
+
+praef_node* praef_node_new(praef_system* sys,
+                           praef_object_id id,
+                           praef_message_bus* bus,
+                           praef_node_disposition disposition,
+                           const unsigned char pubkey[PRAEF_PUBKEY_SIZE]) {
+  praef_node* node = calloc(1, sizeof(praef_node));
+  if (!node) {
+    sys->oom = 1;
+    return NULL;
+  }
+
+  node->id = id;
+  node->sys = sys;
+  node->bus = bus;
+  node->disposition = disposition;
+  memcpy(node->pubkey, pubkey, PRAEF_PUBKEY_SIZE);
+  sys->oom |=
+    !praef_node_router_init(node) ||
+    !praef_node_state_init(node) ||
+    !praef_node_join_init(node);
+
+  return node;
+}
+
+void praef_node_delete(praef_node* node) {
+    praef_node_join_destroy(node);
+    praef_node_state_destroy(node);
+    praef_node_router_destroy(node);
+    free(node);
 }
 
 int praef_system_add_event(praef_system* this, const void* data, size_t size) {
@@ -123,42 +151,70 @@ int praef_system_vote_event(praef_system* this, praef_object_id oid,
   return praef_outbox_append(this->router.cr_out, &msg);
 }
 
-static void praef_system_register_node(
-  praef_system* this, praef_node* node,
-  const unsigned char pubkey[PRAEF_PUBKEY_SIZE]
+int praef_system_register_node(
+  praef_system* this, praef_node* node
 ) {
-  /* TODO: Properly handle duplicate public key */
-  this->oom |= !praef_verifier_assoc(this->verifier, pubkey, node->id);
+  if (praef_verifier_is_assoc(this->verifier, node->pubkey)) {
+    /* Already associated. This should mean that the node is already inserted,
+     * but check this to be certain (and "oom" if not). Were this not the case,
+     * this would indicate the creation of a hydra node --- one public key
+     * associated with multiple ids, the correct handling of which would be
+     * extremely difficult, which is why the protocol (theoretically) makes
+     * this case almost-certainly-impossible. (In theory, two nodes could
+     * happen to generate the same public key, so just aborting isn't a valid
+     * solution.)
+     */
+    this->oom |= !praef_system_get_node(this, node->id);
+    /* In any case, destroy the node and give up. */
+    praef_node_delete(node);
+    return 0;
+  }
+
+  this->oom |= !praef_verifier_assoc(this->verifier, node->pubkey, node->id);
+
+  /* If this id is already in use, we have created a chimera node. We still
+   * need to register it with the verifier for consistency's sake, but change
+   * the disposition to negative, don't reregister, and return failure.
+   */
+  if (praef_system_get_node(this, node->id)) {
+    praef_system_get_node(this, node->id)->disposition = praef_nd_negative;
+    praef_node_delete(node);
+    return 0;
+  }
+
   RB_INSERT(praef_node_map, &this->nodes, node);
   if ((*this->app->create_node_bridge)(this->app, node->id)) {
     (*this->app->create_node_object)(this->app, node->id);
   } else {
     this->oom = 1;
   }
+
+  return 1;
 }
 
 void praef_system_bootstrap(praef_system* this) {
-  praef_node* node = calloc(1, sizeof(praef_node));
   unsigned char pubkey[PRAEF_PUBKEY_SIZE];
-  if (!node) {
-    this->oom = 1;
-    return;
-  }
-
-  node->id = 1;
-  node->sys = this;
-  node->bus = &this->state.loopback;
-  node->disposition = praef_nd_positive;
-  this->local_node = node;
+  praef_node* node;
 
   praef_signator_pubkey(pubkey, this->signator);
-  praef_system_register_node(this, node, pubkey);
+  node = praef_node_new(this, 1, &this->state.loopback,
+                        praef_nd_positive,
+                        pubkey);
 
-  this->oom |=
-    !praef_node_router_init(node) ||
-    !praef_node_state_init(node);
+  if (!node) return;
+
+  this->local_node = node;
+  if (!praef_system_register_node(this, node))
+    /* This should never, ever happen. Failure indicates that either (a) the
+     * public key is already in use, or (b) the id is already in use. The only
+     * valid time to call bootstrap() is when the system is empty, so neither
+     * of these conditions could possibly trigger then. (Note that OOMs in
+     * registration still return success for this purpose.)
+     */
+    abort();
 
   this->join.join_tree_traversal_complete = 1;
+  this->join.has_received_network_info = 1;
 
   if (PRAEF_APP_HAS(this->app, acquire_id_opt))
     (*this->app->acquire_id_opt)(this->app, 1);
@@ -197,4 +253,10 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
 
 void praef_system_oom(praef_system* this) {
   this->oom = 1;
+}
+
+praef_node* praef_system_get_node(praef_system* this, praef_object_id node) {
+  praef_node example;
+  example.id = node;
+  return RB_FIND(praef_node_map, &this->nodes, &example);
 }

@@ -39,13 +39,20 @@ typedef struct praef_join_tree_entry_s {
   unsigned char data[128];
   unsigned data_size;
 
-  SLIST_HEAD(,praef_join_tree_entry_s) children;
-  SLIST_ENTRY(praef_join_tree_entry_s) next;
+  STAILQ_HEAD(,praef_join_tree_entry_s) children;
+  STAILQ_ENTRY(praef_join_tree_entry_s) next;
 } praef_join_tree_entry;
 
 typedef struct {
+  int has_received_network_info;
+  unsigned char bootstrap_key[PRAEF_PUBKEY_SIZE];
   unsigned char system_salt[32];
-  const PraefNetworkIdentifierPair_t* connect_target;
+  unsigned char system_salt_sig[PRAEF_SIGNATURE_SIZE];
+  /* These become set when a connection is initiated and are destroyed when the
+   * connection completes.
+   */
+  praef_outbox* connect_out;
+  praef_mq* connect_mq;
 
   unsigned join_tree_query_interval;
   /* Join tree traversal is performed one query at a time per node in the tree,
@@ -53,19 +60,23 @@ typedef struct {
    * same actual node (the connect target), but are just regarding different
    * nodes known to exist.) join_tree_traversal_complete becomes true when an
    * end-of-branch PraefMsgJoinTreeEntry is received for that node. The index
-   * for each query is simply based upon the number of known children for that
-   * node so far. The next query is sent immediately upon each response which
-   * introduces a new entry to the tree, and is resent every
-   * join_tree_query_interval instants in the absence of a response.
+   * for each query is stored in next_join_tree_query; this is also used to
+   * determine whether an incomming response is obsolete. The next query is
+   * sent immediately upon each response which introduces a new entry to the
+   * tree, and is resent every join_tree_query_interval instants in the absence
+   * of a response.
    */
   praef_instant last_join_tree_query;
   int join_tree_traversal_complete;
+
+  praef_hlmsg_encoder* minimal_rpc_encoder;
 } praef_system_join;
 
 typedef struct {
   int has_route;
 
   praef_join_tree_entry join_tree;
+  unsigned next_join_tree_query;
 } praef_node_join;
 
 int praef_system_join_init(praef_system*);
@@ -77,7 +88,7 @@ void praef_node_join_destroy(struct praef_node_s*);
 void praef_node_join_recv_msg_join_tree(
   struct praef_node_s*, const PraefMsgJoinTree_t*);
 void praef_node_join_recv_msg_join_tree_entry(
-  struct praef_node_s*, const PraefMsgJoinTreeEntry_t*);
+  praef_system*, const PraefMsgJoinTreeEntry_t*);
 void praef_system_join_recv_msg_get_network_info(
   praef_system*, const PraefMsgGetNetworkInfo_t*);
 void praef_system_join_recv_msg_network_info(

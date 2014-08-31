@@ -99,11 +99,18 @@ praef_signator* praef_signator_new(void) {
 
 static praef_pubkey_hint praef_calc_pubkey_hint(mpz_t pubkey) {
   unsigned char serialised[PRAEF_PUBKEY_SIZE];
-  unsigned char hash[sizeof(praef_pubkey_hint)];
-  praef_keccak_sponge sponge;
 
   memset(serialised, 0, sizeof(serialised));
   mpz_export(serialised, NULL, -1, 1, 0, 0, pubkey);
+
+  return praef_pubkey_hint_of(serialised);
+}
+
+praef_pubkey_hint praef_pubkey_hint_of(
+  const unsigned char serialised[PRAEF_PUBKEY_SIZE]
+) {
+  unsigned char hash[sizeof(praef_pubkey_hint)];
+  praef_keccak_sponge sponge;
 
   praef_keccak_sponge_init(&sponge, PRAEF_KECCAK_RATE, PRAEF_KECCAK_CAP);
   praef_keccak_sponge_absorb(&sponge, serialised, sizeof(serialised));

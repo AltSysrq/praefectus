@@ -69,6 +69,7 @@ typedef enum {
 
 typedef struct praef_node_s {
   praef_object_id id;
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE];
   PraefNetworkIdentifierPair_t net_id;
   praef_system* sys;
   praef_message_bus* bus;
@@ -105,6 +106,20 @@ struct praef_system_s {
   praef_node* local_node;
   int oom;
 };
+
+praef_node* praef_system_get_node(praef_system*, praef_object_id);
+praef_node* praef_node_new(
+  praef_system*, praef_object_id,
+  praef_message_bus*, praef_node_disposition,
+  const unsigned char pubkey[PRAEF_PUBKEY_SIZE]);
+void praef_node_delete(praef_node*);
+/**
+ * Registers the given node. Fails if the node is already registered or the
+ * public key is duplicated. In such a case, the node is destroyed.
+ *
+ * @return Whether the node was registered.
+ */
+int praef_system_register_node(praef_system*, praef_node*);
 
 int praef_compare_nodes(const praef_node*, const praef_node*);
 RB_PROTOTYPE(praef_node_map, praef_node_s, map, praef_compare_nodes)

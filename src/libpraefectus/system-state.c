@@ -42,8 +42,6 @@ static void praef_system_state_loopback_unicast(
 static void praef_system_state_loopback_broadcast(
   praef_message_bus*, const void*, size_t);
 
-static void praef_system_state_recv_message(
-  praef_system*, praef_hlmsg*);
 static void praef_system_state_process_message(
   praef_system*, praef_node*, praef_instant, PraefMsg_t*);
 
@@ -126,7 +124,7 @@ static void praef_system_state_loopback_unicast(
   praef_system_state_loopback_broadcast(bus, data, size);
 }
 
-static void praef_system_state_recv_message(
+void praef_system_state_recv_message(
   praef_system* sys, praef_hlmsg* msg
 ) {
   praef_object_id sender_id;

@@ -191,4 +191,10 @@ praef_object_id praef_verifier_verify(
   const unsigned char sig[PRAEF_SIGNATURE_SIZE],
   const void* data, size_t sz);
 
+/**
+ * Returns the pubkey_hint to be used with the given public key.
+ */
+praef_pubkey_hint praef_pubkey_hint_of(
+  const unsigned char sig[PRAEF_PUBKEY_SIZE]);
+
 #endif /* LIBPRAEFECTUS_DSA_H_ */
