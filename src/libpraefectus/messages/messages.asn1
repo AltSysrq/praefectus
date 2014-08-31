@@ -219,6 +219,11 @@ PraefMsgNetworkInfo ::= SEQUENCE {
 PraefMsgJoinRequest ::= SEQUENCE {
   -- The public key of the node requesting to join. The signature on the
   -- containing high-level message envelope MUST be valid by this signature.
+  --
+  -- Additionally, this value MUST NOT be the same as the public key used by
+  -- the bootstrap node. In practise, the only conceivable way for this
+  -- constraint to be violated while still producing a valid signature is if
+  -- the bootstrap node attempts to join its own system with the same key.
   publickey     PraefPubkey,
   -- The network address pair with which this node will communicate.
   identifier    PraefNetworkIdentifierPair,
