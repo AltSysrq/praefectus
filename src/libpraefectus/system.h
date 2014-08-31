@@ -247,11 +247,8 @@ typedef int (*praef_app_is_auth_valid_t)(
  * likely have its own id.) This callback allows the application to reserve
  * such ids for its own use.
  *
- * An application may only reserve even-numbered ids. This function will not be
- * called for endorsed (ie, odd-numbered) ids. If an id that would be
- * commandeered (ie, even-numbered and non-zero) is reserved by the
- * application, praefectus will try the next even-numbered identifier, until
- * this call returns true.
+ * If an id that would be generated is reserved by the application, praefectus
+ * will try the next even-numbered identifier, until this call returns true.
  *
  * Note that this MUST necessarily be completely stateless. A praefectus system
  * will diverge if any two nodes produce different responses for this call.

@@ -244,8 +244,8 @@ the same node it got the NetworkInfo from (or any node if the application does
 not use that step). The JoinRequest contains sufficient information to prove
 the node has authorisation to enter the system (if the application defines any)
 and provides the network and key information for the node. The node awaits a
-JoinEndorsement or JoinCommandeerment, which provides the node with a probably
-unique id within the system.
+JoinAccept, which provides the node with a probably unique id within the
+system.
 
 Once the node has an id, it connects to other nodes both by Route messages and
 optionally by a side-channel from the application (eg, via the same method it

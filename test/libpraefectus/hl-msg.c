@@ -352,7 +352,7 @@ deftest(validation_rejects_truncated_message) {
 deftest(validation_rejects_oversized_JoinAccept) {
   unsigned char data[PRAEF_HLMSG_MTU_MIN+1] = { 0 };
   praef_hlmsg msg = { .size = sizeof(data), .data = data };
-  PraefMsg_t endorsement = {
+  PraefMsg_t accept = {
     .present = PraefMsg_PR_accept,
     .choice = {
       .accept = {
@@ -377,24 +377,24 @@ deftest(validation_rejects_oversized_JoinAccept) {
     },
   };
 
-  OCTET_STRING_fromBuf(&endorsement.choice.accept.signature,
+  OCTET_STRING_fromBuf(&accept.choice.accept.signature,
                        (char*)data, PRAEF_SIGNATURE_SIZE);
-  OCTET_STRING_fromBuf(&endorsement.choice.accept
+  OCTET_STRING_fromBuf(&accept.choice.accept
                        .request.publickey,
                        (char*)data, PRAEF_PUBKEY_SIZE);
-  OCTET_STRING_fromBuf(&endorsement.choice.accept
+  OCTET_STRING_fromBuf(&accept.choice.accept
                        .request.identifier.intranet
                        .address.choice.ipv4,
                        (char*)data, 4);
 
   encoder = praef_hlmsg_encoder_new(
     praef_htf_uncommitted_redistributable, NULL, NULL, PRAEF_HLMSG_MTU_MIN, 0);
-  while (!praef_hlmsg_encoder_append(&msg, encoder, &endorsement));
+  while (!praef_hlmsg_encoder_append(&msg, encoder, &accept));
 
   ck_assert_int_gt(msg.size, 129);
   ck_assert(!praef_hlmsg_is_valid(&msg));
 
-  (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, &endorsement, 1);
+  (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, &accept, 1);
 }
 
 deftest(doesnt_overflow_message_data_array) {

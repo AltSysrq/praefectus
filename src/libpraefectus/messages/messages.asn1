@@ -173,20 +173,19 @@ PraefMsgGetNetworkInfo ::= SEQUENCE {
 --
 -- This response provides prospective nodes sufficient knowledge to begin
 -- obtaining system state upon being accepted into the system, as well as to
--- calculate their id if commandeering is being used.
+-- calculate their id.
 --
 -- This is an RPC-type message.
 PraefMsgNetworkInfo ::= SEQUENCE {
   -- Some random string of bytes used to salt hashes used for node id
-  -- commandeerment.
+  -- generation.
   salt          PraefNetworkSalt,
   -- A digital signature of the salt field (alone) generated with the bootstrap
   -- node's public key. This signature MUST be valid.
   --
   -- This field prevents a node from participating in a system with an invalid
   -- salt, which would lead to it diverging from the other nodes severely if a
-  -- node joined via id commandeering. (This would only happen if the victim
-  -- joined via id endorsement.) If the salt is wrong, either (a) the node will
+  -- node joined using it. If the salt is wrong, either (a) the node will
   -- identify the fact that the signature is invalid and reject the message, or
   -- (b) will attempt to join with an incorrect bootstrap key, leading it to
   -- reject all messages it ever sees and eventually give up.
@@ -201,19 +200,19 @@ PraefMsgNetworkInfo ::= SEQUENCE {
 -- envelope, and the high-level message MUST NOT have tailing garbage. The
 -- instant and advisory serial number on the high-level message MUST be zero.
 --
--- Receiving nodes SHOULD accept the new node (with either a JoinEndorsement or
--- JoinCommandeerment). The sender SHOULD NOT reattempt this exact request if
--- it receives no response after a certain time-out, but instead generate a new
--- public key and restart with a NetworkInfo message, generally to a different
--- node known to be a part of the system.
+-- Receiving nodes SHOULD accept the new node (with a JoinAccept). The sender
+-- SHOULD NOT reattempt this exact request if it receives no response after a
+-- certain time-out, but instead generate a new public key and restart with a
+-- NetworkInfo message, generally to a different node known to be a part of the
+-- system.
 --
 -- Receiving nodes SHOULD ignore this message if they have not recently
 -- received a GetNetworkInfo message from the same return address, unless the
 -- application is designed to bypass the GetNetworkInfo/NetworkInfo exchange by
 -- using a more secure method.
 --
--- Acceptance of the new node is performed by broadcasting a JoinEndorsement or
--- JoinCommandeerment message to all nodes, including the new one.
+-- Acceptance of the new node is performed by broadcasting a JoinAccept message
+-- to all nodes, including the new one.
 --
 -- This is an RPC-type message.
 PraefMsgJoinRequest ::= SEQUENCE {
@@ -242,12 +241,11 @@ PraefMsgJoinRequest ::= SEQUENCE {
   --
   -- If the application-defined semantics reject this value, the node SHALL NOT
   -- be accepted into the system, and the node that received this request MUST
-  -- NOT send a JoinEndorsement or JoinCommandeerment message to any
-  -- peer.
+  -- NOT send a JoinAccept message to any peer.
   auth          OCTET STRING SIZE(1..64) OPTIONAL
 }
 
--- Joins a new node to the system via commandeerment.
+-- Joins a new node to the system.
 --
 -- In this model of joining, a timestamp is hashed with the node's information
 -- and a system-specific salt to produce a hopefully-unique even id for the new
@@ -308,8 +306,8 @@ PraefMsgJoinTreeEntry ::= SEQUENCE {
   -- is for progress reporting.
   nkeys         PraefDword,
   -- A high-level message which SHOULD contain an acccptance by the input node
-  -- of another node. Note that compliant JoinEndorsement and
-  -- JoinCommandeerment messages always fit within this field.
+  -- of another node. Note that compliant JoinAccept messages always fit within
+  -- this field.
   --
   -- The absence of this field indicates that offset is beyond the end of the
   -- list.
