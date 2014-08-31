@@ -247,13 +247,12 @@ PraefMsgJoinRequest ::= SEQUENCE {
 
 -- Joins a new node to the system.
 --
--- In this model of joining, a timestamp is hashed with the node's information
--- and a system-specific salt to produce a hopefully-unique even id for the new
--- node. Specifically, this hash is the first 32 bits output by SHA-3 after
--- inputing the system's salt, the public key of the new node. If this would
--- produce an id of 0, the value 2 is used instead. Furthermore, if the id this
--- process would produce is otherwise reserved by the application, the next id
--- in sequence is used.
+-- In this model of joining, the node's public key and a system-specific salt
+-- are hashed to produce a hopefully-unique id for the new node. Specifically,
+-- this hash is the first 32 bits output by SHA-3 after inputing the system's
+-- salt, the public key of the new node. If this would produce an id of 0, the
+-- value 2 is used instead. Furthermore, if the id this process would produce
+-- is otherwise reserved by the application, the next id in sequence is used.
 --
 -- This SHOULD be the only message within the containing high-level message,
 -- and the containing high-level message MUST NOT exceed 128 bytes in length.
