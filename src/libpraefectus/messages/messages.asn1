@@ -355,9 +355,6 @@ PraefMsgChmod ::= SEQUENCE {
 -- data. The full semantics for voting are described in the transactor
 -- documentation (see libpraefectus/transactor.h).
 --
--- This message implicitly has the effect of a Vote message specifying the
--- event sent with this message.
---
 -- This is a committed redistributable message.
 PraefMsgAppEvent ::= SEQUENCE {
   -- The serial number for this event. The (node,instant,serialnumber) triple
