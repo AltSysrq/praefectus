@@ -69,6 +69,19 @@ deftest(can_recognise_own_signature) {
                      pubkey, sizeof(pubkey)));
 }
 
+deftest(can_validate_with_unassoc_key) {
+  unsigned char signature[PRAEF_SIGNATURE_SIZE];
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE];
+
+  praef_signator_pubkey(pubkey, signators[0]);
+  praef_signator_sign(signature, signators[0], pubkey, sizeof(pubkey));
+  ck_assert_int_eq(1, praef_verifier_verify_once(
+                     verifier,
+                     pubkey,
+                     signature,
+                     pubkey, sizeof(pubkey)));
+}
+
 deftest(rejects_corrupted_message) {
   unsigned char signature[PRAEF_SIGNATURE_SIZE];
   unsigned char pubkey[PRAEF_PUBKEY_SIZE];

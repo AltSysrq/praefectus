@@ -192,6 +192,21 @@ praef_object_id praef_verifier_verify(
   const void* data, size_t sz);
 
 /**
+ * Checks whether a signature is valid given an arbitrary public key, without
+ * associating the public key with this verifier.
+ *
+ * @param pubkey The public key to use for verification.
+ * @param sig The signature to verify.
+ * @param data The data purportedly signed by pubkey.
+ * @return Whether the signature is valid.
+ */
+int praef_verifier_verify_once(
+  praef_verifier*,
+  const unsigned char pubkey[PRAEF_PUBKEY_SIZE],
+  const unsigned char sig[PRAEF_SIGNATURE_SIZE],
+  const void* data, size_t sz);
+
+/**
  * Returns the pubkey_hint to be used with the given public key.
  */
 praef_pubkey_hint praef_pubkey_hint_of(

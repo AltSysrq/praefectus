@@ -347,22 +347,13 @@ static int praef_verifier_entry_verify(praef_verifier* this,
   return 0 == mpz_cmp(this->v, this->r);
 }
 
-praef_object_id praef_verifier_verify(
+static int praef_verifier_prepare_verify(
   praef_verifier* this,
-  praef_pubkey_hint hint,
   const unsigned char sig[PRAEF_SIGNATURE_SIZE],
   const void* data, size_t sz
 ) {
-  praef_verifier_entry* entry;
   unsigned char hash[PRAEF_SIGINT_SIZE];
   praef_keccak_sponge sponge;
-
-  /* Find the first entry with the given pubkey hint. Fail fast if there is no
-   * such entry.
-   */
-  this->example.hint = hint;
-  entry = RB_NFIND(praef_verifier_entry_tree, &this->entries, &this->example);
-  if (!entry || entry->hint != hint) return 0;
 
   /* Decode the signature */
   mpz_import(this->r, PRAEF_SIGINT_SIZE, -1, 1, 0, 0, sig);
@@ -387,6 +378,45 @@ praef_object_id praef_verifier_verify(
   mpz_mod(this->u1, this->u1, this->q);
   mpz_mul(this->u2, this->r, this->w);
   mpz_mod(this->u2, this->u2, this->q);
+  return 1;
+}
+
+int praef_verifier_verify_once(
+  praef_verifier* this,
+  const unsigned char pubkey[PRAEF_PUBKEY_SIZE],
+  const unsigned char sig[PRAEF_SIGNATURE_SIZE],
+  const void* data, size_t sz
+) {
+  praef_verifier_entry entry;
+  int result;
+
+  if (!praef_verifier_prepare_verify(this, sig, data, sz))
+    return 0;
+
+  praef_verifier_entry_init(&entry, pubkey, 0);
+  result = praef_verifier_entry_verify(this, &entry);
+  praef_verifier_entry_clear(&entry);
+
+  return result;
+}
+
+praef_object_id praef_verifier_verify(
+  praef_verifier* this,
+  praef_pubkey_hint hint,
+  const unsigned char sig[PRAEF_SIGNATURE_SIZE],
+  const void* data, size_t sz
+) {
+  praef_verifier_entry* entry;
+
+  /* Find the first entry with the given pubkey hint. Fail fast if there is no
+   * such entry.
+   */
+  this->example.hint = hint;
+  entry = RB_NFIND(praef_verifier_entry_tree, &this->entries, &this->example);
+  if (!entry || entry->hint != hint) return 0;
+
+  if (!praef_verifier_prepare_verify(this, sig, data, sz))
+    return 0;
 
   /* See if any of the entries have a key that can verify this signature */
   while (entry && entry->hint == hint) {
