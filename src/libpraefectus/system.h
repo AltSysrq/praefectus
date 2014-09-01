@@ -441,13 +441,23 @@ typedef enum {
   /**
    * Indicates that the local node has not received an identifier yet, and so
    * is unable to do terribly much. This status becomes cleared upon
-   * bootstrapping or successful connection.
+   * bootstrapping or successful connection. In the latter case, the status can
+   * be expected to tranfer to pending_grant.
    *
    * If this status remains for too long (as defined by the application) after
    * a connect attempt, the application should destroy this system and retry
    * connection with a new one.
    */
   praef_ss_anonymous,
+  /**
+   * Indicates that the local node has not yet received the GRANT status, and
+   * so cannot yet participate in the system .
+   *
+   * If this status remains for too long (as defined by the application), the
+   * application should destroy this system and retry connection with a new
+   * one.
+   */
+  praef_ss_pending_grant,
   /**
    * Indicates that the local node has entered a state in which it is
    * attempting to DENY more than half of the nodes in the system which are
@@ -481,6 +491,10 @@ typedef enum {
    * Most applications will never encounter this condition unless a malicious
    * node severely skews the clock while it has strong control over it (and if
    * the application accepts such great time advancement).
+   *
+   * Note that for the sake of being conservative about correctness, the
+   * threshold of "the end of time" is actually at instant 0x80000000 instead
+   * of 0xFFFFFFFF.
    */
   praef_ss_overflow,
   /**

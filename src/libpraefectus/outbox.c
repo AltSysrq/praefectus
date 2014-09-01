@@ -50,6 +50,7 @@ struct praef_mq_s {
   praef_outbox* outbox;
   praef_message_bus* bus;
   const PraefNetworkIdentifierPair_t* unicast;
+  int triangular;
   praef_mq_entry* pending;
   unsigned pending_ix, pending_used, pending_cap;
   praef_instant threshold;
@@ -186,6 +187,7 @@ praef_mq* praef_mq_new(praef_outbox* outbox,
   this->outbox = outbox;
   this->bus = bus;
   this->unicast = unicast;
+  this->triangular = 0;
   this->pending_ix = 0;
   this->pending_used = 0;
   this->pending_cap = 16;
@@ -215,6 +217,10 @@ void praef_mq_delete(praef_mq* this) {
 
 void praef_mq_set_threshold(praef_mq* this, praef_instant threshold) {
   this->threshold = threshold;
+}
+
+void praef_mq_set_triangular(praef_mq* this, int triangular) {
+  this->triangular = triangular;
 }
 
 static int praef_mq_enqueue(praef_mq* this, praef_rc_hlmsg* msg) {
@@ -250,10 +256,16 @@ void praef_mq_update(praef_mq* this) {
   for (i = 0; i < this->pending_cap; ++i) {
     if (this->pending[i].msg &&
         this->pending[i].queued_at <= this->threshold) {
-      if (this->unicast)
-        (*this->bus->unicast)(this->bus, this->unicast,
-                              this->pending[i].msg->msg.data,
-                              this->pending[i].msg->msg.size-1);
+      if (this->unicast && this->triangular)
+        (*this->bus->triangular_unicast)(
+          this->bus, this->unicast,
+          this->pending[i].msg->msg.data,
+          this->pending[i].msg->msg.size-1);
+      else if (this->unicast)
+        (*this->bus->unicast)(
+          this->bus, this->unicast,
+          this->pending[i].msg->msg.data,
+          this->pending[i].msg->msg.size-1);
       else
         (*this->bus->broadcast)(this->bus,
                                 this->pending[i].msg->msg.data,

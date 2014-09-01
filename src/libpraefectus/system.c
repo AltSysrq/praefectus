@@ -290,9 +290,18 @@ static int praef_system_self_alive(praef_system* this) {
   return praef_node_is_alive(this->local_node);
 }
 
+#define PRAEF_END_OF_TIME ((praef_instant)0x80000000)
+
 praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
   unsigned old_monotime = this->clock.monotime, elapsed_monotime;
+  unsigned num_live_nodes, num_negative_nodes;
   praef_node* node;
+
+  if (this->clock.ticks >= PRAEF_END_OF_TIME ||
+      this->clock.systime >= PRAEF_END_OF_TIME ||
+      this->clock.monotime >= PRAEF_END_OF_TIME)
+    return praef_ss_overflow;
+
   praef_clock_tick(&this->clock, elapsed, praef_system_self_alive(this));
   elapsed_monotime = this->clock.monotime - old_monotime;
 
@@ -306,8 +315,31 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
   (*this->app->advance_bridge)(this->app, elapsed_monotime);
   praef_system_router_update(this, elapsed);
 
-  /* TODO: Other stati */
-  return this->abnormal_status;
+  if (this->abnormal_status)
+    return this->abnormal_status;
+
+  if (NULL == this->local_node)
+    return praef_ss_anonymous;
+
+  if ((*this->app->get_node_deny_bridge)(this->app, this->local_node->id) <
+      this->clock.monotime)
+    return praef_ss_kicked;
+
+  if ((*this->app->get_node_grant_bridge)(this->app, this->local_node->id) >=
+      this->clock.monotime)
+    return praef_ss_pending_grant;
+
+  num_live_nodes = 0;
+  num_negative_nodes = 0;
+  RB_FOREACH(node, praef_node_map, &this->nodes) {
+    if (praef_node_is_alive(node)) ++num_live_nodes;
+    if (praef_nd_negative == node->disposition) ++num_negative_nodes;
+  }
+
+  if (num_live_nodes < num_negative_nodes*2)
+    return praef_ss_partitioned;
+
+  return praef_ss_ok;
 }
 
 void praef_system_oom(praef_system* this) {

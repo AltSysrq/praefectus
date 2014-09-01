@@ -115,6 +115,11 @@ void praef_mq_delete(praef_mq*);
  */
 void praef_mq_set_threshold(praef_mq*, praef_instant);
 /**
+ * Sets whether unicasts from the given mq should be sent via normal unicast or
+ * via triangular unicast.
+ */
+void praef_mq_set_triangular(praef_mq*, int triangular);
+/**
  * Advances the mq the given number of ticks into the future, sending any
  * messages whose delay has fully elapsed.
  */

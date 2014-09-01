@@ -74,10 +74,10 @@ int praef_system_join_init(praef_system* sys) {
 
 void praef_system_join_destroy(praef_system* sys) {
   praef_hlmsg_encoder_delete(sys->join.minimal_rpc_encoder);
-  if (sys->join.connect_out) {
+  if (sys->join.connect_mq)
     praef_mq_delete(sys->join.connect_mq);
+  if (sys->join.connect_out)
     praef_outbox_delete(sys->join.connect_out);
-  }
 }
 
 int praef_node_join_init(praef_node* node) {
@@ -182,9 +182,11 @@ void praef_system_join_update(praef_system* sys, unsigned et) {
       }
 
       sys->join.connect_target = NULL;
-      praef_mq_delete(sys->join.connect_mq);
+      if (sys->join.connect_mq)
+        praef_mq_delete(sys->join.connect_mq);
       sys->join.connect_mq = NULL;
-      praef_outbox_delete(sys->join.connect_out);
+      if (sys->join.connect_out)
+        praef_outbox_delete(sys->join.connect_out);
       sys->join.connect_out = NULL;
     } else {
       /* If the interval for join tree query retries has expired, rerun the
@@ -194,9 +196,9 @@ void praef_system_join_update(praef_system* sys, unsigned et) {
        * We don't want to do this every frame since there can potentially be a
        * large number of parallel queries.
        */
-      if (sys->clock.systime - sys->join.last_join_tree_query >
+      if (sys->clock.ticks - sys->join.last_join_tree_query >
           sys->join.join_tree_query_interval) {
-        sys->join.last_join_tree_query = sys->clock.systime;
+        sys->join.last_join_tree_query = sys->clock.ticks;
 
         RB_FOREACH(node, praef_node_map, &sys->nodes)
           if (~0u != node->join.next_join_tree_query)
@@ -205,8 +207,10 @@ void praef_system_join_update(praef_system* sys, unsigned et) {
     }
   }
 
-  PRAEF_OOM_IF_NOT(sys, praef_outbox_flush(sys->join.connect_out));
-  praef_mq_update(sys->join.connect_mq);
+  if (sys->join.connect_out)
+    PRAEF_OOM_IF_NOT(sys, praef_outbox_flush(sys->join.connect_out));
+  if (sys->join.connect_mq)
+    praef_mq_update(sys->join.connect_mq);
 }
 
 void praef_node_join_recv_msg_join_tree(
@@ -302,7 +306,8 @@ static void praef_system_join_query_next_join_tree(
   msg.present = PraefMsg_PR_jointree;
   msg.choice.jointree.node = against->id;
   msg.choice.jointree.offset = against->join.next_join_tree_query++;
-  PRAEF_OOM_IF_NOT(sys, praef_outbox_append(sys->join.connect_out, &msg));
+  if (sys->join.connect_out)
+    PRAEF_OOM_IF_NOT(sys, praef_outbox_append(sys->join.connect_out, &msg));
 }
 
 void praef_system_join_recv_msg_get_network_info(
@@ -372,6 +377,11 @@ void praef_system_join_recv_msg_network_info(
       abort();
 
     sys->join.has_received_network_info = 1;
+    /* Triangular routing no longer necessary, since we've gotten a message
+     * back from the destination.
+     */
+    if (sys->join.connect_mq)
+      praef_mq_set_triangular(sys->join.connect_mq, 0);
   }
   return;
 }
@@ -482,7 +492,7 @@ void praef_system_join_recv_join_request(
     /* Refuse request if it would exceed the application's requested rate
      * limit.
      */
-    if (sys->join.last_accept - sys->clock.systime < sys->join.accept_interval)
+    if (sys->join.last_accept - sys->clock.ticks < sys->join.accept_interval)
       return;
 
     /* Refuse request if accepting this node would put us above the
@@ -642,4 +652,24 @@ void praef_system_join_recv_node_accept(
     (*new_node->bus->unicast)(new_node->bus, &new_node->net_id,
                               envelope->data, envelope->size-1);
   }
+}
+
+void praef_system_connect(praef_system* sys,
+                          const PraefNetworkIdentifierPair_t* target) {
+  sys->join.connect_target = target;
+  sys->join.connect_out = praef_outbox_new(
+    praef_hlmsg_encoder_new(praef_htf_rpc_type,
+                            sys->signator,
+                            &sys->join.minimal_rpc_serno,
+                            PRAEF_HLMSG_MTU_MIN, 0),
+    PRAEF_HLMSG_MTU_MIN);
+  if (sys->join.connect_out)
+    sys->join.connect_mq = praef_mq_new(sys->join.connect_out,
+                                        sys->bus,
+                                        target);
+
+  if (sys->join.connect_mq)
+    praef_mq_set_triangular(sys->join.connect_mq, 1);
+
+  PRAEF_OOM_IF_NOT(sys, sys->join.connect_out && sys->join.connect_mq);
 }
