@@ -61,6 +61,66 @@ typedef struct praef_system_s praef_system;
 typedef struct praef_app_s praef_app;
 
 /**
+ * Describes the IP version restrictions, if any, of a praef_system.
+ *
+ * All nodes within one system MUST use the same IP version restrictions. It is
+ * the application's responsibility to ensure that any network identifier pairs
+ * it passes to praefectus meet any restrictions it has enacted.
+ */
+typedef enum {
+  /**
+   * Indicates that any IP versions are permissible. This configuration should
+   * be used with caution, since it could result in a system consisting of some
+   * number of IPv4-only and IPv6-only hosts that have no way to communicate.
+   */
+  praef_siv_any,
+  /**
+   * Indicates that IPv4 is the only permissible IP version. Attempts to
+   * communicate with the local node from another protocol version will be
+   * silently ignored.
+   */
+  praef_siv_4only,
+  /**
+   * Indicates that IPv6 is the only permissible IP version. Attempts to
+   * communicate with the local node from another protocol version will be
+   * silently ignored.
+   */
+  praef_siv_6only
+} praef_system_ip_version;
+
+/**
+ * Describes the network locality restrictions, if any, of a praef_system.
+ *
+ * The network address of a peer in praefectus is identified by one or two IP
+ * addresses, referred to as intranet and Internet. An identifier with only an
+ * intranet address is "local"; one with both intranet and Internet is
+ * "global".
+ *
+ * All nodes within one system MUST use the same locality restrictions.
+ */
+typedef enum {
+  /**
+   * Indicates that arbitrary mixtures of local and global identifiers is
+   * permissible. There is virtually never any reason to use this
+   * configuration, as it permits pairs of local-only nodes which cannot use
+   * local communication.
+   */
+  praef_snl_any,
+  /**
+   * Indicates that all network addresses shall be local-only. Attempts to
+   * communicate with the local node with a global network identifier will be
+   * silently ignored.
+   */
+  praef_snl_local,
+  /**
+   * Indicates that all network addresses shall be global. Attempts to
+   * communicate with the local node with a local network identifier will be
+   * silently ignored.
+   */
+  praef_snl_global
+} praef_system_network_locality;
+
+/**
  * Instructs the application to create a node-object in the underlying system
  * with the given id. In the vast majority of applications, this corresponds to
  * creating an instance of a praef_object with that id and adding it to the
@@ -407,7 +467,13 @@ typedef enum {
    * node severely skews the clock while it has strong control over it (and if
    * the application accepts such great time advancement).
    */
-  praef_ss_overflow
+  praef_ss_overflow,
+  /**
+   * Indicates that the local node experienced a fatal id collision with
+   * another node. This status is always permanent and fatal. Graceful
+   * disconnect may or may not be possible.
+   */
+  praef_ss_collision
 } praef_system_status;
 
 /**
@@ -456,6 +522,9 @@ typedef enum {
  * message-bus abstraction.
  * @param profile The profile to use to calculate default configuration based
  * on std_latency.
+ * @param ip_version The IP version restrictions on the system, if any.
+ * @param net_locality The network locality restrictions on the system, if
+ * any.
  * @param mtu The MTU for message encoders. This needs to be at least
  * PRAEF_HLMSG_MTU_MIN+8.
  * @return The new system, or NULL if insufficient memory was available.
@@ -465,6 +534,8 @@ praef_system* praef_system_new(praef_app* app,
                                const PraefNetworkIdentifierPair_t* self,
                                unsigned std_latency,
                                praef_system_profile profile,
+                               praef_system_ip_version ip_version,
+                               praef_system_network_locality net_locality,
                                unsigned mtu);
 
 /**
@@ -684,5 +755,41 @@ void praef_system_conf_self_commit_lag_compensation(
  */
 void praef_system_conf_join_tree_query_interval(
   praef_system*, unsigned interval);
+/**
+ * Controls the minimum interval between the acceptance of new nodes into the
+ * system by *this node*. Attempts to join the system which arrive before this
+ * interval has expired since the last accept are silently ignored.
+ *
+ * This value simply makes the system more DoS-resistant, and only controls the
+ * behaviour of the local node. Other nodes in the system can still potentially
+ * accept nodes into the system at an arbitrary rate.
+ *
+ * The only way to strongly protect an application from accept floods is to
+ * define an authentication mechanism which makes it difficult or impossible to
+ * generate large numbers of valid accepts. For example, one could employ a
+ * centralised server that is the sole source of authentication information,
+ * and either has a limited rate at which it will generate such information, or
+ * is aware of the number of nodes in a system and will refuse to exceed that
+ * number.
+ *
+ * The default is std_latency*8.
+ */
+void praef_system_conf_accept_interval(
+  praef_system*, unsigned interval);
+/**
+ * Controls the approximate maximum node count in the system. The local node
+ * will not accept join requests when the number of live nodes is greater than
+ * or equal to this value.
+ *
+ * Note that there is nothing preventing other nodes already in the system from
+ * blowing past this limit if they choose to do so. Furthermore, even when all
+ * nodes are cooperating with the same limit, the limit can still be exceeded
+ * due to the asynchronous nature of the network. Therefore, applications MUST
+ * be able to handle systems which exceed the node count limit.
+ *
+ * The default is ~0 (ie, effectively no limit).
+ */
+void praef_system_conf_max_live_nodes(
+  praef_system*, unsigned max);
 
 #endif /* LIBPRAEFECTUS_SYSTEM_H_ */

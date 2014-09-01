@@ -211,7 +211,7 @@ praef_metatransactor* praef_metatransactor_new(praef_metatransactor_cxn* cxn) {
   if (!(this->context = praef_context_new())) goto fail;
 
   bootstrap = praef_metatransactor_node_new(
-    this, PRAEF_METATRANSACTOR_BOOTSTRAP_NODE);
+    this, PRAEF_BOOTSTRAP_NODE);
   if (!bootstrap) goto fail;
 
   bootstrap->bits_set[GRANT_BIT] = 0;
@@ -362,7 +362,7 @@ static void praef_metatransactor_node_rewind(
   }
 
   /* The bootstrap node always has the GRANT bit set */
-  if (PRAEF_METATRANSACTOR_BOOTSTRAP_NODE == this->self.id)
+  if (PRAEF_BOOTSTRAP_NODE == this->self.id)
     this->bits_set[GRANT_BIT] = 0;
 }
 

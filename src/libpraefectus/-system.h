@@ -90,7 +90,10 @@ struct praef_system_s {
   praef_message_bus* bus;
   unsigned std_latency;
   praef_system_profile profile;
+  praef_system_ip_version ip_version;
+  praef_system_network_locality net_locality;
   unsigned mtu;
+  const PraefNetworkIdentifierPair_t* self_net_id;
 
   praef_signator* signator;
   praef_verifier* verifier;
@@ -104,12 +107,13 @@ struct praef_system_s {
   struct praef_node_map nodes;
 
   praef_node* local_node;
-  int oom;
+  praef_system_status abnormal_status;
 };
 
 praef_node* praef_system_get_node(praef_system*, praef_object_id);
 praef_node* praef_node_new(
   praef_system*, praef_object_id,
+  const PraefNetworkIdentifierPair_t*,
   praef_message_bus*, praef_node_disposition,
   const unsigned char pubkey[PRAEF_PUBKEY_SIZE]);
 void praef_node_delete(praef_node*);
@@ -121,8 +125,27 @@ void praef_node_delete(praef_node*);
  */
 int praef_system_register_node(praef_system*, praef_node*);
 
+int praef_system_is_permissible_netid(
+  praef_system*, const PraefNetworkIdentifierPair_t*);
+
+int praef_node_is_alive(praef_node*);
+
 int praef_compare_nodes(const praef_node*, const praef_node*);
 RB_PROTOTYPE(praef_node_map, praef_node_s, map, praef_compare_nodes)
+
+#define PRAEF_OOM_IF_NOT(sys, cond) do {                \
+    if (!(cond)) (sys)->abnormal_status = praef_ss_oom; \
+  } while (0)
+
+#define PRAEF_OOM_IF(sys, cond) do {                    \
+    if (cond) (sys)->abnormal_status = praef_ss_oom;    \
+  } while (0)
+
+static inline void praef_system_oom_if_not(
+  praef_system* sys, int cond
+) {
+  if (!cond) sys->abnormal_status = praef_ss_oom;
+}
 
 #define PRAEF_APP_HAS(app, method)                      \
   (((app)->size >= offsetof(praef_app, method)) &&      \

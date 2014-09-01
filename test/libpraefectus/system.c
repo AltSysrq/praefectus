@@ -80,6 +80,8 @@ defsetup {
                               praef_virtual_bus_mb(bus[i]),
                               praef_virtual_bus_address(bus[i]),
                               0, praef_sp_lax,
+                              praef_siv_any,
+                              praef_snl_any,
                               PRAEF_HLMSG_MTU_MIN+8);
   }
 }

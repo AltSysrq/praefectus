@@ -196,7 +196,9 @@ PraefMsgNetworkInfo ::= SEQUENCE {
 
 -- Requests to join the system of which the receiver is a part. Receivers MUST
 -- process this message if and only if they do not recognise the
--- signature. This MUST be the only message inside the high-level message
+-- signature. Upon reception of such a message from a node already in the
+-- system, the JoinAccept that introduced that node SHOULD be
+-- retransmitted. This MUST be the only message inside the high-level message
 -- envelope, and the high-level message MUST NOT have tailing garbage. The
 -- instant and advisory serial number on the high-level message MUST be zero.
 --
@@ -204,12 +206,12 @@ PraefMsgNetworkInfo ::= SEQUENCE {
 -- SHOULD NOT reattempt this exact request if it receives no response after a
 -- certain time-out, but instead generate a new public key and restart with a
 -- NetworkInfo message, generally to a different node known to be a part of the
--- system.
+-- system. However, it MAY retry several times over a shorter interval.
 --
--- Receiving nodes SHOULD ignore this message if they have not recently
--- received a GetNetworkInfo message from the same return address, unless the
--- application is designed to bypass the GetNetworkInfo/NetworkInfo exchange by
--- using a more secure method.
+-- Receiving nodes MAY ignore this message if they have not recently received a
+-- GetNetworkInfo message from the same return address, unless the application
+-- is designed to bypass the GetNetworkInfo/NetworkInfo exchange by using a
+-- more secure method.
 --
 -- Acceptance of the new node is performed by broadcasting a JoinAccept message
 -- to all nodes, including the new one.
@@ -249,10 +251,11 @@ PraefMsgJoinRequest ::= SEQUENCE {
 --
 -- In this model of joining, the node's public key and a system-specific salt
 -- are hashed to produce a hopefully-unique id for the new node. Specifically,
--- this hash is the first 32 bits output by SHA-3 after inputing the system's
--- salt, the public key of the new node. If this would produce an id of 0, the
--- value 2 is used instead. Furthermore, if the id this process would produce
--- is otherwise reserved by the application, the next id in sequence is used.
+-- this hash is the first 32 bits (interpreted as a little-endian integer)
+-- output by SHA-3 after inputing the system's salt and the public key of the
+-- new node. If this would produce an id of 0 or 1, the value 2 is used
+-- instead. Furthermore, if the id this process would produce is otherwise
+-- reserved by the application, the next id in sequence is used.
 --
 -- This SHOULD be the only message within the containing high-level message,
 -- and the containing high-level message MUST NOT exceed 128 bytes in length.

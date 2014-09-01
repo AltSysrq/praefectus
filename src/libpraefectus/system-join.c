@@ -33,14 +33,21 @@
 #include <stdlib.h>
 
 #include "messages/PraefMsg.h"
+#include "keccak.h"
 #include "system.h"
 #include "-system.h"
 #include "secure-random.h"
 
 static void praef_system_join_query_next_join_tree(praef_system*, praef_node*);
+static int praef_system_join_verify_jr_signature(
+  praef_system*, const PraefMsgJoinRequest_t*,
+  const unsigned char sig[PRAEF_SIGNATURE_SIZE]);
+static unsigned praef_system_join_num_live_nodes(praef_system*);
 
 int praef_system_join_init(praef_system* sys) {
   sys->join.join_tree_query_interval = sys->std_latency;
+  sys->join.accept_interval = sys->std_latency*8;
+  sys->join.max_live_nodes = ~0u;
 
   /* Set up the salt initially with the assumption that the local node will be
    * the bootstrap node. If this winds up not being the case, the salt info
@@ -58,7 +65,7 @@ int praef_system_join_init(praef_system* sys) {
   if (!(sys->join.minimal_rpc_encoder =
         praef_hlmsg_encoder_new(praef_htf_rpc_type,
                                 sys->signator,
-                                NULL,
+                                &sys->join.minimal_rpc_serno,
                                 PRAEF_HLMSG_MTU_MIN, 0)))
     return 0;
 
@@ -84,6 +91,18 @@ void praef_system_conf_join_tree_query_interval(
   praef_system* sys, unsigned interval
 ) {
   sys->join.join_tree_query_interval = interval;
+}
+
+void praef_system_conf_accept_interval(
+  praef_system* sys, unsigned interval
+) {
+  sys->join.accept_interval = interval;
+}
+
+void praef_system_conf_max_live_nodes(
+  praef_system* sys, unsigned max
+) {
+  sys->join.max_live_nodes = max;
 }
 
 void praef_system_join_update(praef_system* sys, unsigned et) {
@@ -127,8 +146,9 @@ void praef_node_join_recv_msg_join_tree(
 
   send:
   response.choice.jtentry.nkeys = ix;
-  from->sys->oom |= praef_outbox_append(
-    from->router.rpc_out, &response);
+  PRAEF_OOM_IF_NOT(
+    from->sys, praef_outbox_append(
+      from->router.rpc_out, &response));
 }
 
 /* Note in particular here that join tree query responses are accepted from
@@ -184,7 +204,7 @@ static void praef_system_join_query_next_join_tree(
   msg.present = PraefMsg_PR_jointree;
   msg.choice.jointree.node = against->id;
   msg.choice.jointree.offset = against->join.next_join_tree_query++;
-  sys->oom |= praef_outbox_append(sys->join.connect_out, &msg);
+  PRAEF_OOM_IF_NOT(sys, praef_outbox_append(sys->join.connect_out, &msg));
 }
 
 void praef_system_join_recv_msg_get_network_info(
@@ -195,8 +215,10 @@ void praef_system_join_recv_msg_get_network_info(
   unsigned char data[PRAEF_HLMSG_MTU_MIN+1];
   praef_hlmsg response_msg;
 
-  bootstrap = praef_system_get_node(sys, 1);
+  bootstrap = praef_system_get_node(sys, PRAEF_BOOTSTRAP_NODE);
   if (!bootstrap) return;
+  if (!praef_system_is_permissible_netid(sys, &msg->retaddr))
+    return;
 
   memset(&response, 0, sizeof(response));
   response.present = PraefMsg_PR_netinfo;
@@ -209,7 +231,7 @@ void praef_system_join_recv_msg_get_network_info(
       OCTET_STRING_fromBuf(&response.choice.netinfo.bootstrapkey,
                            (char*)bootstrap->pubkey,
                            PRAEF_PUBKEY_SIZE)) {
-    sys->oom = 1;
+    sys->abnormal_status = praef_ss_oom;
     return;
   }
 
@@ -224,39 +246,302 @@ void praef_system_join_recv_msg_get_network_info(
 void praef_system_join_recv_msg_network_info(
   praef_system* sys, const PraefMsgNetworkInfo_t* msg
 ) {
-  praef_verifier* verifier = NULL;
   praef_node* bootstrap;
 
   if (sys->join.has_received_network_info) return;
 
   /* Validate the key/salt pair */
-  verifier = praef_verifier_new();
-  if (!verifier) goto oom;
-  if (!praef_verifier_assoc(verifier, msg->bootstrapkey.buf, 1))
-    goto oom;
-
-  if (praef_verifier_verify(
-        verifier, praef_pubkey_hint_of(msg->bootstrapkey.buf),
+  if (praef_verifier_verify_once(
+        sys->verifier,
+        msg->bootstrapkey.buf,
         msg->saltsig.buf,
         msg->salt.buf, msg->salt.size)) {
     /* OK, create bootstrap node */
     memcpy(sys->join.system_salt, msg->salt.buf, msg->salt.size);
     memcpy(sys->join.system_salt_sig, msg->saltsig.buf, msg->saltsig.size);
 
-    bootstrap = praef_node_new(sys, 1, sys->bus, praef_nd_positive,
+    bootstrap = praef_node_new(sys, PRAEF_BOOTSTRAP_NODE,
+                               sys->join.connect_target,
+                               sys->bus, praef_nd_positive,
                                msg->bootstrapkey.buf);
-    if (!bootstrap) goto oom;
+    if (!bootstrap) {
+      sys->abnormal_status = praef_ss_oom;
+      return;
+    }
+
     if (!praef_system_register_node(sys, bootstrap))
       /* This is the first ever node, should never happen */
       abort();
 
     sys->join.has_received_network_info = 1;
   }
-
-  praef_verifier_delete(verifier);
   return;
+}
 
-  oom:
-  sys->oom = 1;
-  if (verifier) praef_verifier_delete(verifier);
+int praef_system_join_verify_jr_signature(
+  praef_system* sys, const PraefMsgJoinRequest_t* submsg,
+  const unsigned char sig[PRAEF_SIGNATURE_SIZE]
+) {
+  PraefMsg_t msg;
+  praef_hlmsg tmp;
+  unsigned char data[PRAEF_HLMSG_MTU_MIN+1];
+
+  tmp.data = data;
+  tmp.size = sizeof(data);
+
+  /* Reencode the message in normalised form.
+   *
+   * This will sign the message with *our* public key, but that doesn't really
+   * matter since we'll be hitting the verifier manually with the signature
+   * provided by the caller, and the signable area excludes both the public key
+   * hint and the signature.
+   */
+  msg.present = PraefMsg_PR_joinreq;
+  memcpy(&msg.choice.joinreq, &submsg, sizeof(PraefMsgJoinRequest_t));
+  sys->join.minimal_rpc_serno = 0;
+  praef_hlmsg_encoder_singleton(&tmp, sys->join.minimal_rpc_encoder, &msg);
+  return praef_verifier_verify_once(
+    sys->verifier,
+    submsg->publickey.buf,
+    sig,
+    praef_hlmsg_signable(&tmp),
+    praef_hlmsg_signable_sz(&tmp));
+}
+
+unsigned praef_system_join_num_live_nodes(praef_system* sys) {
+  praef_node* node;
+  unsigned count = 0;
+
+  RB_FOREACH(node, praef_node_map, &sys->nodes)
+    if (praef_node_is_alive(node))
+      ++count;
+
+  return count;
+}
+
+static int praef_system_join_is_valid_join_request(
+  praef_system* sys, const PraefMsgJoinRequest_t* msg,
+  const unsigned char sig[PRAEF_SIGNATURE_SIZE]
+) {
+  praef_node* bootstrap = praef_system_get_node(sys, PRAEF_BOOTSTRAP_NODE);
+
+  /* Network address MUST match what the system expects */
+  if (!praef_system_is_permissible_netid(sys, &msg->identifier))
+    return 0;
+  /* Public key MUST NOT be the same as that of the bootstrap node */
+  if (0 == memcmp(bootstrap->pubkey, msg->publickey.buf,
+                  PRAEF_PUBKEY_SIZE))
+    return 0;
+  /* Signature on hlmsg MUST be valid, and it MUST be in the prescribed
+   * normalised encoding.
+   */
+  if (!praef_system_join_verify_jr_signature(sys, msg, sig))
+    return 0;
+
+  /* If the application defines authentication, it MUST have auth data, and
+   * it MUST pass the application's test.
+   */
+  if (PRAEF_APP_HAS(sys->app, is_auth_valid_opt)) {
+    if (!msg->auth) return 0;
+
+    if (!(*sys->app->is_auth_valid_opt)(sys->app, msg))
+      return 0;
+  }
+
+  return 1;
+}
+
+void praef_system_join_recv_join_request(
+  praef_system* sys, praef_node* node,
+  const PraefMsgJoinRequest_t* msg,
+  const praef_hlmsg* envelope
+) {
+  praef_node* bootstrap = praef_system_get_node(sys, PRAEF_BOOTSTRAP_NODE);
+  PraefMsg_t accept;
+
+  memset(&accept, 0, sizeof(accept));
+
+  /* If there is no associated node, validate the request and see if we'll be
+   * accepting it. If so, create it now, otherwise return. Afterwards (if we
+   * didn't reject the request), regardless of whether this created a new node,
+   * broadcast the acceptance message.
+   */
+
+  /* We can't do anything if this node is not yet a member of the system */
+  if (!bootstrap || !sys->join.has_received_network_info ||
+      !sys->local_node)
+    return;
+  /* Special case: The bootstrap node should never send such a message. Do
+   * nothing if this came from that node, since there's no Accept message to
+   * retransmit.
+   */
+  if (bootstrap == node) return;
+
+  if (!node) {
+    if (!praef_system_join_is_valid_join_request(
+          sys, msg, praef_hlmsg_signature(envelope)))
+      return;
+    /* Refuse request if it would exceed the application's requested rate
+     * limit.
+     */
+    if (sys->join.last_accept - sys->clock.systime < sys->join.accept_interval)
+      return;
+
+    /* Refuse request if accepting this node would put us above the
+     * application-suggested node limit.
+     */
+    if (praef_system_join_num_live_nodes(sys) >= sys->join.max_live_nodes)
+      return;
+
+    /* All checks pass, the node is permitted to join.
+     *
+     * Send an Accept message to everyone, and handle the actual node creation
+     * when processing the Accept.
+     */
+    accept.present = PraefMsg_PR_accept;
+    accept.choice.accept.signature.buf = praef_hlmsg_signature(envelope);
+    accept.choice.accept.signature.size = PRAEF_SIGNATURE_SIZE;
+    memcpy(&accept.choice.accept.request, &msg,
+           sizeof(PraefMsgJoinRequest_t));
+    PRAEF_OOM_IF_NOT(
+      sys, !praef_outbox_append_singleton(sys->router.ur_out, &accept));
+  } else {
+    /* Node already exists, just remind it of its Accept message. */
+    (*node->bus->unicast)(node->bus, &node->net_id,
+                          node->join.join_tree.data,
+                          node->join.join_tree.data_size);
+  }
+}
+
+static int praef_system_join_is_reserved_id(
+  praef_system* sys, praef_object_id id
+) {
+  if (id < 2) return 1;
+
+  if (PRAEF_APP_HAS(sys->app, permit_object_id_opt))
+    return !(*sys->app->permit_object_id_opt)(sys->app, id);
+
+  return 0;
+}
+
+void praef_system_join_recv_node_accept(
+  praef_system* sys, praef_node* from_node,
+  const PraefMsgJoinAccept_t* msg,
+  const praef_hlmsg* envelope
+) {
+  praef_keccak_sponge sponge;
+  unsigned char local_pubkey[PRAEF_PUBKEY_SIZE];
+  unsigned char id_bytes[sizeof(praef_object_id)];
+  praef_object_id id;
+  praef_node* new_node;
+
+  /* There are two distinct modes of operation for handling this message.
+   *
+   * The first case is when the local node is not yet part of the system. In
+   * this case, we don't care about from_node (it's probably NULL, but might
+   * not be if we happen to be talking to the bootstrap node). If the message
+   * is valid *and* refers to the local node's public key, create the local
+   * node with the generated id.
+   *
+   * In the second case, the local node is part of the system. Here we require
+   * from_node to be a real node in the system. If the message is valid and
+   * refers to a node not already in existence, create the node and send the
+   * enveloped message back to the new node. The latter step occurs because
+   * the join-request-handling code doesn't actually know the contents of the
+   * message it is sending, but we get that here. This additionally has the
+   * nice side-effect of performing a NAT hole-punch to the new node in the
+   * likely case where it'll be attempting to connect to the local node within
+   * a few seconds.
+   */
+
+  /* Common validation code.
+   *
+   * Unlike vanilla join requests, validation failures here are a violation of
+   * protocol by from_node, and thus have the side-effect of changing the
+   * disposition for that node to negative.
+   */
+  if (!praef_system_join_is_valid_join_request(
+        sys, &msg->request, msg->signature.buf)) {
+    if (from_node)
+      from_node->disposition = praef_nd_negative;
+    return;
+  }
+
+  /* Calculate id for this request */
+  praef_keccak_sponge_init(&sponge, PRAEF_KECCAK_RATE, PRAEF_KECCAK_CAP);
+  praef_keccak_sponge_absorb(&sponge, sys->join.system_salt,
+                             sizeof(sys->join.system_salt));
+  praef_keccak_sponge_absorb(&sponge, msg->request.publickey.buf,
+                             msg->request.publickey.size);
+  praef_keccak_sponge_squeeze(&sponge, id_bytes, sizeof(id_bytes));
+  id = (((praef_object_id)id_bytes[0]) <<  0)
+     | (((praef_object_id)id_bytes[1]) <<  8)
+     | (((praef_object_id)id_bytes[2]) << 16)
+     | (((praef_object_id)id_bytes[3]) << 24);
+
+  while (praef_system_join_is_reserved_id(sys, id)) ++id;
+
+  if (!sys->local_node) {
+    praef_signator_pubkey(local_pubkey, sys->signator);
+    if (0 != memcmp(local_pubkey, msg->request.publickey.buf,
+                    PRAEF_PUBKEY_SIZE))
+      /* Unrelated accept message */
+      return;
+
+    /* This is us. Create local node object and notify application of our new
+     * id.
+     */
+    new_node = praef_node_new(sys, id, sys->self_net_id,
+                              &sys->state.loopback, praef_nd_positive,
+                              local_pubkey);
+    if (!new_node) {
+      sys->abnormal_status = praef_ss_oom;
+      return;
+    }
+
+    if (!praef_system_register_node(sys, new_node)) {
+      /* This means we were unfortunate enough to have an id collision with the
+       * node we connected with.
+       */
+      sys->abnormal_status = praef_ss_collision;
+      return;
+    }
+
+    /* This can't be set until registration completes, since registration could
+     * destroy new_node in the rare case where the id collides with the
+     * connect-target node.
+     */
+    sys->local_node = new_node;
+    if (PRAEF_APP_HAS(sys->app, acquire_id_opt))
+      (*sys->app->acquire_id_opt)(sys->app, id);
+  } else {
+    /* If we can't identify the origin of the Accept, discard, as the only
+     * expected use of this message is to inform the local node (now a full
+     * participant) of other new nodes.
+     */
+    if (!from_node) return;
+
+    /* If a node with the new id has already joined, there is no action to
+     * take.
+     */
+    if (praef_system_get_node(sys, id)) return;
+
+    /* The request is valid, create the new node */
+    new_node = praef_node_new(sys, id, &msg->request.identifier,
+                              sys->bus, praef_nd_neutral,
+                              msg->request.publickey.buf);
+    if (!new_node) {
+      sys->abnormal_status = praef_ss_oom;
+      return;
+    }
+
+    if (praef_system_register_node(sys, new_node)) {
+      if (PRAEF_APP_HAS(sys->app, discover_node_opt))
+        (*sys->app->discover_node_opt)(sys->app, &new_node->net_id, id);
+    }
+
+    /* Feed the Accept message back to the new node */
+    (*new_node->bus->unicast)(new_node->bus, &new_node->net_id,
+                              envelope->data, envelope->size-1);
+  }
 }

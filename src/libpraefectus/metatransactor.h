@@ -33,12 +33,6 @@
 #include "object.h"
 
 /**
- * The special, well-known node ID which implicitly receives the 0x01 (ALIVE)
- * status at instant zero.
- */
-#define PRAEF_METATRANSACTOR_BOOTSTRAP_NODE ((praef_object_id)1)
-
-/**
  * The status of a node in a metatransactor is a two-bit field consisting of a
  * GRANT and a DENY bit. Events from a node are meaningful only if it has the
  * GRANT bit set and the DENY bit clear. Meta-events can attempt to set either

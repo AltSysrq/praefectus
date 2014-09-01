@@ -31,13 +31,6 @@
 #include "common.h"
 
 /**
- * Globally identifies a praefectus object within a single context. Object ids
- * are to be provided by the application, except that object ID 0 is reserved
- * for internal use.
- */
-typedef unsigned praef_object_id;
-
-/**
  * The reserved null object id; application objects may not have this ID.
  */
 #define PRAEF_NULL_OBJECT_ID ((praef_object_id)0)

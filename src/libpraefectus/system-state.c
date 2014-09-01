@@ -141,7 +141,7 @@ void praef_system_state_recv_message(
     ht_objref.data = msg->data;
     switch (praef_hash_tree_add(sys->state.hash_tree, &ht_objref)) {
     case praef_htar_failed:
-      sys->oom = 1;
+      sys->abnormal_status = praef_ss_oom;
       return;
 
     case praef_htar_already_present:
@@ -175,7 +175,7 @@ void praef_system_state_recv_message(
   for (seg = praef_hlmsg_first(msg); seg; seg = praef_hlmsg_snext(seg)) {
     decoded = praef_hlmsg_sdec(seg);
     if (!decoded) {
-      sys->oom = 1;
+      sys->abnormal_status = praef_ss_oom;
     } else {
       praef_system_state_process_message(sys, sender, instant, decoded);
       (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, decoded, 0);

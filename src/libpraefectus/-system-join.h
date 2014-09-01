@@ -51,10 +51,13 @@ typedef struct {
   /* These become set when a connection is initiated and are destroyed when the
    * connection completes.
    */
+  const PraefNetworkIdentifierPair_t* connect_target;
   praef_outbox* connect_out;
   praef_mq* connect_mq;
 
   unsigned join_tree_query_interval;
+  unsigned accept_interval;
+  unsigned max_live_nodes;
   /* Join tree traversal is performed one query at a time per node in the tree,
    * but in parallel for different nodes. (Note that these queries go to the
    * same actual node (the connect target), but are just regarding different
@@ -69,7 +72,15 @@ typedef struct {
   praef_instant last_join_tree_query;
   int join_tree_traversal_complete;
 
+  praef_instant last_accept;
+
   praef_hlmsg_encoder* minimal_rpc_encoder;
+  /* The serno of the next hlmsg from the minimal RPC encoder.
+   *
+   * This is a separate field so that sernos can be forced to zero when needed
+   * for normalisation purposes.
+   */
+  praef_advisory_serial_number minimal_rpc_serno;
 } praef_system_join;
 
 typedef struct {
@@ -94,7 +105,8 @@ void praef_system_join_recv_msg_get_network_info(
 void praef_system_join_recv_msg_network_info(
   praef_system*, const PraefMsgNetworkInfo_t*);
 void praef_system_join_recv_join_request(
-  praef_system*, const PraefMsgJoinRequest_t*, const praef_hlmsg*);
+  praef_system*, struct praef_node_s*,
+  const PraefMsgJoinRequest_t*, const praef_hlmsg*);
 void praef_system_join_recv_node_accept(
   praef_system*, struct praef_node_s*, const PraefMsgJoinAccept_t*,
   const praef_hlmsg*);

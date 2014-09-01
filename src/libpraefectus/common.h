@@ -37,6 +37,20 @@
  * that work with hashes.
  */
 #define PRAEF_HASH_SIZE 32
+/**
+ * The special, well-known node ID which implicitly receives the 0x01 (ALIVE)
+ * status at instant zero.
+ */
+#define PRAEF_BOOTSTRAP_NODE ((praef_object_id)1)
+
+/**
+ * Globally identifies a praefectus object within a single context. Object ids
+ * are to be provided by the application, except that object ID 0 is reserved
+ * for internal use.
+ *
+ * Object ids also identify nodes in a system.
+ */
+typedef unsigned praef_object_id;
 
 /**
  * Specifies a discrete point in time in a praefectus simulation. Greater

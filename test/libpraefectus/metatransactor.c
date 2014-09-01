@@ -119,7 +119,7 @@ deftest(accepts_events_for_bootstrap_node) {
   cloned_evt = CLONE(evt);
 
   cxn_accept = invoke_apply;
-  praef_metatransactor_add_event(that, PRAEF_METATRANSACTOR_BOOTSTRAP_NODE,
+  praef_metatransactor_add_event(that, PRAEF_BOOTSTRAP_NODE,
                                  cloned_evt);
   praef_metatransactor_advance(that, 2);
   ck_assert(applied);
@@ -127,7 +127,7 @@ deftest(accepts_events_for_bootstrap_node) {
 
 deftest(wont_create_duplicate_node) {
   ck_assert_int_eq(0, praef_metatransactor_add_node(
-                     that, PRAEF_METATRANSACTOR_BOOTSTRAP_NODE));
+                     that, PRAEF_BOOTSTRAP_NODE));
 }
 
 deftest(node_can_join) {

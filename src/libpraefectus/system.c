@@ -45,6 +45,8 @@ praef_system* praef_system_new(praef_app* app,
                                const PraefNetworkIdentifierPair_t* self,
                                unsigned std_latency,
                                praef_system_profile profile,
+                               praef_system_ip_version ipv,
+                               praef_system_network_locality net_locality,
                                unsigned mtu) {
   praef_system* this;
 
@@ -56,6 +58,9 @@ praef_system* praef_system_new(praef_app* app,
   this->mtu = mtu;
   this->std_latency = std_latency;
   this->profile = profile;
+  this->ip_version = ipv;
+  this->net_locality = net_locality;
+  this->self_net_id = self;
   praef_clock_init(&this->clock, 5 * std_latency, std_latency);
   RB_INIT(&this->nodes);
 
@@ -91,14 +96,51 @@ void praef_system_delete(praef_system* this) {
   free(this);
 }
 
+static int praef_copy_net_id(
+  PraefNetworkIdentifier_t* dst,
+  const PraefNetworkIdentifier_t* src
+) {
+  dst->port = src->port;
+  dst->address.present = src->address.present;
+  if (PraefIpAddress_PR_ipv4 == src->address.present)
+    return !OCTET_STRING_fromBuf(&dst->address.choice.ipv4,
+                                 (char*)src->address.choice.ipv4.buf,
+                                 src->address.choice.ipv4.size);
+  else
+    return !OCTET_STRING_fromBuf(&dst->address.choice.ipv6,
+                                 (char*)src->address.choice.ipv6.buf,
+                                 src->address.choice.ipv6.size);
+}
+
+static int praef_copy_net_id_pair(
+  PraefNetworkIdentifierPair_t* dst,
+  const PraefNetworkIdentifierPair_t* src
+) {
+  memset(dst, 0, sizeof(PraefNetworkIdentifierPair_t));
+  if (!praef_copy_net_id(&dst->intranet, &src->intranet))
+    return 0;
+
+  if (src->internet) {
+    dst->internet = calloc(1, sizeof(PraefNetworkIdentifier_t));
+    if (!dst->internet) return 0;
+    if (!praef_copy_net_id(dst->internet, src->internet))
+      return 0;
+  } else {
+    dst->internet = NULL;
+  }
+
+  return 1;
+}
+
 praef_node* praef_node_new(praef_system* sys,
                            praef_object_id id,
+                           const PraefNetworkIdentifierPair_t* net_id,
                            praef_message_bus* bus,
                            praef_node_disposition disposition,
                            const unsigned char pubkey[PRAEF_PUBKEY_SIZE]) {
   praef_node* node = calloc(1, sizeof(praef_node));
   if (!node) {
-    sys->oom = 1;
+    sys->abnormal_status = praef_ss_oom;
     return NULL;
   }
 
@@ -107,10 +149,12 @@ praef_node* praef_node_new(praef_system* sys,
   node->bus = bus;
   node->disposition = disposition;
   memcpy(node->pubkey, pubkey, PRAEF_PUBKEY_SIZE);
-  sys->oom |=
+  PRAEF_OOM_IF(
+    sys,
+    !praef_copy_net_id_pair(&node->net_id, net_id) ||
     !praef_node_router_init(node) ||
     !praef_node_state_init(node) ||
-    !praef_node_join_init(node);
+    !praef_node_join_init(node));
 
   return node;
 }
@@ -119,6 +163,8 @@ void praef_node_delete(praef_node* node) {
     praef_node_join_destroy(node);
     praef_node_state_destroy(node);
     praef_node_router_destroy(node);
+    (*asn_DEF_PraefNetworkIdentifierPair.free_struct)(
+      &asn_DEF_PraefNetworkIdentifierPair, &node->net_id, 1);
     free(node);
 }
 
@@ -156,21 +202,28 @@ int praef_system_register_node(
 ) {
   if (praef_verifier_is_assoc(this->verifier, node->pubkey)) {
     /* Already associated. This should mean that the node is already inserted,
-     * but check this to be certain (and "oom" if not). Were this not the case,
-     * this would indicate the creation of a hydra node --- one public key
-     * associated with multiple ids, the correct handling of which would be
+     * but check this to be certain (and collide if not). Were this not the
+     * case, this would indicate the creation of a hydra node --- one public
+     * key associated with multiple ids, the correct handling of which would be
      * extremely difficult, which is why the protocol (theoretically) makes
-     * this case almost-certainly-impossible. (In theory, two nodes could
-     * happen to generate the same public key, so just aborting isn't a valid
-     * solution.)
+     * this case almost-certainly-impossible.
+     *
+     * Since node id generation is entirely derived from the public key (and
+     * the salt constant), the case where two nodes happen to have the same
+     * public key results in both having the same id. The only exception is the
+     * bootstrap node, but nodes are not allowed to join using the bootstrap
+     * node's id. Therefore, the case where the public key is in use but the id
+     * is not should never happen, so abort.
      */
-    this->oom |= !praef_system_get_node(this, node->id);
+    if (!praef_system_get_node(this, node->id))
+      abort();
     /* In any case, destroy the node and give up. */
     praef_node_delete(node);
     return 0;
   }
 
-  this->oom |= !praef_verifier_assoc(this->verifier, node->pubkey, node->id);
+  PRAEF_OOM_IF_NOT(
+    this, praef_verifier_assoc(this->verifier, node->pubkey, node->id));
 
   /* If this id is already in use, we have created a chimera node. We still
    * need to register it with the verifier for consistency's sake, but change
@@ -186,7 +239,7 @@ int praef_system_register_node(
   if ((*this->app->create_node_bridge)(this->app, node->id)) {
     (*this->app->create_node_object)(this->app, node->id);
   } else {
-    this->oom = 1;
+    this->abnormal_status = praef_ss_oom;
   }
 
   return 1;
@@ -197,7 +250,9 @@ void praef_system_bootstrap(praef_system* this) {
   praef_node* node;
 
   praef_signator_pubkey(pubkey, this->signator);
-  node = praef_node_new(this, 1, &this->state.loopback,
+  node = praef_node_new(this, PRAEF_BOOTSTRAP_NODE,
+                        this->self_net_id,
+                        &this->state.loopback,
                         praef_nd_positive,
                         pubkey);
 
@@ -217,17 +272,22 @@ void praef_system_bootstrap(praef_system* this) {
   this->join.has_received_network_info = 1;
 
   if (PRAEF_APP_HAS(this->app, acquire_id_opt))
-    (*this->app->acquire_id_opt)(this->app, 1);
+    (*this->app->acquire_id_opt)(this->app, PRAEF_BOOTSTRAP_NODE);
+}
+
+int praef_node_is_alive(praef_node* node) {
+  praef_system* sys = node->sys;
+
+  return
+    (sys->clock.monotime <
+     (*sys->app->get_node_grant_bridge)(sys->app, node->id)) &&
+    (sys->clock.monotime >=
+     (*sys->app->get_node_deny_bridge)(sys->app, node->id));
 }
 
 static int praef_system_self_alive(praef_system* this) {
   if (!this->local_node) return 0;
-
-  return
-    (this->clock.monotime <
-     (*this->app->get_node_grant_bridge)(this->app, this->local_node->id)) &&
-    (this->clock.monotime >=
-     (*this->app->get_node_deny_bridge)(this->app, this->local_node->id));
+  return praef_node_is_alive(this->local_node);
 }
 
 praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
@@ -246,17 +306,54 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
   (*this->app->advance_bridge)(this->app, elapsed_monotime);
   praef_system_router_update(this, elapsed);
 
-  if (this->oom) return praef_ss_oom;
   /* TODO: Other stati */
-  return praef_ss_ok;
+  return this->abnormal_status;
 }
 
 void praef_system_oom(praef_system* this) {
-  this->oom = 1;
+  this->abnormal_status = praef_ss_oom;
 }
 
 praef_node* praef_system_get_node(praef_system* this, praef_object_id node) {
   praef_node example;
   example.id = node;
   return RB_FIND(praef_node_map, &this->nodes, &example);
+}
+
+int praef_system_is_permissible_netid(
+  praef_system* this, const PraefNetworkIdentifierPair_t* id
+) {
+  switch (this->ip_version) {
+  case praef_siv_any: break;
+  case praef_siv_4only:
+    if (PraefIpAddress_PR_ipv4 != id->intranet.address.present)
+      return 0;
+
+    if (id->internet &&
+        PraefIpAddress_PR_ipv4 != id->internet->address.present)
+      return 0;
+    break;
+
+  case praef_siv_6only:
+    if (PraefIpAddress_PR_ipv6 != id->intranet.address.present)
+      return 0;
+
+    if (id->internet &&
+        PraefIpAddress_PR_ipv6 != id->internet->address.present)
+      return 0;
+    break;
+  }
+
+  switch (this->net_locality) {
+  case praef_snl_any: break;
+  case praef_snl_local:
+    if (id->internet) return 0;
+    break;
+
+  case praef_snl_global:
+    if (!id->internet) return 0;
+    break;
+  }
+
+  return 1;
 }
