@@ -36,10 +36,13 @@
 
 defsuite(libpraefectus_system);
 
+unsigned num_systems;
 static praef_app app[4];
 static praef_system* sys[4];
 static praef_virtual_network* vnet;
 static praef_virtual_bus* bus[4];
+static praef_virtual_network_link* link_from_to[4][4];
+static praef_system_status stati[4];
 
 /* "Application Events" are encoded as simply a 1-byte array containing the
  * byte 42. The tests only care about the identity of the events themselves.
@@ -65,7 +68,9 @@ static praef_event* decode_event(
 }
 
 defsetup {
-  unsigned i;
+  unsigned i, j;
+
+  num_systems = 0;
 
   memset(app, 0, sizeof(app));
   for (i = 0; i < 4; ++i) {
@@ -84,6 +89,13 @@ defsetup {
                               praef_snl_any,
                               PRAEF_HLMSG_MTU_MIN+8);
   }
+
+  for (i = 0; i < 4; ++i) {
+    for (j = 0; j < 4; ++j) {
+      link_from_to[i][j] = praef_virtual_bus_link(bus[i], bus[j]);
+      link_from_to[i][j]->firewall_grace_period = 2;
+    }
+  }
 }
 
 defteardown {
@@ -95,23 +107,35 @@ defteardown {
   praef_virtual_network_delete(vnet);
 }
 
+static void nop() {}
+#define NOP(meth) ((*(void(**)())&meth) = nop)
+#define COUNT(var, meth) unsigned var = 0; \
+  ((*(void(**)())&meth) = lambdav((), ++var))
+
+static praef_instant always(praef_app* _, praef_object_id id) {
+  return 0;
+}
+
+static praef_instant never(praef_app* _, praef_object_id id) {
+  return ~0;
+}
+
+static void advance(unsigned delta) {
+  unsigned i;
+
+  for (i = 0; i < num_systems; ++i)
+    stati[i] = praef_system_advance(sys[i], delta);
+
+  praef_virtual_network_advance(vnet, delta);
+}
+
 deftest(can_send_minimal_events) {
   int has_created_node = 0, has_created_obj = 0;
   int has_received_evt = 0, has_received_vote = 0;
   praef_event* evt_to_free;
 
-  app[0].get_node_grant_bridge = lambda(
-    (this, node),
-    praef_app* this; praef_object_id node,
-    ck_assert_ptr_eq(app, this);
-    ck_assert_int_eq(1, node);
-    (praef_instant)0);
-  app[0].get_node_deny_bridge = lambda(
-    (this, node),
-    praef_app* this; praef_object_id node,
-    ck_assert_ptr_eq(app, this);
-    ck_assert_int_eq(1, node);
-    (praef_instant)~0);
+  app[0].get_node_grant_bridge = always;
+  app[0].get_node_deny_bridge = never;
   app[0].create_node_bridge = lambda(
     (this, node),
     praef_app* this; praef_object_id node,
@@ -163,4 +187,43 @@ deftest(can_send_minimal_events) {
   ck_assert(has_received_evt);
   ck_assert(has_received_vote);
   free(evt_to_free);
+}
+
+deftest(can_establish_basic_connection) {
+  num_systems = 2;
+
+  app[0].get_node_grant_bridge = always;
+  app[0].get_node_deny_bridge = never;
+  app[1].get_node_grant_bridge = never;
+  app[1].get_node_deny_bridge = never;
+  NOP(app[0].advance_bridge);
+  COUNT(nodes0, app[0].create_node_bridge);
+  COUNT(objects0, app[0].create_node_object);
+  NOP(app[1].advance_bridge);
+  COUNT(nodes1, app[1].create_node_bridge);
+  COUNT(objects1, app[1].create_node_object);
+
+  praef_system_bootstrap(sys[0]);
+  praef_system_connect(sys[1], praef_virtual_bus_address(bus[0]));
+
+  /* 1 --GetNetworkInfo--> 0 --> ... */
+  advance(1); advance(1);
+  ck_assert_int_eq(praef_ss_anonymous, stati[1]);
+  /* ... --NetworkInfo--> 1 */
+  advance(1);
+  ck_assert_int_eq(praef_ss_anonymous, stati[1]);
+  /* 1 --JoinRequest--> 0 --> ... */
+  advance(1);
+  ck_assert_int_eq(praef_ss_anonymous, stati[1]);
+  /* ... --JoinAccept--> 1 */
+  advance(1); advance(1);
+  ck_assert_int_eq(praef_ss_pending_grant, stati[1]);
+
+  /* Both should now be fully aware of each other, though the new node has not
+   * yet traversed the join tree.
+   */
+  ck_assert_int_eq(2, nodes0);
+  ck_assert_int_eq(2, objects0);
+  ck_assert_int_eq(2, nodes1);
+  ck_assert_int_eq(2, objects1);
 }

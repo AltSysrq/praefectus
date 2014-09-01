@@ -49,6 +49,8 @@
    /* Size, largest possible message */         \
    1 + 255)
 
+#define PRAEF_HLMSG_JOINACCEPT_MAX 224
+
 /**
  * The type for advisory serial numbers attached to hlmsgs.
  */

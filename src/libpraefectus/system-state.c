@@ -33,6 +33,7 @@
 #include "system.h"
 #include "-system.h"
 #include "-system-state.h"
+#include "-system-join.h"
 #include "defs.h"
 
 static void praef_system_state_loopback_unicast(
@@ -43,7 +44,8 @@ static void praef_system_state_loopback_broadcast(
   praef_message_bus*, const void*, size_t);
 
 static void praef_system_state_process_message(
-  praef_system*, praef_node*, praef_instant, PraefMsg_t*);
+  praef_system*, praef_node*, praef_instant,
+  PraefMsg_t*, const praef_hlmsg*);
 
 static void praef_system_state_process_appevt(
   praef_system*, praef_node*, praef_instant, PraefMsgAppEvent_t*);
@@ -177,14 +179,15 @@ void praef_system_state_recv_message(
     if (!decoded) {
       sys->abnormal_status = praef_ss_oom;
     } else {
-      praef_system_state_process_message(sys, sender, instant, decoded);
+      praef_system_state_process_message(sys, sender, instant, decoded, msg);
       (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, decoded, 0);
     }
   }
 }
 
 static void praef_system_state_process_message(
-  praef_system* sys, praef_node* sender, praef_instant instant, PraefMsg_t* msg
+  praef_system* sys, praef_node* sender, praef_instant instant,
+  PraefMsg_t* msg, const praef_hlmsg* envelope
 ) {
   switch (msg->present) {
   case PraefMsg_PR_NOTHING: abort();
@@ -196,6 +199,32 @@ static void praef_system_state_process_message(
   case PraefMsg_PR_vote:
     if (sender)
       praef_system_state_process_vote(sys, sender, instant, &msg->choice.vote);
+    break;
+
+  case PraefMsg_PR_getnetinfo:
+    praef_system_join_recv_msg_get_network_info(sys, &msg->choice.getnetinfo);
+    break;
+
+  case PraefMsg_PR_netinfo:
+    praef_system_join_recv_msg_network_info(sys, &msg->choice.netinfo);
+    break;
+
+  case PraefMsg_PR_joinreq:
+    praef_system_join_recv_msg_join_request(sys, sender, &msg->choice.joinreq,
+                                            envelope);
+    break;
+
+  case PraefMsg_PR_accept:
+    praef_system_join_recv_msg_join_accept(sys, sender, &msg->choice.accept,
+                                           envelope);
+    break;
+
+  case PraefMsg_PR_jointree:
+    praef_system_join_recv_msg_join_tree(sender, &msg->choice.jointree);
+    break;
+
+  case PraefMsg_PR_jtentry:
+    praef_system_join_recv_msg_join_tree_entry(sys, &msg->choice.jtentry);
     break;
 
   /* TODO: Handle all cases, remove default */

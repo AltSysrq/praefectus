@@ -258,12 +258,14 @@ PraefMsgJoinRequest ::= SEQUENCE {
 -- reserved by the application, the next id in sequence is used.
 --
 -- This SHOULD be the only message within the containing high-level message,
--- and the containing high-level message MUST NOT exceed 128 bytes in length.
+-- and the containing high-level message MUST NOT exceed 224 bytes in length.
 --
 -- This is an uncommitted redistributable message.
 PraefMsgJoinAccept ::= SEQUENCE {
   -- The original JoinRequest message, used to validate the signature.
   request       PraefMsgJoinRequest,
+  -- The timestamp on the original JoinRequest
+  instant       PraefInstant,
   -- The signature of the high-level message envelope containing the original
   -- JoinRequest message, calculated by composing the most compact such
   -- high-level message possible with instan 0. (That is, the signature signs 4
@@ -313,7 +315,7 @@ PraefMsgJoinTreeEntry ::= SEQUENCE {
   --
   -- The absence of this field indicates that offset is beyond the end of the
   -- list.
-  data          OCTET STRING SIZE(1..128) OPTIONAL
+  data          OCTET STRING SIZE(1..224) OPTIONAL
 }
 
 -- Votes to set a a status bit on a node.

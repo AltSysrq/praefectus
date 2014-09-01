@@ -41,7 +41,8 @@
 static void praef_system_join_query_next_join_tree(praef_system*, praef_node*);
 static int praef_system_join_verify_jr_signature(
   praef_system*, const PraefMsgJoinRequest_t*,
-  const unsigned char sig[PRAEF_SIGNATURE_SIZE]);
+  const unsigned char sig[PRAEF_SIGNATURE_SIZE],
+  praef_instant);
 static unsigned praef_system_join_num_live_nodes(praef_system*);
 
 int praef_system_join_init(praef_system* sys) {
@@ -113,8 +114,6 @@ void praef_system_join_update(praef_system* sys, unsigned et) {
   int has_pending_join_tree_queries;
   praef_node* node;
 
-  praef_hlmsg_encoder_set_now(sys->join.minimal_rpc_encoder,
-                              sys->clock.monotime);
   /* Nothing else to do here if not currently establishing a connection. */
   if (!sys->join.connect_out) return;
 
@@ -213,7 +212,7 @@ void praef_system_join_update(praef_system* sys, unsigned et) {
     praef_mq_update(sys->join.connect_mq);
 }
 
-void praef_node_join_recv_msg_join_tree(
+void praef_system_join_recv_msg_join_tree(
   praef_node* from, const PraefMsgJoinTree_t* msg
 ) {
   PraefMsg_t response;
@@ -257,11 +256,11 @@ void praef_node_join_recv_msg_join_tree(
  * messages, since the acceptance messages necessarily form a tree of
  * signatures starting from the bootstrap signature.
  */
-void praef_node_join_recv_msg_join_tree_entry(
+void praef_system_join_recv_msg_join_tree_entry(
   praef_system* sys, const PraefMsgJoinTreeEntry_t* msg
 ) {
   praef_node* against;
-  unsigned char data[129];
+  unsigned char data[PRAEF_HLMSG_JOINACCEPT_MAX+1];
   praef_hlmsg nested_msg;
 
   against = praef_system_get_node(sys, msg->node);
@@ -335,15 +334,19 @@ void praef_system_join_recv_msg_get_network_info(
                            (char*)bootstrap->pubkey,
                            PRAEF_PUBKEY_SIZE)) {
     sys->abnormal_status = praef_ss_oom;
+    (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, &response, 1);
     return;
   }
 
   response_msg.data = data;
   response_msg.size = sizeof(data);
+  praef_hlmsg_encoder_set_now(sys->join.minimal_rpc_encoder,
+                              sys->clock.monotime);
   praef_hlmsg_encoder_singleton(&response_msg, sys->join.minimal_rpc_encoder,
                                 &response);
   (*sys->bus->unicast)(sys->bus, &msg->retaddr,
                        response_msg.data, response_msg.size-1);
+  (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, &response, 1);
 }
 
 void praef_system_join_recv_msg_network_info(
@@ -386,9 +389,10 @@ void praef_system_join_recv_msg_network_info(
   return;
 }
 
-int praef_system_join_verify_jr_signature(
+static int praef_system_join_verify_jr_signature(
   praef_system* sys, const PraefMsgJoinRequest_t* submsg,
-  const unsigned char sig[PRAEF_SIGNATURE_SIZE]
+  const unsigned char sig[PRAEF_SIGNATURE_SIZE],
+  praef_instant instant
 ) {
   PraefMsg_t msg;
   praef_hlmsg tmp;
@@ -404,9 +408,11 @@ int praef_system_join_verify_jr_signature(
    * provided by the caller, and the signable area excludes both the public key
    * hint and the signature.
    */
+  memset(&msg, 0, sizeof(msg));
   msg.present = PraefMsg_PR_joinreq;
-  memcpy(&msg.choice.joinreq, &submsg, sizeof(PraefMsgJoinRequest_t));
+  memcpy(&msg.choice.joinreq, submsg, sizeof(PraefMsgJoinRequest_t));
   sys->join.minimal_rpc_serno = 0;
+  praef_hlmsg_encoder_set_now(sys->join.minimal_rpc_encoder, instant);
   praef_hlmsg_encoder_singleton(&tmp, sys->join.minimal_rpc_encoder, &msg);
   return praef_verifier_verify_once(
     sys->verifier,
@@ -429,7 +435,8 @@ unsigned praef_system_join_num_live_nodes(praef_system* sys) {
 
 static int praef_system_join_is_valid_join_request(
   praef_system* sys, const PraefMsgJoinRequest_t* msg,
-  const unsigned char sig[PRAEF_SIGNATURE_SIZE]
+  const unsigned char sig[PRAEF_SIGNATURE_SIZE],
+  praef_instant instant
 ) {
   praef_node* bootstrap = praef_system_get_node(sys, PRAEF_BOOTSTRAP_NODE);
 
@@ -443,7 +450,7 @@ static int praef_system_join_is_valid_join_request(
   /* Signature on hlmsg MUST be valid, and it MUST be in the prescribed
    * normalised encoding.
    */
-  if (!praef_system_join_verify_jr_signature(sys, msg, sig))
+  if (!praef_system_join_verify_jr_signature(sys, msg, sig, instant))
     return 0;
 
   /* If the application defines authentication, it MUST have auth data, and
@@ -459,7 +466,7 @@ static int praef_system_join_is_valid_join_request(
   return 1;
 }
 
-void praef_system_join_recv_join_request(
+void praef_system_join_recv_msg_join_request(
   praef_system* sys, praef_node* node,
   const PraefMsgJoinRequest_t* msg,
   const praef_hlmsg* envelope
@@ -487,7 +494,8 @@ void praef_system_join_recv_join_request(
 
   if (!node) {
     if (!praef_system_join_is_valid_join_request(
-          sys, msg, praef_hlmsg_signature(envelope)))
+          sys, msg, praef_hlmsg_signature(envelope),
+          praef_hlmsg_instant(envelope)))
       return;
     /* Refuse request if it would exceed the application's requested rate
      * limit.
@@ -507,12 +515,13 @@ void praef_system_join_recv_join_request(
      * when processing the Accept.
      */
     accept.present = PraefMsg_PR_accept;
+    accept.choice.accept.instant = praef_hlmsg_instant(envelope);
     accept.choice.accept.signature.buf = praef_hlmsg_signature(envelope);
     accept.choice.accept.signature.size = PRAEF_SIGNATURE_SIZE;
-    memcpy(&accept.choice.accept.request, &msg,
+    memcpy(&accept.choice.accept.request, msg,
            sizeof(PraefMsgJoinRequest_t));
     PRAEF_OOM_IF_NOT(
-      sys, !praef_outbox_append_singleton(sys->router.ur_out, &accept));
+      sys, praef_outbox_append_singleton(sys->router.ur_out, &accept));
   } else {
     /* Node already exists, just remind it of its Accept message. */
     (*node->bus->unicast)(node->bus, &node->net_id,
@@ -532,7 +541,7 @@ static int praef_system_join_is_reserved_id(
   return 0;
 }
 
-void praef_system_join_recv_node_accept(
+void praef_system_join_recv_msg_join_accept(
   praef_system* sys, praef_node* from_node,
   const PraefMsgJoinAccept_t* msg,
   const praef_hlmsg* envelope
@@ -569,7 +578,7 @@ void praef_system_join_recv_node_accept(
    * disposition for that node to negative.
    */
   if (!praef_system_join_is_valid_join_request(
-        sys, &msg->request, msg->signature.buf)) {
+        sys, &msg->request, msg->signature.buf, msg->instant)) {
     if (from_node)
       from_node->disposition = praef_nd_negative;
     return;

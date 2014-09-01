@@ -36,7 +36,7 @@
 #include "messages/PraefMsgJoinAccept.h"
 
 typedef struct praef_join_tree_entry_s {
-  unsigned char data[128];
+  unsigned char data[PRAEF_HLMSG_JOINACCEPT_MAX];
   unsigned data_size;
 
   STAILQ_HEAD(,praef_join_tree_entry_s) children;
@@ -94,18 +94,18 @@ void praef_system_join_update(praef_system*, unsigned);
 int praef_node_join_init(struct praef_node_s*);
 void praef_node_join_destroy(struct praef_node_s*);
 
-void praef_node_join_recv_msg_join_tree(
+void praef_system_join_recv_msg_join_tree(
   struct praef_node_s*, const PraefMsgJoinTree_t*);
-void praef_node_join_recv_msg_join_tree_entry(
+void praef_system_join_recv_msg_join_tree_entry(
   praef_system*, const PraefMsgJoinTreeEntry_t*);
 void praef_system_join_recv_msg_get_network_info(
   praef_system*, const PraefMsgGetNetworkInfo_t*);
 void praef_system_join_recv_msg_network_info(
   praef_system*, const PraefMsgNetworkInfo_t*);
-void praef_system_join_recv_join_request(
+void praef_system_join_recv_msg_join_request(
   praef_system*, struct praef_node_s*,
   const PraefMsgJoinRequest_t*, const praef_hlmsg*);
-void praef_system_join_recv_node_accept(
+void praef_system_join_recv_msg_join_accept(
   praef_system*, struct praef_node_s*, const PraefMsgJoinAccept_t*,
   const praef_hlmsg*);
 

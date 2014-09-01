@@ -151,7 +151,8 @@ int praef_hlmsg_is_valid(const praef_hlmsg* message) {
     if (ok) {
       switch (deserialised.present) {
       case PraefMsg_PR_accept:
-        ok &= (message->size <= 129 /* plus one for extra trailing zero */);
+        ok &= (message->size <=
+               PRAEF_HLMSG_JOINACCEPT_MAX+1 /* plus one for trailing zero */);
         break;
 
       default:
