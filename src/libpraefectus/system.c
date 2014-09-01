@@ -357,3 +357,30 @@ int praef_system_is_permissible_netid(
 
   return 1;
 }
+
+static int praef_system_net_id_equal(
+  const PraefNetworkIdentifier_t* a, const PraefNetworkIdentifier_t* b
+) {
+  if (a->port != b->port) return 0;
+  if (a->address.present != b->address.present) return 0;
+
+  if (PraefIpAddress_PR_ipv4 == a->address.present)
+    return !memcmp(a->address.choice.ipv4.buf,
+                   b->address.choice.ipv4.buf,
+                   a->address.choice.ipv4.size);
+  else
+    return !memcmp(a->address.choice.ipv6.buf,
+                   b->address.choice.ipv6.buf,
+                   a->address.choice.ipv6.size);
+}
+
+int praef_system_net_id_pair_equal(
+  const PraefNetworkIdentifierPair_t* a, const PraefNetworkIdentifierPair_t* b
+) {
+  if (!praef_system_net_id_equal(&a->intranet, &b->intranet)) return 0;
+  if (!!a->internet != !!b->internet) return 0;
+  if (a->internet && !praef_system_net_id_equal(a->internet, b->internet))
+    return 0;
+
+  return 1;
+}

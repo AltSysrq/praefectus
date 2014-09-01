@@ -282,7 +282,7 @@ typedef void (*praef_app_vote_t)(praef_app*,
 typedef void (*praef_app_advance_t)(praef_app*, unsigned delta);
 
 /**
- * Enquires the application as to whether the authentication on the given join
+ * Inquires the application as to whether the authentication on the given join
  * request is valid.
  *
  * The response from this call MUST be consistent for all nodes in the system,
@@ -296,6 +296,20 @@ typedef void (*praef_app_advance_t)(praef_app*, unsigned delta);
  */
 typedef int (*praef_app_is_auth_valid_t)(
   praef_app*, const PraefMsgJoinRequest_t*);
+
+/**
+ * Generates application-specific authentication data to be used with the given
+ * join request.
+ *
+ * @param req The request that may need authentication data. Its auth field is
+ * initially NULL.
+ * @param auth_data An OCTET STRING with a 64-byte data array. If the
+ * application wishes to use authentication, it should fill this data array in
+ * and set the size appropriately, then point req->data at auth_data.
+ */
+typedef void (*praef_app_gen_auth_t)(
+  praef_app*, PraefMsgJoinRequest_t* req,
+  OCTET_STRING_t* auth_data);
 
 /**
  * Inquires the application as to whether the given object identifier is
@@ -399,6 +413,7 @@ struct praef_app_s {
   /* Optional control callbacks */
   praef_app_permit_object_id_t permit_object_id_opt;
   praef_app_is_auth_valid_t is_auth_valid_opt;
+  praef_app_gen_auth_t gen_auth_opt;
 
   /* Optional notification callbacks */
   praef_app_acquire_id_t acquire_id_opt;

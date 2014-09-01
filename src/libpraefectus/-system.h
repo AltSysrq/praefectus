@@ -127,6 +127,8 @@ int praef_system_register_node(praef_system*, praef_node*);
 
 int praef_system_is_permissible_netid(
   praef_system*, const PraefNetworkIdentifierPair_t*);
+int praef_system_net_id_pair_equal(
+  const PraefNetworkIdentifierPair_t*, const PraefNetworkIdentifierPair_t*);
 
 int praef_node_is_alive(praef_node*);
 

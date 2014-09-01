@@ -75,8 +75,8 @@ int praef_system_join_init(praef_system* sys) {
 void praef_system_join_destroy(praef_system* sys) {
   praef_hlmsg_encoder_delete(sys->join.minimal_rpc_encoder);
   if (sys->join.connect_out) {
-    praef_outbox_delete(sys->join.connect_out);
     praef_mq_delete(sys->join.connect_mq);
+    praef_outbox_delete(sys->join.connect_out);
   }
 }
 
@@ -106,14 +106,107 @@ void praef_system_conf_max_live_nodes(
 }
 
 void praef_system_join_update(praef_system* sys, unsigned et) {
+  PraefMsg_t request;
+  OCTET_STRING_t auth;
+  unsigned char auth_data[64];
+  unsigned char local_pubkey[PRAEF_PUBKEY_SIZE];
+  int has_pending_join_tree_queries;
+  praef_node* node;
+
   praef_hlmsg_encoder_set_now(sys->join.minimal_rpc_encoder,
                               sys->clock.monotime);
-  if (sys->join.connect_out) {
-    praef_outbox_set_now(sys->join.connect_out, sys->clock.monotime);
-    praef_mq_update(sys->join.connect_mq);
+  /* Nothing else to do here if not currently establishing a connection. */
+  if (!sys->join.connect_out) return;
+
+  memset(&request, 0, sizeof(request));
+  praef_outbox_set_now(sys->join.connect_out, sys->clock.monotime);
+
+  /* If still in the handshake portion of the connection protocol, retransmit
+   * the request packet every frame.
+   *
+   * Strictly speaking, this is a lot more than necessary, but the requests are
+   * idempotent, and 60 packets/sec is a drop in the bucket for any modern
+   * network, and is even easy on dial-up.
+   */
+  if (!sys->join.has_received_network_info) {
+    request.present = PraefMsg_PR_getnetinfo;
+    memcpy(&request.choice.getnetinfo.retaddr,
+           sys->self_net_id, sizeof(PraefNetworkIdentifierPair_t));
+    PRAEF_OOM_IF_NOT(sys, praef_outbox_append_singleton(
+                       sys->join.connect_out, &request));
+  } else if (!sys->local_node) {
+    praef_signator_pubkey(local_pubkey, sys->signator);
+    memset(&auth, 0, sizeof(auth));
+    auth.buf = auth_data;
+    auth.size = sizeof(auth_data);
+    request.present = PraefMsg_PR_joinreq;
+    request.choice.joinreq.publickey.buf = local_pubkey;
+    request.choice.joinreq.publickey.size = PRAEF_PUBKEY_SIZE;
+    memcpy(&request.choice.joinreq.identifier, sys->self_net_id,
+           sizeof(PraefNetworkIdentifierPair_t));
+    if (PRAEF_APP_HAS(sys->app, gen_auth_opt))
+      (*sys->app->gen_auth_opt)(sys->app, &request.choice.joinreq, &auth);
+    sys->join.minimal_rpc_serno = 0;
+    PRAEF_OOM_IF_NOT(sys, praef_outbox_append_singleton(
+                       sys->join.connect_out, &request));
+  } else {
+    /* See if there are any pending join tree queries against any node. */
+    has_pending_join_tree_queries = 0;
+    RB_FOREACH(node, praef_node_map, &sys->nodes) {
+      if (~0u != node->join.next_join_tree_query) {
+        has_pending_join_tree_queries = 1;
+        break;
+      }
+    }
+
+    if (!has_pending_join_tree_queries) {
+      /* Connection phase complete.
+       *
+       * - Mark join tree traversal complete and notify application.
+       * - Mark the disposition to the node we used to create the connection as
+       *   positive so we create an initial route.
+       * - Tear the connection-stage resources down.
+       */
+      sys->join.join_tree_traversal_complete = 1;
+      if (PRAEF_APP_HAS(sys->app, join_tree_traversed_opt))
+        (*sys->app->join_tree_traversed_opt)(sys->app);
+
+      RB_FOREACH(node, praef_node_map, &sys->nodes) {
+        if (praef_system_net_id_pair_equal(&node->net_id,
+                                           sys->join.connect_target)) {
+          if (praef_nd_neutral == node->disposition)
+            node->disposition = praef_nd_positive;
+
+          break;
+        }
+      }
+
+      sys->join.connect_target = NULL;
+      praef_mq_delete(sys->join.connect_mq);
+      sys->join.connect_mq = NULL;
+      praef_outbox_delete(sys->join.connect_out);
+      sys->join.connect_out = NULL;
+    } else {
+      /* If the interval for join tree query retries has expired, rerun the
+       * current query for every node where the join tree traversal is still
+       * in-progress.
+       *
+       * We don't want to do this every frame since there can potentially be a
+       * large number of parallel queries.
+       */
+      if (sys->clock.systime - sys->join.last_join_tree_query >
+          sys->join.join_tree_query_interval) {
+        sys->join.last_join_tree_query = sys->clock.systime;
+
+        RB_FOREACH(node, praef_node_map, &sys->nodes)
+          if (~0u != node->join.next_join_tree_query)
+            praef_system_join_query_next_join_tree(sys, node);
+      }
+    }
   }
 
-  /* TODO */
+  PRAEF_OOM_IF_NOT(sys, praef_outbox_flush(sys->join.connect_out));
+  praef_mq_update(sys->join.connect_mq);
 }
 
 void praef_node_join_recv_msg_join_tree(
@@ -188,11 +281,16 @@ void praef_node_join_recv_msg_join_tree_entry(
   }
 
   /* Send next message immediately if this was an answer to the previous query
-   * for this node and this answer was not "end of list".
+   * for this node and this answer was not "end of list". Otherwise, if this is
+   * "end of list" and corresponds to our last query, mark traversal for that
+   * node complete.
    */
-  if (msg->offset == against->join.next_join_tree_query - 1 &&
-      msg->data)
-    praef_system_join_query_next_join_tree(sys, against);
+  if (msg->offset == against->join.next_join_tree_query - 1) {
+    if (msg->data)
+      praef_system_join_query_next_join_tree(sys, against);
+    else
+      against->join.next_join_tree_query = ~0;
+  }
 }
 
 static void praef_system_join_query_next_join_tree(
@@ -528,7 +626,7 @@ void praef_system_join_recv_node_accept(
 
     /* The request is valid, create the new node */
     new_node = praef_node_new(sys, id, &msg->request.identifier,
-                              sys->bus, praef_nd_neutral,
+                              sys->bus, praef_nd_positive,
                               msg->request.publickey.buf);
     if (!new_node) {
       sys->abnormal_status = praef_ss_oom;

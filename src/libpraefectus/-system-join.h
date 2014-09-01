@@ -84,8 +84,6 @@ typedef struct {
 } praef_system_join;
 
 typedef struct {
-  int has_route;
-
   praef_join_tree_entry join_tree;
   unsigned next_join_tree_query;
 } praef_node_join;
