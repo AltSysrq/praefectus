@@ -18,7 +18,8 @@ praef_SOURCES = \
 praefectus/top/main.c \
 praefectus/top/test-state.c \
 praefectus/graphics/canvas.c \
-praefectus/graphics/crt.c
+praefectus/graphics/crt.c \
+praefectus/graphics/font.c
 
 noinst_LTLIBRARIES = libpraefectus.la libasn1-support.la \
 libpraefectus-messages.la
