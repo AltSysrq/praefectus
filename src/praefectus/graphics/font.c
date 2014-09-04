@@ -282,7 +282,7 @@ static void font_position_glyphs(font_glyph* glyph, unsigned count) {
       prev_tail_kern[i] = glyph->primary->tail[i] - glyph->primary->pitch;
     }
 
-    xoff -= max_kern;
+    xoff += max_kern + 2;
     glyph->x_off = xoff;
     xoff += glyph->primary->pitch;
   }
