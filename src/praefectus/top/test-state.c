@@ -35,40 +35,13 @@
 #include "../graphics/canvas.h"
 #include "../graphics/crt.h"
 #include "../graphics/font.h"
+#include "../graphics/fraktur.h"
 #include "../game-state.h"
 #include "test-state.h"
 
 #ifdef __GNUC__
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #endif
-
-static font_char test_font_chars[] = {
-  { "A",
-    "   #    "
-    "  # #   "
-    "  # #   "
-    " #   #  "
-    " #####  "
-    "#     # "
-    "#     # "
-    "        "
-    "        " },
-  { "V",
-    "#     # "
-    "#     # "
-    " #   #  "
-    " #   #  "
-    "  # #   "
-    "  # #   "
-    "   #    "
-    "        "
-    "        " },
-  { NULL }
-};
-
-static font_spec test_font_spec = {
-  9, 7, 9, test_font_chars
-};
 
 typedef struct {
   game_state self;
@@ -92,7 +65,7 @@ game_state* test_state_new(void) {
   this->is_alive = 1;
   this->has_rendered = 0;
   this->time_till_step = 0;
-  font_compile(&this->font, &test_font_spec);
+  font_compile(&this->font, &fraktur);
   return (game_state*)this;
 }
 
@@ -142,7 +115,7 @@ static void test_state_draw(test_state* this, canvas* dst,
   unsigned x, y;
   signed ox, oy;
   canvas_pixel curr;
-  canvas_pixel font_palette[4] = { 7, 7, 7, 15 };
+  canvas_pixel font_palette[4] = { 7, 6, 5, 15 };
 
   memcpy(palette, demon_palette, sizeof(demon_palette));
 
@@ -177,7 +150,12 @@ static void test_state_draw(test_state* this, canvas* dst,
     }
   }
 
-  font_render(dst, &this->font, "AVAVVV", 0, 0, font_palette, 1);
+  font_render(dst, &this->font,
+              "THE QUICK BROWN FOX JUMPS",
+              0, 0, font_palette, 1);
+  font_render(dst, &this->font,
+              "OVER THE LAZY DOG",
+              0, fraktur.em, font_palette, 1);
 }
 
 static void test_state_key(test_state* this,
