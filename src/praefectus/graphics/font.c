@@ -108,7 +108,7 @@ void font_compile(compiled_font* dst, const font_spec* spec) {
                 for (ox = -1; ox <= +1; ++ox) {
                   if ((unsigned)(x+ox) < ch->pitch) {
                     if (strchr("-=#", ch->data[(y+oy)*ch->pitch+x+ox])) {
-                      ch->data[y*ch->pitch+x+ox] = '.';
+                      ch->data[y*ch->pitch+x] = '.';
                       goto next_char;
                     }
                   }
