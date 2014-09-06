@@ -123,10 +123,12 @@ static praef_instant never(praef_app* _, praef_object_id id) {
 static void advance(unsigned delta) {
   unsigned i;
 
-  for (i = 0; i < num_systems; ++i)
-    stati[i] = praef_system_advance(sys[i], delta);
+  while (delta--) {
+    for (i = 0; i < num_systems; ++i)
+      stati[i] = praef_system_advance(sys[i], 1);
 
-  praef_virtual_network_advance(vnet, delta);
+    praef_virtual_network_advance(vnet, 1);
+  }
 }
 
 deftest(can_send_minimal_events) {
@@ -207,7 +209,7 @@ deftest(can_establish_basic_connection) {
   praef_system_connect(sys[1], praef_virtual_bus_address(bus[0]));
 
   /* 1 --GetNetworkInfo--> 0 --> ... */
-  advance(1); advance(1);
+  advance(2);
   ck_assert_int_eq(praef_ss_anonymous, stati[1]);
   /* ... --NetworkInfo--> 1 */
   advance(1);
@@ -216,7 +218,7 @@ deftest(can_establish_basic_connection) {
   advance(1);
   ck_assert_int_eq(praef_ss_anonymous, stati[1]);
   /* ... --JoinAccept--> 1 */
-  advance(1); advance(1);
+  advance(2);
   ck_assert_int_eq(praef_ss_pending_grant, stati[1]);
 
   /* Both should now be fully aware of each other, though the new node has not
@@ -226,4 +228,80 @@ deftest(can_establish_basic_connection) {
   ck_assert_int_eq(2, objects0);
   ck_assert_int_eq(2, nodes1);
   ck_assert_int_eq(2, objects1);
+}
+
+deftest(can_join_multinode_system_via_bootstrap_node) {
+  num_systems = 2;
+
+  app[0].get_node_grant_bridge = always;
+  app[0].get_node_deny_bridge = never;
+  app[1].get_node_grant_bridge = never;
+  app[1].get_node_deny_bridge = never;
+  NOP(app[0].advance_bridge);
+  COUNT(nodes0, app[0].create_node_bridge);
+  COUNT(objects0, app[0].create_node_object);
+  NOP(app[1].advance_bridge);
+  COUNT(nodes1, app[1].create_node_bridge);
+  COUNT(objects1, app[1].create_node_object);
+
+  praef_system_bootstrap(sys[0]);
+  praef_system_connect(sys[1], praef_virtual_bus_address(bus[0]));
+  advance(6);
+  ck_assert_int_eq(praef_ss_pending_grant, stati[1]);
+  ck_assert_int_eq(2, nodes0);
+  ck_assert_int_eq(2, nodes1);
+
+  num_systems = 3;
+  app[2].get_node_grant_bridge = never;
+  app[2].get_node_deny_bridge = never;
+  NOP(app[2].advance_bridge);
+  COUNT(nodes2, app[2].create_node_bridge);
+  COUNT(objects2, app[2].create_node_object);
+  praef_system_connect(sys[2], praef_virtual_bus_address(bus[0]));
+  advance(10);
+  ck_assert_int_eq(praef_ss_pending_grant, stati[2]);
+  ck_assert_int_eq(3, nodes0);
+  ck_assert_int_eq(3, objects0);
+  ck_assert_int_eq(3, nodes1);
+  ck_assert_int_eq(3, objects1);
+  ck_assert_int_eq(3, nodes2);
+  ck_assert_int_eq(3, objects2);
+}
+
+deftest(can_join_multinode_system_via_other_node) {
+  num_systems = 2;
+
+  app[0].get_node_grant_bridge = always;
+  app[0].get_node_deny_bridge = never;
+  app[1].get_node_grant_bridge = never;
+  app[1].get_node_deny_bridge = never;
+  NOP(app[0].advance_bridge);
+  COUNT(nodes0, app[0].create_node_bridge);
+  COUNT(objects0, app[0].create_node_object);
+  NOP(app[1].advance_bridge);
+  COUNT(nodes1, app[1].create_node_bridge);
+  COUNT(objects1, app[1].create_node_object);
+
+  praef_system_bootstrap(sys[0]);
+  praef_system_connect(sys[1], praef_virtual_bus_address(bus[0]));
+  advance(6);
+  ck_assert_int_eq(praef_ss_pending_grant, stati[1]);
+  ck_assert_int_eq(2, nodes0);
+  ck_assert_int_eq(2, nodes1);
+
+  num_systems = 3;
+  app[2].get_node_grant_bridge = never;
+  app[2].get_node_deny_bridge = never;
+  NOP(app[2].advance_bridge);
+  COUNT(nodes2, app[2].create_node_bridge);
+  COUNT(objects2, app[2].create_node_object);
+  praef_system_connect(sys[2], praef_virtual_bus_address(bus[1]));
+  advance(10);
+  ck_assert_int_eq(praef_ss_pending_grant, stati[2]);
+  ck_assert_int_eq(3, nodes0);
+  ck_assert_int_eq(3, objects0);
+  ck_assert_int_eq(3, nodes1);
+  ck_assert_int_eq(3, objects1);
+  ck_assert_int_eq(3, nodes2);
+  ck_assert_int_eq(3, objects2);
 }

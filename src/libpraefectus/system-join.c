@@ -44,6 +44,8 @@ static int praef_system_join_verify_jr_signature(
   const unsigned char sig[PRAEF_SIGNATURE_SIZE],
   praef_instant);
 static unsigned praef_system_join_num_live_nodes(praef_system*);
+static void praef_system_join_record_in_join_tree(
+  praef_node* from, praef_node* new, const praef_hlmsg*);
 
 int praef_system_join_init(praef_system* sys) {
   sys->join.join_tree_query_interval = sys->std_latency;
@@ -237,8 +239,8 @@ void praef_system_join_recv_msg_join_tree(
   if (!entry) goto send;
 
   response.choice.jtentry.data = &response_data;
-  response_data.buf = against->join.join_tree.data;
-  response_data.size = against->join.join_tree.data_size;
+  response_data.buf = entry->data;
+  response_data.size = entry->data_size;
 
   send:
   response.choice.jtentry.nkeys = ix;
@@ -550,7 +552,7 @@ void praef_system_join_recv_msg_join_accept(
   unsigned char local_pubkey[PRAEF_PUBKEY_SIZE];
   unsigned char id_bytes[sizeof(praef_object_id)];
   praef_object_id id;
-  praef_node* new_node;
+  praef_node* new_node, * existing_node;
 
   /* There are two distinct modes of operation for handling this message.
    *
@@ -631,6 +633,9 @@ void praef_system_join_recv_msg_join_accept(
     sys->local_node = new_node;
     if (PRAEF_APP_HAS(sys->app, acquire_id_opt))
       (*sys->app->acquire_id_opt)(sys->app, id);
+
+    if (from_node)
+      praef_system_join_record_in_join_tree(from_node, new_node, envelope);
   } else {
     /* If we can't identify the origin of the Accept, discard, as the only
      * expected use of this message is to inform the local node (now a full
@@ -639,9 +644,18 @@ void praef_system_join_recv_msg_join_accept(
     if (!from_node) return;
 
     /* If a node with the new id has already joined, there is no action to
-     * take.
+     * take, except to ensure that the node is somewhere in the join tree (it
+     * might not be if it is the local node and we connected via a
+     * non-bootstrap node, since that path won't actually the node that's
+     * accepting it into the system).
      */
-    if (praef_system_get_node(sys, id)) return;
+    if ((existing_node = praef_system_get_node(sys, id))) {
+      if (!existing_node->join.join_tree.data_size)
+        praef_system_join_record_in_join_tree(
+          from_node, existing_node, envelope);
+
+      return;
+    }
 
     /* The request is valid, create the new node */
     new_node = praef_node_new(sys, id, &msg->request.identifier,
@@ -657,10 +671,23 @@ void praef_system_join_recv_msg_join_accept(
         (*sys->app->discover_node_opt)(sys->app, &new_node->net_id, id);
     }
 
+    praef_system_join_record_in_join_tree(from_node, new_node, envelope);
+
     /* Feed the Accept message back to the new node */
     (*new_node->bus->unicast)(new_node->bus, &new_node->net_id,
                               envelope->data, envelope->size-1);
   }
+}
+
+static void praef_system_join_record_in_join_tree(
+  praef_node* from, praef_node* new, const praef_hlmsg* msg
+) {
+  if (msg->size-1 > sizeof(new->join.join_tree.data)) abort();
+
+  memcpy(new->join.join_tree.data, msg->data, msg->size-1);
+  new->join.join_tree.data_size = msg->size-1;
+  STAILQ_INSERT_TAIL(&from->join.join_tree.children,
+                     &new->join.join_tree, next);
 }
 
 void praef_system_connect(praef_system* sys,
