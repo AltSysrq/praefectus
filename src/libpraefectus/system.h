@@ -820,5 +820,79 @@ void praef_system_conf_accept_interval(
  */
 void praef_system_conf_max_live_nodes(
   praef_system*, unsigned max);
+/**
+ * Controls the maximum number of responses that will be produced in response
+ * to a hash-tree-range query.
+ *
+ * Larger values *may* make the joining of new nodes faster, provided bandwidth
+ * constraints do not cause packets to be dropped. The approximate outgoing
+ * bandwidth requirement is generally approximately
+ *
+ *   mtu * ht_range_max / round_trip_latency
+ *
+ * The default value is 64. On a system with the minimal MTU of 307 bytes, and
+ * a network with 100ms round-trip latency, this consumes up to 191kB/sec (or
+ * 1.5 Mbps) of bandwidth (not including IP overhead and such) while a node is
+ * joining.
+ */
+void praef_system_conf_ht_range_max(praef_system*, unsigned);
+/**
+ * Controls the intervals at which hash tree snapshots are taken.
+ *
+ * Specifically, one hash tree snapshot will be taken at every instant which is
+ * evenly divisible by this value. Smaller values (more frequent snapshots)
+ * will allow nodes to more precicely synchronise their hash trees in the
+ * presence of minor clock skew and latency jitter, at the cost of lower
+ * tolerance to larger clock skew and latency.
+ *
+ * It is highly advisable for all nodes in a system to use the same value for
+ * this configuration.
+ *
+ * The default is std_latency.
+ *
+ * The effect of passing a value of 0 is undefined.
+ */
+void praef_system_conf_ht_shapshot_interval(praef_system*, unsigned);
+/**
+ * Controls the maximum number of hash tree snapshots that will be maintained.
+ *
+ * Larger values counteract the downsides of more frequent snapshots (as
+ * documented in praef_system_conf_ht_shapshot_interval()) in exchange for
+ * somewhat greater memory and CPU usage.
+ *
+ * The default is 64. Invoking this function will purge any existing snapshots
+ * if it succeeds, so it should generally only be used before the system is
+ * connected.
+ *
+ * @return Whether adjusting the configuration succeeds. If 0 is returned, the
+ * configuration is unchanged and no snapshots were purged.
+ */
+int praef_system_conf_ht_num_snapshots(praef_system*, unsigned);
+/**
+ * Controls the interval at which queries against the root hash tree directory
+ * of each node are performed.
+ *
+ * Smaller values will reduce the effects of packet loss (in particular
+ * momentary network partitions) by resynchronising the hash trees more
+ * quickly, at the cost of greater bandwidth usage. Note that this is a
+ * particularly inefficient way of recovering from packet loss; it is intended
+ * as a back-up for when the much faster and lighter sequence-number-based
+ * system fails to recover packets. Frequent queries can consume substantial
+ * amounts of redundant bandwidth.
+ *
+ * The default is std_latency*16.
+ */
+void praef_system_conf_ht_root_query_interval(praef_system*, unsigned);
+/**
+ * Controls the time offset for hash tree queries.
+ *
+ * Specifically, any queries against another node's hash tree is back-dated by
+ * this amount. Smaller values permit recovering from momentary network
+ * partitions more quickly; however, very small values can incur potentially
+ * large amounts of wasted bandwidth in cases of clock skew.
+ *
+ * The default is std_latency*4.
+ */
+void praef_system_conf_ht_root_query_offset(praef_system*, unsigned);
 
 #endif /* LIBPRAEFECTUS_SYSTEM_H_ */
