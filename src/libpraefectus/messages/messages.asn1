@@ -540,6 +540,13 @@ PraefMsgHtRead ::= SEQUENCE {
 -- receiver SHOULD look up what objects match these parameters (up to some
 -- maximum number of objects) and transmit them to the requester.
 --
+-- The receiver, regardless of whether it transmits any results from this
+-- request, SHOULD respond with a PraefMsgHtRangeNext in order to assist the
+-- requester with state tracking and to inform it when it has fully queried the
+-- hash tree. The sender MAY interpret the lack of an HtRangeNext as an
+-- indication that the HtRange query was not received and thus retransmit this
+-- query.
+--
 -- This is an RPC-type message.
 PraefMsgHtRange ::= SEQUENCE {
   -- The minimum hash that the requester is interested in. This is expanded to
@@ -552,6 +559,24 @@ PraefMsgHtRange ::= SEQUENCE {
   -- ((h & mask) == offset).
   offset        PraefByte,
   mask          PraefByte
+}
+
+-- Informs the receiver about the result of a prior HtRange query. In
+-- particular, it informs the receiver about what range was satisfied by the
+-- original HtRange query and whether any further queries would be useful.
+--
+-- This is an RPC-type message.
+PraefMsgHtRangeNext ::= SEQUENCE {
+  -- The suggested hash prefix for the next HtRange query to be performed by
+  -- the receiver against the sender. The receiver SHOULD ignore HtRangeNext
+  -- messages indicating a hash in a range they have already queried. If no
+  -- hash is given in this message, the sender indicates that it believes the
+  -- receiver has exhausted the results produceable by HtRange queries,
+  -- assuming that the sender scanned the ranges sequentially.
+  --
+  -- The sender SHOULD return the minimal prefix hash that would identify the
+  -- first message it chose not to send.
+  hash          PraefHashPrefix OPTIONAL
 }
 
 -- Advises the receiver of a bitmap of affirmative and negative
@@ -641,6 +666,7 @@ PraefMsg ::= CHOICE {
   htdir         PraefMsgHtDir,
   htread        PraefMsgHtRead,
   htrange       PraefMsgHtRange,
+  htrangenext   PraefMsgHtRangeNext,
   jointree      PraefMsgJoinTree,
   jtentry       PraefMsgJoinTreeEntry,
   received      PraefMsgReceived,
