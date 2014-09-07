@@ -274,4 +274,13 @@ praef_hash_tree_readdir(const praef_hash_tree*, const praef_hash_tree_cursor*);
 void praef_hash_tree_hash_of(unsigned char dst[PRAEF_HASH_SIZE],
                              const praef_hash_tree_objref*);
 
+/**
+ * Returns a pointer to the hash of the object with the given id. The effect of
+ * this call is undefined if the objref is not present in hash tree. The
+ * returned pointer is only valid until the next modification to the hash
+ * tree.
+ */
+const unsigned char* praef_hash_tree_get_hash_of(
+  const praef_hash_tree_objref*);
+
 #endif /* LIBPRAEFECTUS_HASH_TREE_H_ */

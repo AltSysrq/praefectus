@@ -477,3 +477,9 @@ void praef_hash_tree_hash_of(unsigned char dst[PRAEF_HASH_SIZE],
     UNDOT(praef_hash_tree_object, data, ref->data);
   memcpy(dst, object->hash, PRAEF_HASH_SIZE);
 }
+
+const unsigned char* praef_hash_tree_get_hash_of(
+  const praef_hash_tree_objref* ref
+) {
+  return UNDOT(praef_hash_tree_object, data, ref->data)->hash;
+}

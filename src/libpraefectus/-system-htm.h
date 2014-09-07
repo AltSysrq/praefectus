@@ -68,15 +68,15 @@ void praef_system_htm_destroy(praef_system*);
 int praef_node_htm_init(struct praef_node_s*);
 void praef_node_htm_destroy(struct praef_node_s*);
 
-void praef_node_recv_msg_htls(struct praef_node_s*,
-                              const PraefMsgHtLs_t*);
-void praef_node_recv_msg_htdir(struct praef_node_s*,
-                               const PraefMsgHtDir_t*);
-void praef_node_recv_msg_htread(struct praef_node_s*,
-                                const PraefMsgHtRead_t*);
-void praef_node_recv_msg_htrange(struct praef_node_s*,
-                                 const PraefMsgHtRange_t*);
-void praef_node_recv_msg_htrangenext(struct praef_node_s*,
-                                     const PraefMsgHtRangeNext_t*);
+void praef_node_htm_recv_msg_htls(struct praef_node_s*,
+                                  const PraefMsgHtLs_t*);
+void praef_node_htm_recv_msg_htdir(struct praef_node_s*,
+                                   const PraefMsgHtDir_t*);
+void praef_node_htm_recv_msg_htread(struct praef_node_s*,
+                                    const PraefMsgHtRead_t*);
+void praef_node_htm_recv_msg_htrange(struct praef_node_s*,
+                                     const PraefMsgHtRange_t*);
+void praef_node_htm_recv_msg_htrangenext(struct praef_node_s*,
+                                         const PraefMsgHtRangeNext_t*);
 
 #endif /* LIBPRAEFECTUS__SYSTEM_HTM_H_ */
