@@ -387,9 +387,9 @@ PraefMsgAppEvent ::= SEQUENCE {
 PraefMsgVote ::= SEQUENCE {
   -- The node which sent the event that this message votes for.
   node          PraefNodeId,
-  -- The instant of the event being voted for. This MUST be less than or equal
-  -- to the instant of the high-level message, and MUST not be beyond a certain
-  -- application-defined distance into the past.
+  -- The instant of the event being voted for. This SHOULD be less than or
+  -- equal to the instant of the high-level message, and MUST not be beyond a
+  -- certain application-defined distance into the past.
   instant       PraefInstant,
   -- The serial number of the event being voted for.
   serialnumber  PraefSerialNumber
