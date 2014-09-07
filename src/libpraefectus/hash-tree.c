@@ -236,7 +236,7 @@ praef_hash_tree_add(praef_hash_tree* this, praef_hash_tree_objref* ref) {
   unsigned char hash[PRAEF_HASH_SIZE];
   praef_keccak_sponge sponge;
 
-  praef_keccak_sponge_init(&sponge, PRAEF_KECCAK_RATE, PRAEF_KECCAK_CAP);
+  praef_sha3_init(&sponge);
   praef_keccak_sponge_absorb(&sponge, ref->data, ref->size);
   praef_keccak_sponge_squeeze(&sponge, hash, PRAEF_HASH_SIZE);
 
@@ -331,7 +331,7 @@ static void praef_hash_tree_rehash(praef_hash_tree_fulldir* dir,
    */
   unsigned char integer[sizeof(praef_hash_tree_sid)];
 
-  praef_keccak_sponge_init(&sponge, PRAEF_KECCAK_RATE, PRAEF_KECCAK_CAP);
+  praef_sha3_init(&sponge);
   for (i = 0; i < PRAEF_HTDIR_SIZE; ++i) {
     switch (subdir->directory.types[i]) {
     case praef_htet_none:

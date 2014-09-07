@@ -112,7 +112,7 @@ praef_pubkey_hint praef_pubkey_hint_of(
   unsigned char hash[sizeof(praef_pubkey_hint)];
   praef_keccak_sponge sponge;
 
-  praef_keccak_sponge_init(&sponge, PRAEF_KECCAK_RATE, PRAEF_KECCAK_CAP);
+  praef_sha3_init(&sponge);
   praef_keccak_sponge_absorb(&sponge, serialised, sizeof(serialised));
   praef_keccak_sponge_squeeze(&sponge, hash, sizeof(hash));
 
@@ -133,7 +133,7 @@ void praef_signator_sign(unsigned char signature[PRAEF_SIGNATURE_SIZE],
   praef_keccak_sponge sponge;
 
   /* Generate the base message hash */
-  praef_keccak_sponge_init(&sponge, PRAEF_KECCAK_RATE, PRAEF_KECCAK_CAP);
+  praef_sha3_init(&sponge);
   praef_keccak_sponge_absorb(&sponge, data, sz);
   praef_keccak_sponge_squeeze(&sponge, hash, sizeof(hash));
 
@@ -144,7 +144,7 @@ void praef_signator_sign(unsigned char signature[PRAEF_SIGNATURE_SIZE],
 
   produce_new_k:
   do {
-    praef_keccak_sponge_init(&sponge, PRAEF_KECCAK_RATE, PRAEF_KECCAK_CAP);
+    praef_sha3_init(&sponge);
     praef_keccak_sponge_absorb(&sponge, kb, sizeof(kb));
     praef_keccak_sponge_absorb(&sponge, this->salt, sizeof(this->salt));
     praef_keccak_sponge_squeeze(&sponge, kb, sizeof(kb));
@@ -367,7 +367,7 @@ static int praef_verifier_prepare_verify(
     return 0;
 
   /* Hash the message and read into an integer */
-  praef_keccak_sponge_init(&sponge, PRAEF_KECCAK_RATE, PRAEF_KECCAK_CAP);
+  praef_sha3_init(&sponge);
   praef_keccak_sponge_absorb(&sponge, data, sz);
   praef_keccak_sponge_squeeze(&sponge, hash, PRAEF_SIGINT_SIZE);
   mpz_import(this->h, PRAEF_SIGINT_SIZE, -1, 1, 0, 0, hash);

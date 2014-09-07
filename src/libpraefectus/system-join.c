@@ -594,7 +594,7 @@ void praef_system_join_recv_msg_join_accept(
   }
 
   /* Calculate id for this request */
-  praef_keccak_sponge_init(&sponge, PRAEF_KECCAK_RATE, PRAEF_KECCAK_CAP);
+  praef_sha3_init(&sponge);
   praef_keccak_sponge_absorb(&sponge, sys->join.system_salt,
                              sizeof(sys->join.system_salt));
   praef_keccak_sponge_absorb(&sponge, msg->request.publickey.buf,

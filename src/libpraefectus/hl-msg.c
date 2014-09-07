@@ -488,7 +488,7 @@ static void praef_hlmsg_encoder_finish_msg(praef_hlmsg* message,
   praef_keccak_sponge sponge;
 
   if (this->garbage_bytes) {
-    praef_keccak_sponge_init(&sponge, PRAEF_KECCAK_RATE, PRAEF_KECCAK_CAP);
+    praef_sha3_init(&sponge);
     praef_keccak_sponge_absorb(&sponge,
                                this->garbage_salt, this->garbage_bytes);
     praef_keccak_sponge_absorb(&sponge, this->garbage, this->garbage_bytes);

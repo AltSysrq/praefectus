@@ -36,4 +36,8 @@
 #define PRAEF_KECCAK_CAP (512)
 #define PRAEF_KECCAK_RATE (1600 - PRAEF_KECCAK_CAP)
 
+static inline void praef_sha3_init(praef_keccak_sponge* sponge) {
+  praef_keccak_sponge_init(sponge, PRAEF_KECCAK_RATE, PRAEF_KECCAK_CAP);
+}
+
 #endif /* LIBPRAEFECTUS_KECCAK_H_ */
