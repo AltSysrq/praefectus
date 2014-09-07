@@ -58,7 +58,8 @@ typedef struct {
 
 typedef struct {
   unsigned range_query_mask, range_query_offset;
-  unsigned char next_range_query[PRAEF_HASH_SIZE];
+  unsigned char current_range_query[PRAEF_HASH_SIZE];
+  unsigned char current_range_query_id;
   int has_finished_range_query;
   praef_instant last_range_query;
 } praef_node_htm;

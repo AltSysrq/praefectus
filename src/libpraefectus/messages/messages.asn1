@@ -607,7 +607,10 @@ PraefMsgHtRange ::= SEQUENCE {
   -- range filter only if, given the final byte of the object hash h,
   -- ((h & mask) == offset).
   offset        PraefByte,
-  mask          PraefByte
+  mask          PraefByte,
+  -- An arbitrary integer identifier for this query, to be sent on the
+  -- corresponding HtRangeNext message. This may be predictable.
+  id            PraefByte
 }
 
 -- Informs the receiver about the result of a prior HtRange query. In
@@ -625,7 +628,9 @@ PraefMsgHtRangeNext ::= SEQUENCE {
   --
   -- The sender SHOULD return the minimal prefix hash that would identify the
   -- first message it chose not to send.
-  hash          PraefHashPrefix OPTIONAL
+  hash          PraefHashPrefix OPTIONAL,
+  -- The id of the corresponding HtRange request.
+  id            PraefByte
 }
 
 -- Advises the receiver of a bitmap of affirmative and negative

@@ -49,6 +49,7 @@ static void praef_node_htm_request_htls(
   int lownybble, unsigned subdir);
 static void praef_node_htm_request_htread(
   praef_node*, PraefDword_t);
+static void praef_node_htm_request_htrange(praef_node*);
 static PraefDword_t praef_system_htm_objhash(
   const praef_hash_tree*,
   const praef_hash_tree_directory* dir,
@@ -416,6 +417,97 @@ static void praef_node_htm_request_htread(praef_node* node,
   memset(&request, 0, sizeof(request));
   request.present = PraefMsg_PR_htread;
   request.choice.htread.objectid = sid;
+  PRAEF_OOM_IF_NOT(node->sys, praef_outbox_append(
+                     node->router.rpc_out, &request));
+}
+
+void praef_node_htm_recv_msg_htread(praef_node* node,
+                                    const PraefMsgHtRead_t* msg) {
+  praef_hash_tree_objref object;
+
+  if (praef_hash_tree_get_id(&object, node->sys->state.hash_tree,
+                             (unsigned)msg->objectid))
+    if (praef_node_htm_is_visible(node, object.instant))
+      (*node->bus->unicast)(node->bus, &node->net_id,
+                            object.data, object.size);
+}
+
+void praef_node_htm_recv_msg_htrange(praef_node* node,
+                                     const PraefMsgHtRange_t* msg) {
+  PraefMsg_t response;
+  OCTET_STRING_t rhash;
+  unsigned char hash[PRAEF_HASH_SIZE];
+  praef_hash_tree_objref objects[node->sys->htm.range_max];
+  unsigned i, n;
+
+  memset(hash, 0, sizeof(hash));
+  memcpy(hash, msg->hash.buf, msg->hash.size);
+  n = praef_hash_tree_get_range(objects, node->sys->htm.range_max,
+                                node->sys->state.hash_tree,
+                                hash,
+                                msg->offset, msg->mask);
+
+  for (i = 0; i < n; ++i)
+    if (praef_node_htm_is_visible(node, objects[i].instant))
+      (*node->bus->unicast)(node->bus, &node->net_id,
+                            objects[i].data, objects[i].size);
+
+  memset(&response, 0, sizeof(response));
+  response.present = PraefMsg_PR_htrangenext;
+  response.choice.htrangenext.id = msg->id;
+  if (n == node->sys->htm.range_max) {
+    /* Still more to go */
+    /* TODO: Minify hash */
+    rhash.buf = (unsigned char*)praef_hash_tree_get_hash_of(&objects[n-1]);
+    rhash.size = PRAEF_HASH_SIZE;
+    response.choice.htrangenext.hash = &rhash;
+  }
+
+  PRAEF_OOM_IF_NOT(node->sys,
+                   praef_outbox_append(node->router.rpc_out,
+                                       &response));
+}
+
+void praef_node_htm_recv_msg_htrangenext(praef_node* node,
+                                         const PraefMsgHtRangeNext_t* msg) {
+  /* Only pay attention to the response if it corresponds to the most recent
+   * query and if it either indicates end-of-tree or a later hash than the
+   * current query.
+   */
+  if (msg->id == node->htm.current_range_query_id &&
+      (!msg->hash || memcmp(msg->hash->buf, node->htm.current_range_query,
+                            msg->hash->size) > 0)) {
+    ++node->htm.current_range_query_id;
+
+    if (msg->hash) {
+      memset(node->htm.current_range_query, 0, PRAEF_HASH_SIZE);
+      memcpy(node->htm.current_range_query, msg->hash->buf, msg->hash->size);
+      praef_node_htm_request_htrange(node);
+    } else {
+      node->htm.has_finished_range_query = 1;
+    }
+  }
+}
+
+static void praef_node_htm_request_htrange(praef_node* node) {
+  PraefMsg_t request;
+  unsigned i;
+
+  memset(&request, 0, sizeof(request));
+  request.present = PraefMsg_PR_htrange;
+  request.choice.htrange.hash.buf = node->htm.current_range_query;
+  request.choice.htrange.offset = node->htm.range_query_offset;
+  request.choice.htrange.mask = node->htm.range_query_mask;
+  request.choice.htrange.id = node->htm.current_range_query_id;
+
+  /* Minify the hash prefix */
+  request.choice.htrange.hash.size = 0;
+  for (i = 0; i < PRAEF_HASH_SIZE; ++i)
+    if (node->htm.current_range_query[i])
+      request.choice.htrange.hash.size = i+1;
+
+  node->htm.last_range_query = node->sys->clock.ticks;
+
   PRAEF_OOM_IF_NOT(node->sys, praef_outbox_append(
                      node->router.rpc_out, &request));
 }
