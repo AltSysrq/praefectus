@@ -489,6 +489,36 @@ PraefMsgHtDir ::= SEQUENCE {
   -- possible, it SHOULD be the exact contents of an actual HtLs message
   -- received, though nodes MAY send gratuitous HtDir messages at any time.
   request       PraefMsgHtLs,
+  -- The first 32 bits of the SHA-3 of the concatenation of the SHA-3 hashes of
+  -- all objects contained *directly* by this subdirectory followed by the
+  -- public key of the recipient of this message followed by the snapshot on
+  -- the htls object encoded as a 4-byte little-endian integer, itself
+  -- interpreted as a little-endian integer.
+  --
+  -- This field exists to resolve the case where two nodes each have a
+  -- directory containing objects in the same slots, but which are actually
+  -- different, only coincidentally having the same prefix. This case can be
+  -- detected with overwhelming probability by detecting that the objhash on
+  -- the whole directory differs, in which case the node that notices this
+  -- SHOULD simply request all objects in the directory.
+  --
+  -- In theory, this field is vulnerable to birthday attacks, which could cause
+  -- a system to diverge. However, directories near the top of the tree are
+  -- subject to effectively random pollution by other nodes that will quickly
+  -- resolve such situations by producing actual prefix collisions that split
+  -- the objects into distinct subdirectories; deeper directories require
+  -- exponentially more work since the objects in question also must have a
+  -- given SHA-3 prefix. Salting the hash with the recipient's public key makes
+  -- it impossible to precompute an attack at deeper levels, and also means
+  -- that any attack must work simultaneously against *all* cooperating nodes
+  -- in the system.
+  --
+  -- Furthermore, salting via the snapshot instant (which can be relied on to
+  -- update appropriately, as this mechism defends two *cooperating* nodes)
+  -- means that any hypothetical attack can generally only work at exactly one
+  -- instant; making it work on more than one requires exponentially more
+  -- time.
+  objhash       PraefDword,
   -- The entries present in this directory, indexed by the first nybble of
   -- objects after the hash prefix of the containing directory.
   entries       SEQUENCE SIZE(16) OF PraefHtdirEntry
@@ -501,8 +531,27 @@ PraefHtdirEntry ::= CHOICE {
   -- Indicates that this entry has a direct object, and specifies the
   -- node-specific id of that object.
   objectid      PraefDword,
-  -- Indicates that this entry is a subdirectory, and specifies the 32-bit hash
-  -- of that subdirectory entry.
+  -- Indicates that this entry is a subdirectory, and specifies a 32-bit hash
+  -- of that subdirectory entry. This 32-bit hash is the first 32 bits of the
+  -- SHA-3 of the internal 64-bit directory hash (as defined in hash-tree.h)
+  -- encoded as a little-endian integer concatenated with the public key of the
+  -- recipient of the message concatenated with the instant of the htls on the
+  -- enclosing response encoded as a 32-bit little-endian integer.
+  --
+  -- The additional hash steps allow reducing this field to 32-bit without
+  -- opening it up to viable birthday attacks.
+  --
+  -- Note that in theory this field is still susceptible to vanilla birthday
+  -- attacks against the underlying 64-bit hash. However, this is subject to
+  -- having matching hash prefixes, which makes the attack geometrically more
+  -- difficult as the attack moves deeper into the tree. An attack will not
+  -- work near the top of the tree since other messages will pollute the
+  -- directories (ie, the attacker needs full control over the directory of
+  -- attack). An attack on a subdirectory of a level-two directory (8 bit
+  -- prefix + 4 bit offset) is expected to require 24.5 trillion plaintexts to
+  -- succeed. Each level lower multiplies this requirement by a factor of
+  -- 16. Applications can make such attacks even less practical by deliberately
+  -- producing messages to rappidly pollute the upper levels of the tree.
   subdirsid     PraefDword
 }
 

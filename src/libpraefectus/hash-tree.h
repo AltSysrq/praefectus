@@ -69,7 +69,7 @@ typedef struct praef_hash_tree_s praef_hash_tree;
 /**
  * The short-id/hash type used to identify directory entries.
  */
-typedef unsigned praef_hash_tree_sid;
+typedef unsigned long long praef_hash_tree_sid;
 
 /**
  * The possible types for a hash tree directory entry. A false value is
@@ -84,7 +84,8 @@ typedef enum {
   praef_htet_none = 0,
   /**
    * Indicates that the hash tree directory has an object in this field. The
-   * sid is the object's monotonic ID.
+   * sid is the object's monotonic ID, which is guaranteed to fit into the
+   * lower 32 bits of the sid.
    */
   praef_htet_object,
   /**

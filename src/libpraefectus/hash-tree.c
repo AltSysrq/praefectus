@@ -322,14 +322,14 @@ static void praef_hash_tree_rehash(praef_hash_tree_fulldir* dir,
                                    const praef_hash_tree* tree) {
   praef_hash_tree_fulldir* subdir = dir->subdirectories[subdir_ix];
   praef_keccak_sponge sponge;
-  unsigned i, sid;
+  unsigned i, sid, byte;
   /* In order to be non-sensitive to endianness, manually reencode integers
    * into a little-endian buffer before feeding to the hash function, and
    * manually reencode the output of the hash. Hopefully, the compiler can see
    * the optimisation of using the original integer on platforms that encode
    * their integers correctly.
    */
-  unsigned char integer[4];
+  unsigned char integer[sizeof(praef_hash_tree_sid)];
 
   praef_keccak_sponge_init(&sponge, PRAEF_KECCAK_RATE, PRAEF_KECCAK_CAP);
   for (i = 0; i < PRAEF_HTDIR_SIZE; ++i) {
@@ -347,20 +347,17 @@ static void praef_hash_tree_rehash(praef_hash_tree_fulldir* dir,
 
     case praef_htet_directory:
       sid = subdir->directory.sids[i];
-      integer[0] = (sid >>  0) & 0xFF;
-      integer[1] = (sid >>  8) & 0xFF;
-      integer[2] = (sid >> 16) & 0xFF;
-      integer[3] = (sid >> 24) & 0xFF;
+      for (byte = 0; byte < sizeof(praef_hash_tree_sid); ++byte)
+        integer[byte] = (sid >> byte*8) & 0xFF;
       praef_keccak_sponge_absorb(&sponge, integer, sizeof(integer));
       break;
     }
   }
 
   praef_keccak_sponge_squeeze(&sponge, integer, sizeof(integer));
-  sid = (((unsigned)integer[0]) <<  0)
-      | (((unsigned)integer[1]) <<  8)
-      | (((unsigned)integer[2]) << 16)
-      | (((unsigned)integer[3]) << 24);
+  sid = 0;
+  for (byte = 0; byte < sizeof(praef_hash_tree_sid); ++byte)
+    sid |= ((praef_hash_tree_sid)integer[byte]) << 8*byte;
   dir->directory.sids[subdir_ix] = sid;
 }
 
