@@ -50,6 +50,9 @@ typedef struct {
   unsigned root_query_offset;
 
   praef_instant last_root_query;
+  /* Array of snapshots. Some or all may be NULL (ie, the tree inside is
+   * NULL). Sorted from most recent to oldest.
+   */
   praef_system_htm_snapshot* snapshots;
 } praef_system_htm;
 

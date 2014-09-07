@@ -29,8 +29,23 @@
 #include <config.h>
 #endif
 
+#include "messages/PraefMsg.h"
+
 #include "system.h"
 #include "-system.h"
+
+static int praef_node_htm_is_visible(praef_node*, praef_instant);
+static const praef_hash_tree* praef_system_htm_get_snapshot(
+  praef_system*, praef_instant);
+static void praef_system_htm_create_cursor(
+  praef_hash_tree_cursor* dst,
+  const PraefMsgHtLs_t*);
+static const praef_hash_tree_directory* praef_system_htm_get_dir_or_empty(
+  const praef_hash_tree*, const praef_hash_tree_cursor*,
+  const praef_hash_tree_directory* empty);
+static void praef_node_htm_request_htls(
+  praef_node*, const void* prefix, unsigned size,
+  int lownybble, unsigned subdir);
 
 int praef_system_htm_init(praef_system* sys) {
   if (!praef_system_conf_ht_num_snapshots(sys, 64)) return 0;
@@ -103,4 +118,165 @@ void praef_system_conf_ht_root_query_interval(praef_system* sys,
 void praef_system_conf_ht_root_query_offset(praef_system* sys,
                                             unsigned offset) {
   sys->htm.root_query_offset = offset;
+}
+
+static int praef_node_htm_is_visible(praef_node* node,
+                                     praef_instant instant) {
+  /* TODO */
+  return 1;
+}
+
+static const praef_hash_tree* praef_system_htm_get_snapshot(
+  praef_system* sys, praef_instant instant
+) {
+  unsigned i;
+
+  for (i = 0; i < sys->htm.num_snapshots; ++i)
+    if (sys->htm.snapshots[i].tree &&
+        sys->htm.snapshots[i].instant <= instant)
+      return sys->htm.snapshots[i].tree;
+
+  return sys->state.hash_tree;
+}
+
+static void praef_system_htm_create_cursor(
+  praef_hash_tree_cursor* cursor,
+  const PraefMsgHtLs_t* msg
+) {
+  memcpy(cursor->hash, msg->hash.buf, msg->hash.size);
+  cursor->offset = 2 * msg->hash.size;
+  if (cursor->offset && !msg->lownybble)
+    --cursor->offset;
+}
+
+void praef_node_recv_msg_htls(praef_node* node,
+                              const PraefMsgHtLs_t* msg) {
+  PraefMsg_t response;
+  praef_hash_tree_cursor cursor;
+  const praef_hash_tree_directory* dir;
+  unsigned i;
+  PraefHtdirEntry_t entries[PRAEF_HTDIR_SIZE],
+                  * entries_ptrs[PRAEF_HTDIR_SIZE];
+
+  if (!node->sys->htm.snapshots) return;
+
+  memset(&response, 0, sizeof(response));
+
+  praef_system_htm_create_cursor(&cursor, msg);
+  dir = praef_hash_tree_readdir(
+    praef_system_htm_get_snapshot(node->sys, msg->snapshot), &cursor);
+  if (!dir) return;
+
+  response.choice.htdir.entries.list.array = entries_ptrs;
+  response.choice.htdir.entries.list.count = PRAEF_HTDIR_SIZE;
+  response.choice.htdir.entries.list.size = PRAEF_HTDIR_SIZE;
+
+  response.present = PraefMsg_PR_htdir;
+  memcpy(&response.choice.htdir.request, msg, sizeof(PraefMsgHtLs_t));
+  for (i = 0; i < PRAEF_HTDIR_SIZE; ++i) {
+    entries_ptrs[i] = entries+i;
+
+    switch (dir->types[i]) {
+    case praef_htet_none:
+      entries[i].present = PraefHtdirEntry_PR_empty;
+      break;
+
+    case praef_htet_object:
+      entries[i].present = PraefHtdirEntry_PR_objectid;
+      entries[i].choice.objectid = dir->sids[i];
+      break;
+
+    case praef_htet_directory:
+      entries[i].present = PraefHtdirEntry_PR_subdirsid;
+      entries[i].choice.subdirsid = dir->sids[i];
+      break;
+    }
+  }
+
+  PRAEF_OOM_IF_NOT(node->sys, praef_outbox_append(
+                     node->router.rpc_out, &response));
+}
+
+static const praef_hash_tree_directory* praef_system_htm_get_dir_or_empty(
+  const praef_hash_tree* tree, const praef_hash_tree_cursor* cursor,
+  const praef_hash_tree_directory* empty
+) {
+  const praef_hash_tree_directory* dir;
+
+  dir = praef_hash_tree_readdir(tree, cursor);
+  return dir? dir : empty;
+}
+
+void praef_node_rec_msg_htdir(praef_node* node,
+                              const PraefMsgHtDir_t* msg) {
+  praef_hash_tree_cursor cursor;
+  const praef_hash_tree_directory* sn_dir, * curr_dir;
+  praef_hash_tree_directory empty_dir;
+  unsigned i;
+
+  memset(&empty_dir, 0, sizeof(empty_dir));
+
+  praef_system_htm_create_cursor(&cursor, &msg->request);
+  /* Get both the current version of the directory and the snapshot version. We
+   * use the current version to see whether any new objects are visible and the
+   * both versions to decide whether to recurse into subdirectories.
+   *
+   * If a directory is absent, just assume it is empty locally (which is
+   * logically correct).
+   */
+  curr_dir = praef_system_htm_get_dir_or_empty(
+    node->sys->state.hash_tree, &cursor, &empty_dir);
+  sn_dir = praef_system_htm_get_dir_or_empty(
+    praef_system_htm_get_snapshot(node->sys, msg->request.snapshot),
+    &cursor, &empty_dir);
+
+  for (i = 0; i < PRAEF_HTDIR_SIZE; ++i) {
+    switch (msg->entries.list.array[i]->present) {
+    case PraefHtdirEntry_PR_NOTHING: abort();
+    case PraefHtdirEntry_PR_empty: continue;
+    case PraefHtdirEntry_PR_objectid:
+      /* TODO: Right now there's no way to tell whether two objects that happen
+       * to be colocated in two hash trees are actually the same, or just
+       * happen to have the same prefix. We need to include some second-order
+       * hash or something (probably 16- or 24-bit) to have high confidence in
+       * them being different. Alternatively, we could provide the second-order
+       * hash of all objects in directly in a directory, and indiscriminately
+       * request all of them if the local and remote hashes differ, but all
+       * object slots match.
+       *
+       * The second-order hash doesn't need to be terribly resistent to
+       * birthday attacks, since matching the hash prefix causes the time
+       * required to find collisions to grow exponentially with the length of
+       * the prefix, and early on when the prefix is short, prefix collisions
+       * will get resolved anyway as other messages experience prefix
+       * collisions within the same tree and trigger the production of
+       * subdirectories.
+       *
+       * Just abort for now until we fix this.
+       */
+      abort();
+
+    case PraefHtdirEntry_PR_subdirsid:
+      /* Recurse if neither the snapshot nor current agree with the directory
+       * entry.
+       */
+      if ((praef_htet_directory != sn_dir->types[i] ||
+           msg->entries.list.array[i]->choice.subdirsid != sn_dir->sids[i]) &&
+          (praef_htet_directory != curr_dir->types[i] ||
+           msg->entries.list.array[i]->choice.subdirsid != curr_dir->sids[i]))
+        praef_node_htm_request_htls(node, msg->request.hash.buf,
+                                    msg->request.hash.size,
+                                    msg->request.lownybble, i);
+      break;
+    }
+  }
+}
+
+static void praef_node_htm_request_htls(praef_node* node,
+                                        const void* bytes,
+                                        unsigned nbytes,
+                                        int lownybble,
+                                        unsigned subdir) {
+  /* TODO */
+  abort();
 }
