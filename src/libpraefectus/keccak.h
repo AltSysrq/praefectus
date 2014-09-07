@@ -40,4 +40,35 @@ static inline void praef_sha3_init(praef_keccak_sponge* sponge) {
   praef_keccak_sponge_init(sponge, PRAEF_KECCAK_RATE, PRAEF_KECCAK_CAP);
 }
 
+static inline void praef_keccak_sponge_absorb_integer(
+  praef_keccak_sponge* sponge,
+  unsigned long long value,
+  unsigned char nbytes
+) {
+  unsigned char bytes[nbytes];
+  unsigned i;
+
+  for (i = 0; i < nbytes; ++i)
+    bytes[i] = (value >> 8*i) & 0xFF;
+
+  praef_keccak_sponge_absorb(sponge, bytes, nbytes);
+}
+
+static inline unsigned long long praef_keccak_sponge_squeeze_integer(
+  praef_keccak_sponge* sponge,
+  unsigned char nbytes
+) {
+  unsigned char bytes[nbytes];
+  unsigned i;
+  unsigned long long val;
+
+  praef_keccak_sponge_squeeze(sponge, bytes, nbytes);
+
+  val = 0;
+  for (i = 0; i < nbytes; ++i)
+    val |= ((unsigned long long)bytes[i]) << i*8;
+
+  return val;
+}
+
 #endif /* LIBPRAEFECTUS_KECCAK_H_ */

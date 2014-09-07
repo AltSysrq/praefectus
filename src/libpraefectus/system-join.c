@@ -557,7 +557,6 @@ void praef_system_join_recv_msg_join_accept(
 ) {
   praef_keccak_sponge sponge;
   unsigned char local_pubkey[PRAEF_PUBKEY_SIZE];
-  unsigned char id_bytes[sizeof(praef_object_id)];
   praef_object_id id;
   praef_node* new_node, * existing_node;
 
@@ -599,11 +598,7 @@ void praef_system_join_recv_msg_join_accept(
                              sizeof(sys->join.system_salt));
   praef_keccak_sponge_absorb(&sponge, msg->request.publickey.buf,
                              msg->request.publickey.size);
-  praef_keccak_sponge_squeeze(&sponge, id_bytes, sizeof(id_bytes));
-  id = (((praef_object_id)id_bytes[0]) <<  0)
-     | (((praef_object_id)id_bytes[1]) <<  8)
-     | (((praef_object_id)id_bytes[2]) << 16)
-     | (((praef_object_id)id_bytes[3]) << 24);
+  id = praef_keccak_sponge_squeeze_integer(&sponge, sizeof(praef_object_id));
 
   while (praef_system_join_is_reserved_id(sys, id)) ++id;
 
