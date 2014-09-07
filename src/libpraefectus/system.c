@@ -346,6 +346,10 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
   return praef_ss_ok;
 }
 
+const praef_clock* praef_system_get_clock(praef_system* this) {
+  return &this->clock;
+}
+
 void praef_system_oom(praef_system* this) {
   this->abnormal_status = praef_ss_oom;
 }

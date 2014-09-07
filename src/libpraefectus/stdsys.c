@@ -39,6 +39,7 @@ typedef struct {
   praef_system* system;
   praef_userdata userdata;
   unsigned (*classify_event)(const praef_event*);
+  praef_stdsys_event_vote_t event_vote;
 } praef_stdsys;
 
 static int praef_stdsys_create_node(
@@ -67,6 +68,8 @@ static unsigned praef_stdsys_all_events_are_pessimistic(
 ) {
   return 0;
 }
+static int praef_stdsys_event_vote_default(
+  praef_app*, const praef_event*, praef_userdata);
 
 praef_app* praef_stdsys_new(praef_std_state* stack) {
   praef_stdsys* this = calloc(1, sizeof(praef_stdsys));
@@ -74,6 +77,7 @@ praef_app* praef_stdsys_new(praef_std_state* stack) {
 
   this->stack = stack;
   this->classify_event = praef_stdsys_all_events_are_pessimistic;
+  this->event_vote = praef_stdsys_event_vote_default;
   this->app.create_node_bridge = praef_stdsys_create_node;
   this->app.get_node_grant_bridge = praef_stdsys_get_node_grant;
   this->app.get_node_deny_bridge = praef_stdsys_get_node_deny;
@@ -85,17 +89,26 @@ praef_app* praef_stdsys_new(praef_std_state* stack) {
   return (praef_app*)this;
 }
 
-void praef_stdsys_system(praef_app* this, praef_system* sys) {
+void praef_stdsys_set_system(praef_app* this, praef_system* sys) {
   ((praef_stdsys*)this)->system = sys;
 }
 
-void praef_stdsys_userdata(praef_app* this, praef_userdata userdata) {
+void praef_stdsys_set_userdata(praef_app* this, praef_userdata userdata) {
   ((praef_stdsys*)this)->userdata = userdata;
+}
+
+praef_userdata praef_stdsys_userdata(const praef_app* this) {
+  return ((const praef_stdsys*)this)->userdata;
 }
 
 void praef_stdsys_optimistic_events(praef_app* this,
                                     unsigned (*f)(const praef_event*)) {
   ((praef_stdsys*)this)->classify_event = f;
+}
+
+void praef_stdsys_event_vote(praef_app* this,
+                             praef_stdsys_event_vote_t f) {
+  ((praef_stdsys*)this)->event_vote = f;
 }
 
 void praef_stdsys_delete(praef_app* this) {
@@ -124,7 +137,8 @@ static praef_instant praef_stdsys_get_node_deny(
 }
 
 static void praef_stdsys_insert_event(praef_app* this, praef_event* evt) {
-  unsigned optimism = (*((praef_stdsys*)this)->classify_event)(evt);
+  praef_stdsys* stdsys = (praef_stdsys*)this;
+  unsigned optimism = (*stdsys->classify_event)(evt);
   praef_event* txevt = praef_transactor_put_event(STACK->tx, evt, !!optimism);
   praef_event* dlevt;
   if (!txevt) {
@@ -145,6 +159,14 @@ static void praef_stdsys_insert_event(praef_app* this, praef_event* evt) {
     }
 
     if (!praef_metatransactor_add_event(STACK->mtx, evt->object, dlevt)) {
+      praef_system_oom(SYSTEM);
+      return;
+    }
+  }
+
+  if ((*stdsys->event_vote)(this, evt, stdsys->userdata)) {
+    if (!praef_system_vote_event(SYSTEM, evt->object, evt->instant,
+                                 evt->serial_number)) {
       praef_system_oom(SYSTEM);
       return;
     }
@@ -191,3 +213,16 @@ static void praef_stdsys_advance(praef_app* this, unsigned delta) {
                           ((praef_stdsys*)this)->userdata);
 }
 
+static int praef_stdsys_event_vote_default(
+  praef_app* vthis, const praef_event* evt, praef_userdata _
+) {
+  praef_stdsys* this = (praef_stdsys*)vthis;
+  const praef_clock* clock = praef_system_get_clock(this->system);
+  unsigned optimistic;
+
+  optimistic = (*this->classify_event)(evt);
+
+  return !optimistic ||
+    evt->instant > clock->systime ||
+    clock->systime - evt->instant <= optimistic;
+}

@@ -32,6 +32,7 @@
 #include "object.h"
 #include "event.h"
 #include "message-bus.h"
+#include "clock.h"
 #include "messages/PraefNetworkIdentifierPair.h"
 #include "messages/PraefMsgJoinRequest.h"
 
@@ -650,6 +651,11 @@ int praef_system_vote_event(praef_system*, praef_object_id,
  */
 int praef_system_send_unicast(praef_system*, praef_object_id target,
                               const void* data, size_t size);
+
+/**
+ * Returns the global clock maintained by the given praef_system.
+ */
+const praef_clock* praef_system_get_clock(praef_system*);
 
 /**
  * Sets the Out-of-Memory flag on the given praef_system. All further calls to
