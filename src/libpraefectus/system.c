@@ -68,7 +68,8 @@ praef_system* praef_system_new(praef_app* app,
       !(this->verifier = praef_verifier_new()) ||
       !praef_system_router_init(this) ||
       !praef_system_state_init(this) ||
-      !praef_system_join_init(this)) {
+      !praef_system_join_init(this) ||
+      !praef_system_htm_init(this)) {
     praef_system_delete(this);
     return NULL;
   }
@@ -87,6 +88,7 @@ void praef_system_delete(praef_system* this) {
     praef_node_delete(node);
   }
 
+  praef_system_htm_destroy(this);
   praef_system_join_destroy(this);
   praef_system_state_destroy(this);
   praef_system_router_destroy(this);
@@ -154,18 +156,20 @@ praef_node* praef_node_new(praef_system* sys,
     !praef_copy_net_id_pair(&node->net_id, net_id) ||
     !praef_node_router_init(node) ||
     !praef_node_state_init(node) ||
-    !praef_node_join_init(node));
+    !praef_node_join_init(node) ||
+    !praef_node_htm_init(node));
 
   return node;
 }
 
 void praef_node_delete(praef_node* node) {
-    praef_node_join_destroy(node);
-    praef_node_state_destroy(node);
-    praef_node_router_destroy(node);
-    (*asn_DEF_PraefNetworkIdentifierPair.free_struct)(
-      &asn_DEF_PraefNetworkIdentifierPair, &node->net_id, 1);
-    free(node);
+  praef_node_htm_destroy(node);
+  praef_node_join_destroy(node);
+  praef_node_state_destroy(node);
+  praef_node_router_destroy(node);
+  (*asn_DEF_PraefNetworkIdentifierPair.free_struct)(
+    &asn_DEF_PraefNetworkIdentifierPair, &node->net_id, 1);
+  free(node);
 }
 
 int praef_system_add_event(praef_system* this, const void* data, size_t size) {

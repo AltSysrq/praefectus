@@ -837,6 +837,15 @@ void praef_system_conf_max_live_nodes(
  */
 void praef_system_conf_ht_range_max(praef_system*, unsigned);
 /**
+ * Controls the interval at which hash-tree-range queries are retried.
+ *
+ * Larger values make node joining faster in the presence of packet loss, but
+ * may cause excessive redundant traffic if too low.
+ *
+ * The default is std_latency*4.
+ */
+void praef_system_conf_ht_range_query_interval(praef_system*, unsigned);
+/**
  * Controls the intervals at which hash tree snapshots are taken.
  *
  * Specifically, one hash tree snapshot will be taken at every instant which is
@@ -852,12 +861,12 @@ void praef_system_conf_ht_range_max(praef_system*, unsigned);
  *
  * The effect of passing a value of 0 is undefined.
  */
-void praef_system_conf_ht_shapshot_interval(praef_system*, unsigned);
+void praef_system_conf_ht_snapshot_interval(praef_system*, unsigned);
 /**
  * Controls the maximum number of hash tree snapshots that will be maintained.
  *
  * Larger values counteract the downsides of more frequent snapshots (as
- * documented in praef_system_conf_ht_shapshot_interval()) in exchange for
+ * documented in praef_system_conf_ht_snapshot_interval()) in exchange for
  * somewhat greater memory and CPU usage.
  *
  * The default is 64. Invoking this function will purge any existing snapshots
