@@ -68,6 +68,14 @@ typedef enum {
   praef_nd_negative
 } praef_node_disposition;
 
+typedef enum {
+  praef_sjs_unconnected = 0,
+  praef_sjs_request_cxn,
+  praef_sjs_walking_join_tree,
+  praef_sjs_scanning_hash_tree,
+  praef_sjs_connected
+} praef_system_join_state;
+
 typedef struct praef_node_s {
   praef_object_id id;
   unsigned char pubkey[PRAEF_PUBKEY_SIZE];
@@ -101,6 +109,7 @@ struct praef_system_s {
   praef_verifier* verifier;
   praef_event_serial_number evt_serno;
   praef_clock clock;
+  praef_system_join_state join_state;
 
   praef_system_state state;
   praef_system_router router;

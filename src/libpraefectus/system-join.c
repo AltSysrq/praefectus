@@ -31,6 +31,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 #include "messages/PraefMsg.h"
 #include "keccak.h"
@@ -130,12 +131,16 @@ void praef_system_join_update(praef_system* sys, unsigned et) {
    * network, and is even easy on dial-up.
    */
   if (!sys->join.has_received_network_info) {
+    assert(praef_sjs_request_cxn == sys->join_state);
+
     request.present = PraefMsg_PR_getnetinfo;
     memcpy(&request.choice.getnetinfo.retaddr,
            sys->self_net_id, sizeof(PraefNetworkIdentifierPair_t));
     PRAEF_OOM_IF_NOT(sys, praef_outbox_append_singleton(
                        sys->join.connect_out, &request));
   } else if (!sys->local_node) {
+    assert(praef_sjs_request_cxn == sys->join_state);
+
     praef_signator_pubkey(local_pubkey, sys->signator);
     memset(&auth, 0, sizeof(auth));
     auth.buf = auth_data;
@@ -151,6 +156,8 @@ void praef_system_join_update(praef_system* sys, unsigned et) {
     PRAEF_OOM_IF_NOT(sys, praef_outbox_append_singleton(
                        sys->join.connect_out, &request));
   } else {
+    assert(praef_sjs_walking_join_tree == sys->join_state);
+
     /* See if there are any pending join tree queries against any node. */
     has_pending_join_tree_queries = 0;
     RB_FOREACH(node, praef_node_map, &sys->nodes) {
@@ -168,7 +175,7 @@ void praef_system_join_update(praef_system* sys, unsigned et) {
        *   positive so we create an initial route.
        * - Tear the connection-stage resources down.
        */
-      sys->join.join_tree_traversal_complete = 1;
+      ++sys->join_state;
       if (PRAEF_APP_HAS(sys->app, join_tree_traversed_opt))
         (*sys->app->join_tree_traversed_opt)(sys->app);
 
@@ -636,6 +643,8 @@ void praef_system_join_recv_msg_join_accept(
 
     if (from_node)
       praef_system_join_record_in_join_tree(from_node, new_node, envelope);
+
+    ++sys->join_state;
   } else {
     /* If we can't identify the origin of the Accept, discard, as the only
      * expected use of this message is to inform the local node (now a full
@@ -658,6 +667,7 @@ void praef_system_join_recv_msg_join_accept(
     }
 
     /* The request is valid, create the new node */
+    /* TODO: Be smarter about the initial disposition */
     new_node = praef_node_new(sys, id, &msg->request.identifier,
                               sys->bus, praef_nd_positive,
                               msg->request.publickey.buf);
@@ -692,6 +702,8 @@ static void praef_system_join_record_in_join_tree(
 
 void praef_system_connect(praef_system* sys,
                           const PraefNetworkIdentifierPair_t* target) {
+  sys->join_state = praef_sjs_request_cxn;
+
   sys->join.connect_target = target;
   sys->join.connect_out = praef_outbox_new(
     praef_hlmsg_encoder_new(praef_htf_rpc_type,

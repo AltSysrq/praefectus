@@ -61,16 +61,15 @@ typedef struct {
   /* Join tree traversal is performed one query at a time per node in the tree,
    * but in parallel for different nodes. (Note that these queries go to the
    * same actual node (the connect target), but are just regarding different
-   * nodes known to exist.) join_tree_traversal_complete becomes true when an
-   * end-of-branch PraefMsgJoinTreeEntry is received for that node. The index
-   * for each query is stored in next_join_tree_query; this is also used to
-   * determine whether an incomming response is obsolete. The next query is
-   * sent immediately upon each response which introduces a new entry to the
-   * tree, and is resent every join_tree_query_interval instants in the absence
-   * of a response.
+   * nodes known to exist.) We advance beyond the walking_join_tree connection
+   * status when an end-of-branch PraefMsgJoinTreeEntry is received for that
+   * node. The index for each query is stored in next_join_tree_query; this is
+   * also used to determine whether an incomming response is obsolete. The next
+   * query is sent immediately upon each response which introduces a new entry
+   * to the tree, and is resent every join_tree_query_interval instants in the
+   * absence of a response.
    */
   praef_instant last_join_tree_query;
-  int join_tree_traversal_complete;
 
   praef_instant last_accept;
 

@@ -272,7 +272,7 @@ void praef_system_bootstrap(praef_system* this) {
      */
     abort();
 
-  this->join.join_tree_traversal_complete = 1;
+  this->join_state = praef_sjs_connected;
   this->join.has_received_network_info = 1;
 
   if (PRAEF_APP_HAS(this->app, acquire_id_opt))
