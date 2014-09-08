@@ -57,23 +57,43 @@ static void font_render_glyph(canvas*, unsigned, unsigned,
                               canvas_pixel, char);
 
 static void font_infer_lead(unsigned* lead, font_char* ch,
-                            unsigned y) {
-  unsigned x = 0;
+                            unsigned y0, unsigned y1) {
+  unsigned x, min = ~0, min2 = ~0, y;
 
-  while (x < ch->pitch/2 && !strchr("-=#", ch->data[y*ch->pitch+x]))
-    ++x;
+  for (y = y0; y < y1; ++y) {
+    x = 0;
+    while (x < ch->pitch/2 && !strchr("-=#", ch->data[y*ch->pitch+x]))
+      ++x;
 
-  *lead = x;
+    if (x < min) {
+      min2 = min;
+      min = x;
+    } else if (x < min2) {
+      min2 = x;
+    }
+  }
+
+  *lead = min;
 }
 
 static void font_infer_tail(unsigned* tail, font_char* ch,
-                            unsigned y) {
-  unsigned x = ch->pitch;
+                            unsigned y0, unsigned y1) {
+  unsigned x, max = 0, max2 = 0, y;
 
-  while (x > ch->pitch/2 && !strchr("-=#", ch->data[y*ch->pitch+x-1]))
-    --x;
+  for (y = y0; y < y1; ++y) {
+    x = ch->pitch;
+    while (x > ch->pitch/2 && !strchr("-=#", ch->data[y*ch->pitch+x-1]))
+      --x;
 
-  *tail = x;
+    if (x > max) {
+      max2 = max;
+      max = x;
+    } else if (x > max2) {
+      max2 = x;
+    }
+  }
+
+  *tail = max;
 }
 
 void font_compile(compiled_font* dst, const font_spec* spec) {
@@ -127,12 +147,12 @@ void font_compile(compiled_font* dst, const font_spec* spec) {
     /* Infer kerning if requested */
     if (!ch->lead[0] && !ch->lead[1] && !ch->lead[2] &&
         !ch->tail[0] && !ch->tail[1] && !ch->tail[2]) {
-      font_infer_lead(ch->lead+0, ch, 0);
-      font_infer_tail(ch->tail+0, ch, 0);
-      font_infer_lead(ch->lead+1, ch, spec->rows/2);
-      font_infer_tail(ch->tail+1, ch, spec->rows/2);
-      font_infer_lead(ch->lead+2, ch, spec->rows-1);
-      font_infer_tail(ch->tail+2, ch, spec->rows-1);
+      font_infer_lead(ch->lead+0, ch, 0, spec->baseline/2);
+      font_infer_tail(ch->tail+0, ch, 0, spec->baseline/2);
+      font_infer_lead(ch->lead+1, ch, spec->baseline/2, spec->baseline);
+      font_infer_tail(ch->tail+1, ch, spec->baseline/2, spec->baseline);
+      font_infer_lead(ch->lead+2, ch, spec->baseline, spec->rows);
+      font_infer_tail(ch->tail+2, ch, spec->baseline, spec->rows);
     }
 
     switch (strlen(ch->name)) {
@@ -282,7 +302,7 @@ static void font_position_glyphs(font_glyph* glyph, unsigned count) {
       prev_tail_kern[i] = glyph->primary->tail[i] - glyph->primary->pitch;
     }
 
-    xoff += max_kern + 2;
+    xoff += max_kern + 1;
     glyph->x_off = xoff;
     xoff += glyph->primary->pitch;
   }
