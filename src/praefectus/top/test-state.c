@@ -150,12 +150,20 @@ static void test_state_draw(test_state* this, canvas* dst,
     }
   }
 
+  memset(dst->data, 0, dst->pitch * dst->h * sizeof(canvas_pixel));
+
   font_render(dst, &this->font,
               "THE QUICK BROWN FOX JUMPS",
               0, 0, font_palette, 1);
   font_render(dst, &this->font,
               "OVER THE LAZY DOG",
               0, fraktur.em, font_palette, 1);
+  font_render(dst, &this->font,
+              "The quick brown fox jumps",
+              0, 2*fraktur.em, font_palette, 1);
+  font_render(dst, &this->font,
+              "over the lazy dog",
+              0, 3*fraktur.em, font_palette, 1);
 }
 
 static void test_state_key(test_state* this,
