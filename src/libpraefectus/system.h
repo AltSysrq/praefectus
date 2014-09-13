@@ -368,6 +368,24 @@ typedef void (*praef_app_remove_node_t)(praef_app*, praef_object_id);
 typedef void (*praef_app_join_tree_traversed_t)(praef_app*);
 
 /**
+ * Notifies the application of the approximate current progress of the hash
+ * tree scan process, which occurs during joining after the join tree has been
+ * traversed. The progress is reported in terms of a fraction. The hash tree
+ * scan is fully complete when this is called with numerator==denominator.
+ *
+ * This may be called even though the progress has not changed since the
+ * previous call, and may even report a lower progress than the previous call
+ * in uncommon cases.
+ *
+ * @param numerator The numerator of current progress. This is guaranteed
+ * to be <= denominator.
+ * @param denominator The denominator of the current progress. This is
+ * guaranteed to be non-zero.
+ */
+typedef void (*praef_app_ht_scan_progress_t)(
+  praef_app*, unsigned numerator, unsigned denominator);
+
+/**
  * Notifies the application that it has received an application-defined unicast
  * message.
  *
@@ -421,6 +439,7 @@ struct praef_app_s {
   praef_app_discover_node_t discover_node_opt;
   praef_app_remove_node_t remove_node_opt;
   praef_app_join_tree_traversed_t join_tree_traversed_opt;
+  praef_app_ht_scan_progress_t ht_scan_progress_opt;
 
   /* Optional application-defined-message callbacks */
   praef_app_recv_unicast_t recv_unicast_opt;
@@ -839,7 +858,8 @@ void praef_system_conf_max_live_nodes(
  * The default value is 64. On a system with the minimal MTU of 307 bytes, and
  * a network with 100ms round-trip latency, this consumes up to 191kB/sec (or
  * 1.5 Mbps) of bandwidth (not including IP overhead and such) while a node is
- * joining.
+ * joining per concurrent range query (see
+ * praef_system_conf_ht_scan_concurrency()).
  */
 void praef_system_conf_ht_range_max(praef_system*, unsigned);
 /**
@@ -851,6 +871,36 @@ void praef_system_conf_ht_range_max(praef_system*, unsigned);
  * The default is std_latency*4.
  */
 void praef_system_conf_ht_range_query_interval(praef_system*, unsigned);
+/**
+ * Controls the redundancy level used for hash tree scans when joining a
+ * system.
+ *
+ * When possible, at least this many nodes will be queried for the same ranges
+ * in the hash tree, though no node will be queried for the same range more
+ * than once. Join time increases linearly with this value, but the certainty
+ * that all messages are received from the scan increases as well. This may
+ * also increase bandwidth usage, though that can be more precicely controlled
+ * with praef_system_conf_ht_range_query_interval(),
+ * praef_system_conf_ht_range_max(), and
+ * praef_system_conf_ht_scan_concurrency().
+ *
+ * The default is 2.
+ */
+void praef_system_conf_ht_scan_redundancy(praef_system*, unsigned);
+/**
+ * Controls the maximum concurrency with which the local node will perform
+ * range queries during the hash tree scan. Note that the local node never runs
+ * more than one conncurrent range query against any other single node.
+ *
+ * This is a direct linear trade-off between bandwidth usage and the time it
+ * takes to join. (Obviously, once bandwidth limits are hit, increasing the
+ * value further will only reduce performance due to packet loss.) This value
+ * must be less than 255. A value of zero is permissible, but is generally not
+ * a good idea, as it will cause the hash tree scan step to be skipped.
+ *
+ * The default is 3.
+ */
+void praef_system_conf_ht_scan_concurrency(praef_system*, unsigned char);
 /**
  * Controls the intervals at which hash tree snapshots are taken.
  *

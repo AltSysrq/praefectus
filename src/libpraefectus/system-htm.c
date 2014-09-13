@@ -65,6 +65,8 @@ int praef_system_htm_init(praef_system* sys) {
 
   sys->htm.range_max = 64;
   sys->htm.range_query_interval = sys->std_latency*4;
+  sys->htm.scan_redundancy = 2;
+  sys->htm.scan_concurrency = 3;
   sys->htm.snapshot_interval = sys->std_latency;
   sys->htm.root_query_interval = sys->std_latency*16;
   sys->htm.root_query_offset = sys->std_latency*4;
@@ -96,6 +98,15 @@ void praef_system_conf_ht_range_max(praef_system* sys, unsigned max) {
 void praef_system_conf_ht_range_query_interval(praef_system* sys,
                                                unsigned interval) {
   sys->htm.range_query_interval = interval;
+}
+
+void praef_system_conf_ht_scan_redundancy(praef_system* sys, unsigned r) {
+  sys->htm.scan_redundancy = r;
+}
+
+void praef_system_conf_ht_scan_concurrency(praef_system* sys,
+                                           unsigned char c) {
+  sys->htm.scan_concurrency = c;
 }
 
 void praef_system_conf_ht_snapshot_interval(praef_system* sys,
@@ -475,6 +486,7 @@ void praef_node_htm_recv_msg_htrangenext(praef_node* node,
    * current query.
    */
   if (msg->id == node->htm.current_range_query_id &&
+      node->htm.is_running_scan_process &&
       (!msg->hash || memcmp(msg->hash->buf, node->htm.current_range_query,
                             msg->hash->size) > 0)) {
     ++node->htm.current_range_query_id;
@@ -484,7 +496,10 @@ void praef_node_htm_recv_msg_htrangenext(praef_node* node,
       memcpy(node->htm.current_range_query, msg->hash->buf, msg->hash->size);
       praef_node_htm_request_htrange(node);
     } else {
-      node->htm.has_finished_range_query = 1;
+      node->htm.completed_scan_processes |= 1 << node->htm.range_query_offset;
+      ++node->sys->htm.completed_scan_process_counts[
+        node->htm.range_query_offset];
+      node->htm.is_running_scan_process = 0;
     }
   }
 }
@@ -497,7 +512,7 @@ static void praef_node_htm_request_htrange(praef_node* node) {
   request.present = PraefMsg_PR_htrange;
   request.choice.htrange.hash.buf = node->htm.current_range_query;
   request.choice.htrange.offset = node->htm.range_query_offset;
-  request.choice.htrange.mask = node->htm.range_query_mask;
+  request.choice.htrange.mask = PRAEF_SYSTEM_HTM_RANGE_QUERY_MASK;
   request.choice.htrange.id = node->htm.current_range_query_id;
 
   /* Minify the hash prefix */
@@ -510,4 +525,166 @@ static void praef_node_htm_request_htrange(praef_node* node) {
 
   PRAEF_OOM_IF_NOT(node->sys, praef_outbox_append(
                      node->router.rpc_out, &request));
+}
+
+static unsigned praef_system_htm_popcount(unsigned i) {
+  unsigned n;
+
+  /* We don't need to do this particular efficiently, so just use the simplest,
+   * most portable solution.
+   */
+  for (n = 0; i; ++n, i >>= 2);
+
+  return n;
+}
+
+void praef_system_htm_update(praef_system* sys, unsigned elapsed) {
+  praef_instant current_snapshot;
+  unsigned prog_num_saturation = 0, prog_denom_saturation = 0,
+    prog_num_completed = 0, prog_denom_completed = 0,
+    prog_num, prog_denom;
+  unsigned i;
+  praef_node* node;
+
+  /* Create new snapshot if we've reached the next snapshot boundary. */
+  current_snapshot = sys->clock.monotime / sys->htm.snapshot_interval
+    * sys->htm.snapshot_interval;
+  if (!sys->htm.snapshots[0].tree ||
+      current_snapshot != sys->htm.snapshots[0].instant) {
+    if (sys->htm.snapshots[sys->htm.num_snapshots-1].tree)
+      praef_hash_tree_delete(sys->htm.snapshots[sys->htm.num_snapshots-1].tree);
+
+    memmove(sys->htm.snapshots+1,
+            sys->htm.snapshots+0,
+            sizeof(praef_system_htm_snapshot) * (sys->htm.num_snapshots - 1));
+
+    sys->htm.snapshots[0].instant = current_snapshot;
+    sys->htm.snapshots[0].tree = praef_hash_tree_fork(sys->state.hash_tree);
+    PRAEF_OOM_IF_NOT(sys, sys->htm.snapshots[0].tree);
+  }
+
+  /* If currently scanning the hash trees of other nodes, check the progress
+   * thereof, let the application know, and move past the scan state if
+   * complete.
+   *
+   * Assignment of processes to nodes occurs in the per-node update cycle.
+   */
+  if (praef_sjs_scanning_hash_tree == sys->join_state) {
+    RB_FOREACH(node, praef_node_map, &sys->nodes) {
+      if (praef_nd_positive == node->disposition &&
+          sys->local_node != node) {
+        prog_denom_saturation += PRAEF_SYSTEM_HTM_NUM_SCAN_PROCESSES;
+        prog_num_saturation += praef_system_htm_popcount(
+          node->htm.completed_scan_processes);
+      }
+    }
+
+    prog_denom_completed = sys->htm.scan_redundancy *
+      PRAEF_SYSTEM_HTM_NUM_SCAN_PROCESSES;
+    for (i = 0; i < PRAEF_SYSTEM_HTM_NUM_SCAN_PROCESSES; ++i)
+      prog_num_completed += sys->htm.completed_scan_process_counts[i];
+
+    /* The progress which indicates a greater value is always most
+     * indicative of actual progress.
+     *
+     *  a/b > c/d  -->  a*d > c*b
+     */
+    if (prog_num_saturation * prog_denom_completed >
+        prog_num_completed * prog_denom_saturation) {
+      prog_num = prog_num_saturation;
+      prog_denom = prog_denom_saturation;
+    } else {
+      prog_num = prog_num_completed;
+      prog_denom = prog_denom_completed;
+    }
+
+    /* Special case: scan_redundancy is zero or there are no positive peers;
+     * the application apparently doesn't want to use scanning, or everyone
+     * we liked is gone. Complete instantly with 1/1, because this can't
+     * continue anyway.
+     */
+    if (!prog_denom) {
+      if (PRAEF_APP_HAS(sys->app, ht_scan_progress_opt))
+        (*sys->app->ht_scan_progress_opt)(sys->app, 1, 1);
+
+      ++sys->join_state;
+    } else {
+      if (PRAEF_APP_HAS(sys->app, ht_scan_progress_opt))
+        (*sys->app->ht_scan_progress_opt)(sys->app, prog_num, prog_denom);
+
+      if (prog_num == prog_denom)
+        ++sys->join_state;
+    }
+  }
+}
+
+void praef_node_htm_update(praef_node* node, unsigned elapsed) {
+  unsigned rq_concurrency, i;
+  unsigned char processes_in_progress[PRAEF_SYSTEM_HTM_NUM_SCAN_PROCESSES];
+  praef_node* other;
+  PraefMsg_t query;
+
+  if (!praef_nd_positive != node->disposition ||
+      node == node->sys->local_node) return;
+
+  if (praef_sjs_scanning_hash_tree == node->sys->join_state) {
+    if (node->htm.is_running_scan_process) {
+      /* Retransmit the last range query if it's been too long without a
+       * response.
+       */
+      if (node->sys->clock.ticks - node->htm.last_range_query >=
+          node->sys->htm.range_query_interval)
+        praef_node_htm_request_htrange(node);
+    } else {
+      /* Try to assign this node a new range query process. First ensure doing
+       * so would not violate the concurrency constraints and that there is an
+       * available process that is not at or expected to reach its redundancy
+       * level given the current in-progress processes.
+       */
+      memset(processes_in_progress, 0, sizeof(processes_in_progress));
+      rq_concurrency = 0;
+
+      RB_FOREACH(other, praef_node_map, &node->sys->nodes) {
+        if (praef_nd_positive == other->disposition &&
+            other->htm.is_running_scan_process) {
+          ++rq_concurrency;
+          ++processes_in_progress[other->htm.range_query_offset];
+        }
+      }
+
+      if (rq_concurrency < node->sys->htm.scan_concurrency) {
+        for (i = 0; i < PRAEF_SYSTEM_HTM_NUM_SCAN_PROCESSES; ++i) {
+          if (processes_in_progress[i] +
+              node->sys->htm.completed_scan_process_counts[i]
+              < node->sys->htm.scan_redundancy &&
+              !(node->htm.completed_scan_processes & (1 << i))) {
+            /* This process is free and has not yet been serviced by this node;
+             * assign to this node.
+             */
+            node->htm.is_running_scan_process = 1;
+            node->htm.range_query_offset = i;
+            memset(node->htm.current_range_query, 0, PRAEF_HASH_SIZE);
+            praef_node_htm_request_htrange(node);
+            break;
+          }
+        }
+      }
+    }
+  } else {
+    /* Start a root tree query if the appropriate interval has elapsed. */
+    if (node->htm.last_root_query - node->sys->clock.ticks >=
+        node->sys->htm.root_query_interval) {
+      memset(&query, 0, sizeof(query));
+      query.present = PraefMsg_PR_htls;
+      query.choice.htls.snapshot = node->sys->clock.systime -
+        node->sys->htm.root_query_offset;
+      query.choice.htls.hash.size = 0;
+      /* Just point at some arbitrary valid memory location */
+      query.choice.htls.hash.buf = (void*)&query;
+      query.choice.htls.lownybble = 0;
+      PRAEF_OOM_IF_NOT(node->sys, praef_outbox_append(
+                         node->router.rpc_out, &query));
+      node->htm.last_root_query = node->sys->clock.ticks;
+    }
+  }
 }

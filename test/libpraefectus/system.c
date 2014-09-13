@@ -84,7 +84,7 @@ defsetup {
     sys[i] = praef_system_new(&app[i],
                               praef_virtual_bus_mb(bus[i]),
                               praef_virtual_bus_address(bus[i]),
-                              0, praef_sp_lax,
+                              1, praef_sp_lax,
                               praef_siv_any,
                               praef_snl_any,
                               PRAEF_HLMSG_MTU_MIN+8);
@@ -93,7 +93,7 @@ defsetup {
   for (i = 0; i < 4; ++i) {
     for (j = 0; j < 4; ++j) {
       link_from_to[i][j] = praef_virtual_bus_link(bus[i], bus[j]);
-      link_from_to[i][j]->firewall_grace_period = 2;
+      link_from_to[i][j]->firewall_grace_period = 3;
     }
   }
 }

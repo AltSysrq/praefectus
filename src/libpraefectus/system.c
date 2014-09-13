@@ -312,9 +312,11 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
   RB_FOREACH(node, praef_node_map, &this->nodes) {
     praef_node_state_update(node, elapsed);
     praef_node_router_update(node, elapsed);
+    praef_node_htm_update(node, elapsed);
   }
 
   praef_system_join_update(this, elapsed);
+  praef_system_htm_update(this, elapsed);
   praef_system_state_update(this, elapsed);
   (*this->app->advance_bridge)(this->app, elapsed_monotime);
   praef_system_router_update(this, elapsed);

@@ -36,6 +36,10 @@
 
 struct praef_node_s;
 
+#define PRAEF_SYSTEM_HTM_NUM_SCAN_PROCESSES 32
+#define PRAEF_SYSTEM_HTM_RANGE_QUERY_MASK \
+  (PRAEF_SYSTEM_HTM_NUM_SCAN_PROCESSES-1)
+
 typedef struct {
   praef_instant instant;
   const praef_hash_tree* tree;
@@ -44,6 +48,8 @@ typedef struct {
 typedef struct {
   unsigned range_max;
   unsigned range_query_interval;
+  unsigned scan_redundancy;
+  unsigned scan_concurrency;
   unsigned snapshot_interval;
   unsigned num_snapshots;
   unsigned root_query_interval;
@@ -54,20 +60,63 @@ typedef struct {
    * NULL). Sorted from most recent to oldest.
    */
   praef_system_htm_snapshot* snapshots;
+
+  /**
+   * The task of obtaining messages via range queries is divided into 32
+   * separate "processes", each with a mask of 0x1F and an offset of their
+   * respective indices.  Each frame during the scanning_hash_tree connection
+   * state, if a positive-disposition node that is not the local node does not
+   * currently have a running range query, it is assigned the first range
+   * process whose completion count (this array) is less than a certain
+   * redundancy threshold, which it has not already serviced.
+   *
+   * The scanning_hash_tree state is considered complete when either (a) all
+   * range processes have reached the redundancy threshold, or (b) all
+   * candidate nodes have serviced every process once.
+   */
+  unsigned char completed_scan_process_counts[
+    PRAEF_SYSTEM_HTM_NUM_SCAN_PROCESSES];
 } praef_system_htm;
 
 typedef struct {
-  unsigned range_query_mask, range_query_offset;
+  /**
+   * Whether this node is currently servicing a scan process.
+   */
+  int is_running_scan_process;
+  /**
+   * If is_running_scan_process, the range query offset being used for the
+   * current scan process.
+   */
+  unsigned char range_query_offset;
+  /**
+   * The initial hash of the currently in-flight range query as part of the
+   * current scan process.
+   */
   unsigned char current_range_query[PRAEF_HASH_SIZE];
+  /**
+   * The sequential id on the currently in-flight range query as part of the
+   * current scan process.
+   */
   unsigned char current_range_query_id;
-  int has_finished_range_query;
+  /**
+   * The instant at which the most recent range query has been sent, used to
+   * track when to reattempt the most recent query in the absence of an
+   * HtRangeNext message.
+   */
   praef_instant last_range_query;
+  /**
+   * A bitmap of scan processes which this node has already serviced.
+   */
+  unsigned completed_scan_processes;
+  praef_instant last_root_query;
 } praef_node_htm;
 
 int praef_system_htm_init(praef_system*);
 void praef_system_htm_destroy(praef_system*);
+void praef_system_htm_update(praef_system*, unsigned);
 int praef_node_htm_init(struct praef_node_s*);
 void praef_node_htm_destroy(struct praef_node_s*);
+void praef_node_htm_update(struct praef_node_s*, unsigned);
 
 void praef_node_htm_recv_msg_htls(struct praef_node_s*,
                                   const PraefMsgHtLs_t*);
