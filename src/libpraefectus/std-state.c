@@ -44,16 +44,15 @@ int praef_std_state_init(praef_std_state* this) {
   return 1;
 
   fail:
-  if (this->mtx) free(this->mtx);
-  if (this->tx) free(this->tx);
-  if (this->context) free(this->context);
+  if (this->mtx) praef_metatransactor_delete(this->mtx);
+  if (this->tx) praef_transactor_delete(this->tx);
+  else if (this->context) praef_context_delete(this->context);
   return 0;
 }
 
 void praef_std_state_cleanup(praef_std_state* this) {
-  free(this->mtx);
-  free(this->tx);
-  free(this->context);
+  praef_metatransactor_delete(this->mtx);
+  praef_transactor_delete(this->tx);
 }
 
 void praef_std_state_advance(praef_std_state* this,
