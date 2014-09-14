@@ -421,11 +421,11 @@ static praef_hlmsg_type_flag praef_hlmsg_type_flag_for(PraefMsg_PR present) {
   case PraefMsg_PR_received:
   case PraefMsg_PR_jointree:
   case PraefMsg_PR_jtentry:
+  case PraefMsg_PR_route:
     return praef_htf_rpc_type;
 
   case PraefMsg_PR_accept:
   case PraefMsg_PR_commit:
-  case PraefMsg_PR_route:
     return praef_htf_uncommitted_redistributable;
 
   case PraefMsg_PR_chmod:

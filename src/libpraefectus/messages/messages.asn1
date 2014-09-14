@@ -683,23 +683,25 @@ PraefMsgAppUnicast ::= SEQUENCE {
 }
 
 -- Indicates that the sender believes it is maintaining active communication
--- with another host at a particular network address.
+-- with another node.
 --
 -- A route from one node to a particular identifier is considered active if a
 -- Route message has been received for that pair with a timestamp within some
 -- application-defined timeout.
 --
 -- Nodes SHOULD regularly publish Route messages for every route they hold
--- open, and only do so if they have received messages from that network
--- address. This excepts routes to nodes which have the DENY status set, or
--- which have not gained the GRANT status after some time. Nodes SHOULD try to
--- establish routes to destinations of which they learn from other nodes' Route
--- messages.
+-- open, and only do so if they have received RPC messages from that network
+-- address with recent timestamps. This excepts nodes which have the DENY
+-- status set, or which have not gained the GRANT status after some time. Nodes
+-- SHOULD try to establish routes to destinations of which they learn from
+-- other nodes' Route messages.
 --
--- This is an uncommitted redistributable message.
+-- This is an RPC-type message.
 PraefMsgRoute ::= SEQUENCE {
-  -- The identifier of the destination of this route.
-  identifier    PraefNetworkIdentifierPair,
+  -- The id of a node with which the sender is holding a connection. The
+  -- receiver MUST take no special action if it does not know about the given
+  -- node id, even if it knows the id is not permitted.
+  node          PraefNodeId,
   -- The estimated latency between the source node and the destination of this
   -- route, in instants. This is purely advisory.
   latency       INTEGER (0..255)
