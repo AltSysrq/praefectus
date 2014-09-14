@@ -29,6 +29,9 @@
 #define LIBPRAEFECTUS__SYSTEM_ROUTEMGR_H_
 
 #include "system.h"
+#include "messages/PraefMsgPing.h"
+#include "messages/PraefMsgPong.h"
+#include "messages/PraefMsgRoute.h"
 
 typedef struct {
   unsigned ungranted_route_interval;
@@ -39,13 +42,16 @@ typedef struct {
   unsigned char ping_salt[8];
 } praef_system_routemgr;
 
+#define PRAEF_NODE_ROUTEMGR_NUM_LATENCY_SAMPLES 8
+
 typedef struct {
   int has_route;
   praef_instant last_route_message;
   praef_instant last_ping;
   praef_instant last_pong;
+  int in_flight_ping;
   unsigned latency;
-  unsigned latency_samples[8];
+  unsigned latency_samples[PRAEF_NODE_ROUTEMGR_NUM_LATENCY_SAMPLES];
   PraefPingId_t current_ping_id;
 } praef_node_routemgr;
 
@@ -54,5 +60,12 @@ void praef_system_routemgr_destroy(praef_system*);
 
 int praef_node_routemgr_init(struct praef_node_s*);
 void praef_node_routemgr_destroy(struct praef_node_s*);
+
+void praef_system_routemgr_recv_msg_route(
+  praef_system*, const PraefMsgRoute_t*);
+void praef_node_routemgr_recv_msg_ping(
+  struct praef_node_s*, const PraefMsgPing_t*);
+void praef_node_routemgr_recv_msg_pong(
+  struct praef_node_s*, const PraefMsgPong_t*);
 
 #endif /* LIBPRAEFECTUS__SYSTEM_ROUTEMGR_H_ */

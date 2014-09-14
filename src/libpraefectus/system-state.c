@@ -220,11 +220,27 @@ static void praef_system_state_process_message(
     break;
 
   case PraefMsg_PR_jointree:
-    praef_system_join_recv_msg_join_tree(sender, &msg->choice.jointree);
+    if (sender)
+      praef_system_join_recv_msg_join_tree(sender, &msg->choice.jointree);
     break;
 
   case PraefMsg_PR_jtentry:
     praef_system_join_recv_msg_join_tree_entry(sys, &msg->choice.jtentry);
+    break;
+
+  case PraefMsg_PR_ping:
+    if (sender)
+      praef_node_routemgr_recv_msg_ping(sender, &msg->choice.ping);
+    break;
+
+  case PraefMsg_PR_pong:
+    if (sender)
+      praef_node_routemgr_recv_msg_pong(sender, &msg->choice.pong);
+    break;
+
+  case PraefMsg_PR_route:
+    if (sender)
+      praef_system_routemgr_recv_msg_route(sys, &msg->choice.route);
     break;
 
   /* TODO: Handle all cases, remove default */
