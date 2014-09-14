@@ -109,8 +109,6 @@ static void praef_virtual_bus_broadcast(
 static void praef_virtual_bus_send_packet(
   praef_virtual_bus*, praef_virtual_link*,
   int bypass_firewall, const void*, size_t);
-static praef_instant praef_virtual_bus_last_recv(
-  praef_virtual_bus*, const PraefNetworkIdentifierPair_t*);
 static size_t praef_virtual_bus_recv(void*, size_t, praef_virtual_bus*);
 
 static int network_identifiers_equal(const PraefNetworkIdentifierPair_t* a,
@@ -255,8 +253,6 @@ static praef_virtual_bus* praef_virtual_bus_new(praef_virtual_network* network) 
     (praef_message_bus_unicast_t)praef_virtual_bus_triangular_unicast;
   this->message_bus.broadcast =
     (praef_message_bus_broadcast_t)praef_virtual_bus_broadcast;
-  this->message_bus.last_recv =
-    (praef_message_bus_last_recv_t)praef_virtual_bus_last_recv;
   this->message_bus.recv =
     (praef_message_bus_recv_t)praef_virtual_bus_recv;
 
@@ -438,21 +434,6 @@ static void praef_virtual_bus_send_packet(
     link->parms.base_latency + (rand() % (link->parms.variable_latency+1));
 
   TAILQ_INSERT_TAIL(&link->destination->in_flight, message, next);
-}
-
-static praef_instant praef_virtual_bus_last_recv(
-  praef_virtual_bus* this, const PraefNetworkIdentifierPair_t* id
-) {
-  praef_virtual_link* link;
-
-  SLIST_FOREACH(link, &this->outbound_links, next)
-    if (network_identifiers_equal(
-          id, &link->destination->network_identifier_pair) &&
-        link->reverse)
-      return link->reverse->is_route_open?
-        this->network->exttime : link->reverse->last_xmit_exttime;
-
-  return 0;
 }
 
 static size_t praef_virtual_bus_recv(void* dst, size_t max,

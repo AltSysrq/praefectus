@@ -103,14 +103,6 @@ typedef void (*praef_message_bus_broadcast_t)(
   const void*, size_t);
 
 /**
- * Returns the instant at which the bus last considered the route to the given
- * remote host healthy. If there is no such route, returns 0.
- */
-typedef praef_instant (*praef_message_bus_last_recv_t)(
-  praef_message_bus*,
-  const PraefNetworkIdentifierPair_t*);
-
-/**
  * Pulls an incoming message from the message bus.
  *
  * Each call will read a different message from the bus, so messages will be
@@ -134,7 +126,6 @@ struct praef_message_bus_s {
   praef_message_bus_unicast_t triangular_unicast;
   praef_message_bus_broadcast_t broadcast;
 
-  praef_message_bus_last_recv_t last_recv;
   praef_message_bus_recv_t recv;
 };
 
