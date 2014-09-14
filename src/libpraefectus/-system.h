@@ -145,6 +145,8 @@ int praef_system_is_permissible_netid(
 int praef_system_net_id_pair_equal(
   const PraefNetworkIdentifierPair_t*, const PraefNetworkIdentifierPair_t*);
 
+int praef_node_has_grant(praef_node*);
+int praef_node_has_deny(praef_node*);
 int praef_node_is_alive(praef_node*);
 
 int praef_compare_nodes(const praef_node*, const praef_node*);

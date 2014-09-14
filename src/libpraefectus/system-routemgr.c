@@ -32,8 +32,28 @@
 #include <string.h>
 
 #include "-system.h"
+#include "keccak.h"
 #include "secure-random.h"
 #include "messages/PraefMsg.h"
+
+static void praef_node_routemgr_send_routes(praef_node*);
+static void praef_node_routemgr_send_ping(praef_node*);
+
+void praef_system_conf_ungranted_route_interval(praef_system* sys, unsigned i) {
+  sys->routemgr.ungranted_route_interval = i;
+}
+
+void praef_system_conf_granted_route_interval(praef_system* sys, unsigned i) {
+  sys->routemgr.granted_route_interval = i;
+}
+
+void praef_system_conf_ping_interval(praef_system* sys, unsigned i) {
+  sys->routemgr.ping_interval = i;
+}
+
+void praef_system_conf_max_pong_silence(praef_system* sys, unsigned i) {
+  sys->routemgr.max_pong_silence = i;
+}
 
 int praef_system_routemgr_init(praef_system* sys) {
   sys->routemgr.ungranted_route_interval = 4 * sys->std_latency;
@@ -51,6 +71,7 @@ int praef_system_routemgr_init(praef_system* sys) {
 void praef_system_routemgr_destroy(praef_system* sys) { }
 
 int praef_node_routemgr_init(praef_node* node) {
+  node->routemgr.last_pong = node->sys->clock.ticks;
   return 1;
 }
 
@@ -62,6 +83,8 @@ void praef_system_routemgr_recv_msg_route(
   praef_node* other = praef_system_get_node(sys, msg->node);
   if (other && praef_nd_neutral == other->disposition)
     other->disposition = praef_nd_positive;
+
+  /* TODO: We should do something with the attached latency here */
 }
 
 void praef_node_routemgr_recv_msg_ping(
@@ -101,3 +124,86 @@ void praef_node_routemgr_recv_msg_pong(
   node->routemgr.latency = sum / PRAEF_NODE_ROUTEMGR_NUM_LATENCY_SAMPLES;
 }
 
+void praef_node_routemgr_update(praef_node* node, unsigned elapsed) {
+  unsigned route_interval;
+
+  /* Ignoring the local node, we want to ensure there is a route to any
+   * positive node, and that there is no route to any negative node.
+   */
+  if (node != node->sys->local_node) {
+    if (praef_nd_positive == node->disposition && !node->routemgr.has_route) {
+      (*node->bus->create_route)(node->bus, &node->net_id);
+      node->routemgr.has_route = 1;
+    } else if (praef_nd_negative == node->disposition &&
+               node->routemgr.has_route) {
+      (*node->bus->delete_route)(node->bus, &node->net_id);
+      node->routemgr.has_route = 0;
+    }
+  }
+
+  if (praef_node_has_deny(node) || praef_nd_negative == node->disposition)
+    return;
+
+  if (node->sys->clock.ticks - node->routemgr.last_pong >
+      node->sys->routemgr.max_pong_silence) {
+    node->disposition = praef_nd_negative;
+    return;
+  }
+
+  route_interval = praef_node_has_grant(node)?
+    node->sys->routemgr.granted_route_interval :
+    node->sys->routemgr.ungranted_route_interval;
+
+  if (node->sys->clock.ticks - node->routemgr.last_route_message >=
+      route_interval)
+    praef_node_routemgr_send_routes(node);
+
+  if (node->sys->clock.ticks - node->routemgr.last_ping >=
+      node->sys->routemgr.ping_interval)
+    praef_node_routemgr_send_ping(node);
+}
+
+static void praef_node_routemgr_send_routes(praef_node* to) {
+  PraefMsg_t msg;
+  praef_node* node;
+
+  memset(&msg, 0, sizeof(msg));
+  msg.present = PraefMsg_PR_route;
+
+  RB_FOREACH(node, praef_node_map, &to->sys->nodes) {
+    if (praef_nd_positive == node->disposition) {
+      msg.choice.route.node = node->id;
+      if (node->routemgr.latency <= 255)
+        msg.choice.route.latency = node->routemgr.latency;
+      else
+        msg.choice.route.latency = 255;
+
+      PRAEF_OOM_IF_NOT(to->sys, praef_outbox_append(
+                         to->router.rpc_out, &msg));
+    }
+  }
+}
+
+static void praef_node_routemgr_send_ping(praef_node* to) {
+  praef_keccak_sponge sponge;
+  PraefMsg_t msg;
+
+  memset(&msg, 0, sizeof(msg));
+  msg.present = PraefMsg_PR_ping;
+  praef_sha3_init(&sponge);
+  praef_keccak_sponge_absorb(&sponge, to->sys->routemgr.ping_salt,
+                             sizeof(to->sys->routemgr.ping_salt));
+  /* Since this is just an RNG, don't care about endianness. */
+  praef_keccak_sponge_absorb(&sponge, (void*)&to->routemgr.current_ping_id,
+                             sizeof(to->routemgr.current_ping_id));
+  praef_keccak_sponge_squeeze(&sponge, (void*)&to->routemgr.current_ping_id,
+                              sizeof(to->routemgr.current_ping_id));
+  praef_keccak_sponge_squeeze(&sponge, to->sys->routemgr.ping_salt,
+                              sizeof(to->sys->routemgr.ping_salt));
+  msg.choice.ping.id = to->routemgr.current_ping_id;
+  PRAEF_OOM_IF_NOT(to->sys, praef_outbox_append(
+                     to->router.rpc_out, &msg));
+
+  to->routemgr.in_flight_ping = 1;
+  to->routemgr.last_ping = to->sys->clock.ticks;
+}

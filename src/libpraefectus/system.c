@@ -283,14 +283,20 @@ void praef_system_bootstrap(praef_system* this) {
     (*this->app->acquire_id_opt)(this->app, PRAEF_BOOTSTRAP_NODE);
 }
 
-int praef_node_is_alive(praef_node* node) {
+int praef_node_has_grant(praef_node* node) {
   praef_system* sys = node->sys;
+  return sys->clock.monotime <
+     (*sys->app->get_node_grant_bridge)(sys->app, node->id);
+}
 
-  return
-    (sys->clock.monotime <
-     (*sys->app->get_node_grant_bridge)(sys->app, node->id)) &&
-    (sys->clock.monotime >=
-     (*sys->app->get_node_deny_bridge)(sys->app, node->id));
+int praef_node_has_deny(praef_node* node) {
+  praef_system* sys = node->sys;
+  return sys->clock.monotime <
+    (*sys->app->get_node_deny_bridge)(sys->app, node->id);
+}
+
+int praef_node_is_alive(praef_node* node) {
+  return praef_node_has_grant(node) && !praef_node_has_deny(node);
 }
 
 static int praef_system_self_alive(praef_system* this) {
@@ -317,6 +323,7 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
     praef_node_state_update(node, elapsed);
     praef_node_router_update(node, elapsed);
     praef_node_htm_update(node, elapsed);
+    praef_node_routemgr_update(node, elapsed);
   }
 
   praef_system_join_update(this, elapsed);

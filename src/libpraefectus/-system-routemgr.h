@@ -60,6 +60,7 @@ void praef_system_routemgr_destroy(praef_system*);
 
 int praef_node_routemgr_init(struct praef_node_s*);
 void praef_node_routemgr_destroy(struct praef_node_s*);
+void praef_node_routemgr_update(struct praef_node_s*, unsigned);
 
 void praef_system_routemgr_recv_msg_route(
   praef_system*, const PraefMsgRoute_t*);
