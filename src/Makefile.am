@@ -48,6 +48,7 @@ libpraefectus/system-state.c \
 libpraefectus/system-router.c \
 libpraefectus/system-join.c \
 libpraefectus/system-htm.c \
+libpraefectus/system-routemgr.c \
 libpraefectus/system.c \
 libpraefectus/stdsys.c
 

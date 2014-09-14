@@ -959,5 +959,60 @@ void praef_system_conf_ht_root_query_interval(praef_system*, unsigned);
  * The default is std_latency*4.
  */
 void praef_system_conf_ht_root_query_offset(praef_system*, unsigned);
+/**
+ * Controls the interval at which Route messages are sent to new nodes that
+ * have received neither the GRANT nor the DENY status.
+ *
+ * Lower values will allow new nodes to discover which nodes in the system are
+ * still active, which makes their connection faster, and will generally reduce
+ * load on the initial node to which they connect, as the hash tree scan will
+ * be better distributed. The only cost is bandwidth, which is fairly low.
+ *
+ * The default is 4*std_latency.
+ */
+void praef_system_conf_ungranted_route_interval(praef_system*, unsigned);
+/**
+ * Controls the interval at which Route messages are sent to nodes which have
+ * already received the GRANT status and have not received the DENY status.
+ *
+ * Lower values increase the probability of new nodes surviving untimely
+ * network partitions and reduce the window of the initial connection target
+ * being a single point of failure, but otherwise have little effect. As with
+ * praef_system_conf_ungranted_route_interval(), the only real cost is
+ * bandwidth.
+ *
+ * The default is 32*std_latency.
+ */
+void praef_system_conf_granted_route_interval(praef_system*, unsigned);
+/**
+ * Controls the interval at which new Ping messages will be sent to other
+ * nodes.
+ *
+ * Lower values yield more accurate short-term estimates of latency, thus
+ * adapting more quickly to changes in the behaviour of the network. However,
+ * this also acts as a cap on the maximum network latency between any two
+ * nodes, beyond which both nodes will switch to a negative disposition towards
+ * each other.
+ *
+ * The default is 16*std_latency.
+ */
+void praef_system_conf_ping_interval(praef_system*, unsigned);
+/**
+ * Controls the maximum amount of time that may elapse since receiving a valid
+ * Pong response from another node before the local node will switch to a
+ * negative disposition to this node. This occurs even if other traffic is
+ * still being received from that node.
+ *
+ * This is primarily a defence against nodes deliberately not responding to
+ * Pings in order to hide their latency; commit and verification lag are the
+ * primary means of liveness testing.
+ *
+ * Lower values increase the chance of incorrectly identifying a node as dead
+ * or malicious due to packet loss.
+ *
+ * The default is 128*std_latency, ie, up to 8 pings at the default interval
+ * may be lost.
+ */
+void praef_system_conf_max_pong_silence(praef_system*, unsigned);
 
 #endif /* LIBPRAEFECTUS_SYSTEM_H_ */
