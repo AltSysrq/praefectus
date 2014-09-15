@@ -386,6 +386,17 @@ typedef void (*praef_app_ht_scan_progress_t)(
   praef_app*, unsigned numerator, unsigned denominator);
 
 /**
+ * Notifies the application that the local node has tenatively received the
+ * GRANT status for the first time. This is usually permanent, though in
+ * certain circumstances the status could be temporarily or even permanently
+ * lost after this notification.
+ *
+ * Generally, the application can view this notification as an intication that
+ * the system is fully set up and ready for full use.
+ */
+typedef void (*praef_app_gained_grant_t)(praef_app*);
+
+/**
  * Notifies the application that it has received an application-defined unicast
  * message.
  *
@@ -440,6 +451,7 @@ struct praef_app_s {
   praef_app_remove_node_t remove_node_opt;
   praef_app_join_tree_traversed_t join_tree_traversed_opt;
   praef_app_ht_scan_progress_t ht_scan_progress_opt;
+  praef_app_gained_grant_t gained_grant_opt;
 
   /* Optional application-defined-message callbacks */
   praef_app_recv_unicast_t recv_unicast_opt;
@@ -1032,5 +1044,44 @@ void praef_system_conf_max_pong_silence(praef_system*, unsigned);
  * The default is 256*std_latency.
  */
 void praef_system_conf_route_kill_delay(praef_system*, unsigned);
+/**
+ * Controls the interval at which the local node will propose for itself to
+ * gain the GRANT status once it feels it is ready to handle it.
+ *
+ * Larger values will somewhat reduce the time required to join a system in the
+ * face of packet loss, at the cost of slightly greater bandwidth usage.
+ *
+ * The default is 16*std_latency.
+ */
+void praef_system_conf_propose_grant_interval(praef_system*, unsigned);
+/**
+ * Controls the frequency at which the local node will suggest setting the DENY
+ * bit on any node it feels negatively about.
+ *
+ * All nodes in the system should use the same value for this configuration to
+ * minimise bandwidth, though the penalty for not doing so is reasonably
+ * small. Larger values increase bandwidth usage, but will somewhat reduce the
+ * time needed to start DENYing another node.
+ *
+ * The default is 16*std_latency.
+ *
+ * @see praef_system_conf_vote_chmod_offset()
+ */
+void praef_system_conf_vote_deny_interval(praef_system*, unsigned);
+/**
+ * Controls the offset into the future at which GRANT/DENY suggestions produced
+ * by the local node are proposed to take effect.
+ *
+ * All nodes in the system MUST use the same value for this configuration or
+ * risk divergence. Larger values increase the probability of a status change
+ * carrying when sufficient nodes are in agreement, at the cost of it taking
+ * longer for the the status change to take effect.
+ *
+ * This setting also controls the maximum distance into the future relative to
+ * the message envelope at which chmod events will be accepted.
+ *
+ * The default is 16*std_latency.
+ */
+void praef_system_conf_vote_chmod_offset(praef_system*, unsigned);
 
 #endif /* LIBPRAEFECTUS_SYSTEM_H_ */

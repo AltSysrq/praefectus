@@ -201,6 +201,11 @@ static void praef_system_state_process_message(
       praef_system_state_process_vote(sys, sender, instant, &msg->choice.vote);
     break;
 
+  case PraefMsg_PR_chmod:
+    if (sender)
+      praef_node_mod_recv_msg_chmod(sender, instant, &msg->choice.chmod);
+    break;
+
   case PraefMsg_PR_getnetinfo:
     praef_system_join_recv_msg_get_network_info(sys, &msg->choice.getnetinfo);
     break;

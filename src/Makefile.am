@@ -49,6 +49,7 @@ libpraefectus/system-router.c \
 libpraefectus/system-join.c \
 libpraefectus/system-htm.c \
 libpraefectus/system-routemgr.c \
+libpraefectus/system-mod.c \
 libpraefectus/system.c \
 libpraefectus/stdsys.c
 
@@ -100,7 +101,6 @@ libpraefectus_messages_la_CFLAGS = -w -Iasn1-support
 libasn1_support_la_SOURCES = \
 asn1-support/BIT_STRING.c \
 asn1-support/BOOLEAN.c \
-asn1-support/ENUMERATED.c \
 asn1-support/INTEGER.c \
 asn1-support/NULL.c \
 asn1-support/NativeEnumerated.c \

@@ -62,6 +62,7 @@
 #include "-system-join.h"
 #include "-system-htm.h"
 #include "-system-routemgr.h"
+#include "-system-mod.h"
 
 typedef enum {
   praef_nd_neutral = 0,
@@ -74,6 +75,7 @@ typedef enum {
   praef_sjs_request_cxn,
   praef_sjs_walking_join_tree,
   praef_sjs_scanning_hash_tree,
+  praef_sjs_requesting_grant,
   praef_sjs_connected
 } praef_system_join_state;
 
@@ -91,6 +93,7 @@ typedef struct praef_node_s {
   praef_node_join join;
   praef_node_htm htm;
   praef_node_routemgr routemgr;
+  praef_node_mod mod;
 
   RB_ENTRY(praef_node_s) map;
 } praef_node;
@@ -118,6 +121,7 @@ struct praef_system_s {
   praef_system_join join;
   praef_system_htm htm;
   praef_system_routemgr routemgr;
+  praef_system_mod mod;
 
   struct praef_node_map nodes;
 
