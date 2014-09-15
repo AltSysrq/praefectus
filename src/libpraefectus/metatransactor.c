@@ -623,6 +623,41 @@ int praef_metatransactor_chmod(praef_metatransactor* this,
   return 1;
 }
 
+int praef_metatransactor_has_chmod(praef_metatransactor* this,
+                                   praef_object_id target_id,
+                                   praef_object_id voter_id,
+                                   praef_metatransactor_node_status mask,
+                                   praef_instant instant) {
+  praef_metatransactor_node* target, * voter;
+  praef_metatransactor_chmod_evt* chmod;
+  praef_metatransactor_chmod_vote* vote;
+  unsigned bit_to_set;
+  target = (praef_metatransactor_node*)
+    praef_context_get_object(this->context, target_id);
+  voter = (praef_metatransactor_node*)
+    praef_context_get_object(this->context, voter_id);
+
+  if (!target || !voter) return 0;
+
+  switch (mask) {
+  case PRAEF_METATRANSACTOR_NS_GRANT: bit_to_set = GRANT_BIT; break;
+  case PRAEF_METATRANSACTOR_NS_DENY:  bit_to_set = DENY_BIT;  break;
+  default: return 0;
+  }
+
+  /* See if such an event already exists */
+  chmod = (praef_metatransactor_chmod_evt*)
+    praef_context_get_event(this->context, target_id, instant, bit_to_set);
+  if (!chmod) return 0;
+
+  /* See if the voter has already cast this vote. If so, return silently. */
+  SLIST_FOREACH(vote, &chmod->votes, next)
+    if (voter == vote->voter)
+      return 1;
+
+  return 0;
+}
+
 praef_instant praef_metatransactor_get_grant(praef_metatransactor* this,
                                              praef_object_id node) {
   return ((praef_metatransactor_node*)praef_context_get_object(

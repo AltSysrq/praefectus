@@ -169,7 +169,9 @@ deftest(node_can_join) {
 
   ck_assert(praef_metatransactor_add_node(that, 2));
   ck_assert(praef_metatransactor_add_event(that, 2, CLONE(evt)));
+  ck_assert(!praef_metatransactor_has_chmod(that, 2, 2, NS_GRANT, 2));
   ck_assert(praef_metatransactor_chmod(that, 2, 2, NS_GRANT, 2));
+  ck_assert(praef_metatransactor_has_chmod(that, 2, 2, NS_GRANT, 2));
   praef_metatransactor_advance(that, 3);
   ck_assert_int_eq(1, node_count);
   ck_assert_int_eq(0, accepted);

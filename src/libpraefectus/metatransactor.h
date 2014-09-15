@@ -159,6 +159,17 @@ int praef_metatransactor_chmod(praef_metatransactor*,
                                praef_instant when);
 
 /**
+ * Returns whether a vote with the given parameters (as per
+ * praef_metatransactor_chmod()) have already been added to the
+ * metatransactor.
+ */
+int praef_metatransactor_has_chmod(praef_metatransactor*,
+                                   praef_object_id target,
+                                   praef_object_id voter,
+                                   praef_metatransactor_node_status mask,
+                                   praef_instant when);
+
+/**
  * Returns the instant at which the given node gained/will gain the GRANT bit,
  * though usually the only future time returned will be ~0.
  *
