@@ -29,6 +29,8 @@
 #include <config.h>
 #endif
 
+#include <assert.h>
+
 #include "-system.h"
 #include "messages/PraefMsg.h"
 
@@ -109,12 +111,23 @@ void praef_node_mod_update(praef_node* node, unsigned delta) {
   }
 }
 
+static int praef_system_mod_is_chmod_permissible(
+  praef_system* sys,
+  praef_instant envelope_instant, const PraefMsgChmod_t* msg
+) {
+  return envelope_instant <= msg->effective &&
+    msg->effective - envelope_instant <= sys->mod.vote_chmod_offset;
+}
+
 void praef_node_mod_recv_msg_chmod(praef_node* node,
                                    praef_instant envelope_instant,
                                    const PraefMsgChmod_t* msg) {
+  PraefMsg_t echo;
+  praef_node* target;
+
   /* Ensure the time is within acceptable bounds */
-  if (envelope_instant > msg->effective ||
-      msg->effective - envelope_instant > node->sys->mod.vote_chmod_offset) {
+  if (!praef_system_mod_is_chmod_permissible(
+        node->sys, envelope_instant, msg)) {
     /* Out of bounds. Ignore the request and exact revenge. */
     node->disposition = praef_nd_negative;
     return;
@@ -123,9 +136,51 @@ void praef_node_mod_recv_msg_chmod(praef_node* node,
   /* TODO: The whole hlmsg must be discarded if we don't know about the node in
    * this message.
    */
+  target = praef_system_get_node(node->sys, msg->node);
+  assert(target);
 
   /* OK. Pass on to the lower system. If we agree with the vote, echo it if we
    * haven't already done so.
    */
-  /* TODO */
+  (*node->sys->app->chmod_bridge)(node->sys->app,
+                                  msg->node,
+                                  node->id,
+                                  1 << msg->bit,
+                                  msg->effective);
+  if (!(*node->sys->app->has_chmod_bridge)(
+        node->sys->app,
+        msg->node,
+        node->sys->local_node->id,
+        1 << msg->bit,
+        msg->effective)) {
+    /* Not yet present, echo if we agree and if we won't be violating time
+     * constraints in doing so.
+     */
+    if ((praef_nd_negative == target->disposition &&
+         PraefMsgChmod__bit_deny == msg->bit &&
+         !praef_node_has_deny(target)) ||
+        (praef_nd_positive == target->disposition &&
+         PraefMsgChmod__bit_grant == msg->bit &&
+         !praef_node_has_grant(target))) {
+      memset(&echo, 0, sizeof(echo));
+      echo.present = PraefMsg_PR_chmod;
+      memcpy(&echo.choice.chmod, msg, sizeof(PraefMsgChmod_t));
+
+      if (praef_system_mod_is_chmod_permissible(
+            node->sys, praef_outbox_get_now(node->sys->router.cr_out),
+            &echo.choice.chmod)) {
+        PRAEF_OOM_IF_NOT(node->sys, praef_outbox_append(
+                           node->sys->router.cr_out, &echo));
+
+        /* Immediately loop it back into this function, so that multiple
+         * identical votes from this frame don't result in duplicate outbound
+         * messages (which could snowball).
+         */
+        praef_node_mod_recv_msg_chmod(
+          node->sys->local_node,
+          praef_outbox_get_now(node->sys->router.cr_out),
+          &echo.choice.chmod);
+      }
+    }
+  }
 }

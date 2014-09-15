@@ -252,6 +252,12 @@ int praef_hlmsg_encoder_append(praef_hlmsg* dst,
                                praef_hlmsg_encoder*,
                                const PraefMsg_t*);
 /**
+ * Returns the timestamp that will be attached to new hlmsgs produced by the
+ * given encoder.
+ */
+praef_instant praef_hlmsg_encoder_get_now(const praef_hlmsg_encoder*);
+
+/**
  * Changes the timestamp attached to further hlmsgs produced by the given
  * encoder. The encoder MUST currently be empty.
  */

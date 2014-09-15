@@ -323,6 +323,10 @@ void praef_hlmsg_encoder_delete(praef_hlmsg_encoder* this) {
   free(this);
 }
 
+praef_instant praef_hlmsg_encoder_get_now(const praef_hlmsg_encoder* this) {
+  return this->now;
+}
+
 void praef_hlmsg_encoder_set_now(praef_hlmsg_encoder* this, praef_instant now) {
   assert(0 == this->msg.size);
   this->now = now;

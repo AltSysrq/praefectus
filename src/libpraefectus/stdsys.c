@@ -55,6 +55,9 @@ static void praef_stdsys_neutralise_event(
 static void praef_stdsys_chmod(
   praef_app*, praef_object_id, praef_object_id,
   unsigned, praef_instant);
+static int praef_stdsys_has_chmod(
+  praef_app*, praef_object_id, praef_object_id,
+  unsigned, praef_instant);
 static void praef_stdsys_vote(
   praef_app*, praef_object_id,
   praef_object_id, praef_instant,
@@ -84,6 +87,7 @@ praef_app* praef_stdsys_new(praef_std_state* stack) {
   this->app.insert_event_bridge = praef_stdsys_insert_event;
   this->app.neutralise_event_bridge = praef_stdsys_neutralise_event;
   this->app.chmod_bridge = praef_stdsys_chmod;
+  this->app.has_chmod_bridge = praef_stdsys_has_chmod;
   this->app.vote_bridge = praef_stdsys_vote;
   this->app.advance_bridge = praef_stdsys_advance;
   return (praef_app*)this;
@@ -189,6 +193,12 @@ static void praef_stdsys_chmod(praef_app* this, praef_object_id target,
   if (!praef_metatransactor_chmod(STACK->mtx,
                                   target, voter, mask, when))
     praef_system_oom(SYSTEM);
+}
+
+static int praef_stdsys_has_chmod(praef_app* this, praef_object_id target,
+                                  praef_object_id voter, unsigned mask,
+                                  praef_instant when) {
+  return praef_metatransactor_has_chmod(STACK->mtx, target, voter, mask, when);
 }
 
 static void praef_stdsys_vote(praef_app* this,

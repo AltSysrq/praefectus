@@ -87,6 +87,11 @@ int praef_outbox_append_singleton(praef_outbox*, const PraefMsg_t*);
 int praef_outbox_flush(praef_outbox*);
 
 /**
+ * Returns the concept of "now" on messages encoded with the given outbox.
+ */
+praef_instant praef_outbox_get_now(const praef_outbox*);
+
+/**
  * Updates the concept of "now" for the encoder and all subscribed mqs.
  */
 void praef_outbox_set_now(praef_outbox*, praef_instant);

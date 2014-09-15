@@ -242,6 +242,17 @@ typedef void (*praef_app_neutralise_event_t)(praef_app*, praef_event* event);
 typedef void (*praef_app_chmod_t)(praef_app*, praef_object_id target,
                                   praef_object_id voter, unsigned mask,
                                   praef_instant when);
+/**
+ * Returns whether a chmod with the given parameters (as per
+ * praef_app_chmod_t()) has already been added to the underlying system. This
+ * corresponds to praef_metatransactor_has_chmod().
+ *
+ * The vast majority of applications will simply use the implementation
+ * provided by the standard system bridge.
+ */
+typedef int (*praef_app_has_chmod_t)(praef_app*, praef_object_id target,
+                                     praef_object_id voter, unsigned mask,
+                                     praef_instant when);
 
 /**
  * Inserts an event vote into the lower layer of the system. This corresponds
@@ -437,6 +448,7 @@ struct praef_app_s {
   praef_app_insert_event_t insert_event_bridge;
   praef_app_neutralise_event_t neutralise_event_bridge;
   praef_app_chmod_t chmod_bridge;
+  praef_app_has_chmod_t has_chmod_bridge;
   praef_app_vote_t vote_bridge;
   praef_app_advance_t advance_bridge;
 

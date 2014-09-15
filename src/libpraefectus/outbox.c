@@ -173,6 +173,10 @@ int praef_outbox_flush(praef_outbox* this) {
   return ok && this->next;
 }
 
+praef_instant praef_outbox_get_now(const praef_outbox* this) {
+  return praef_hlmsg_encoder_get_now(this->enc);
+}
+
 void praef_outbox_set_now(praef_outbox* this, praef_instant now) {
   praef_hlmsg_encoder_set_now(this->enc, now);
   this->now = now;
