@@ -55,11 +55,16 @@ void praef_system_conf_max_pong_silence(praef_system* sys, unsigned i) {
   sys->routemgr.max_pong_silence = i;
 }
 
+void praef_system_conf_route_kill_delay(praef_system* sys, unsigned i) {
+  sys->routemgr.route_kill_delay = i;
+}
+
 int praef_system_routemgr_init(praef_system* sys) {
   sys->routemgr.ungranted_route_interval = 4 * sys->std_latency;
   sys->routemgr.granted_route_interval = 32 * sys->std_latency;
   sys->routemgr.ping_interval = 16 * sys->std_latency;
   sys->routemgr.max_pong_silence = 128 * sys->std_latency;
+  sys->routemgr.route_kill_delay = 256 * sys->std_latency;
 
   if (!praef_secure_random(sys->routemgr.ping_salt,
                            sizeof(sys->routemgr.ping_salt)))
@@ -124,18 +129,30 @@ void praef_node_routemgr_recv_msg_pong(
   node->routemgr.latency = sum / PRAEF_NODE_ROUTEMGR_NUM_LATENCY_SAMPLES;
 }
 
+static int praef_node_routemgr_should_kill(praef_node* node) {
+  praef_instant deny = (*node->sys->app->get_node_deny_bridge)(
+    node->sys->app, node->id);
+
+  /* Seemingly redundant check to avoid overflow */
+  return deny < node->sys->clock.monotime &&
+    deny + node->sys->routemgr.route_kill_delay <
+    node->sys->clock.monotime;
+}
+
 void praef_node_routemgr_update(praef_node* node, unsigned elapsed) {
   unsigned route_interval;
 
   /* Ignoring the local node, we want to ensure there is a route to any
-   * positive node, and that there is no route to any negative node.
+   * positive node, and that there is no route to any negative node which has
+   * had DENY for the requisite amount of time.
    */
   if (node != node->sys->local_node) {
     if (praef_nd_positive == node->disposition && !node->routemgr.has_route) {
       (*node->bus->create_route)(node->bus, &node->net_id);
       node->routemgr.has_route = 1;
     } else if (praef_nd_negative == node->disposition &&
-               node->routemgr.has_route) {
+               node->routemgr.has_route &&
+               praef_node_routemgr_should_kill(node)) {
       (*node->bus->delete_route)(node->bus, &node->net_id);
       node->routemgr.has_route = 0;
     }

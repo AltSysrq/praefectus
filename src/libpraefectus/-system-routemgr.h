@@ -38,6 +38,7 @@ typedef struct {
   unsigned granted_route_interval;
   unsigned ping_interval;
   unsigned max_pong_silence;
+  unsigned route_kill_delay;
 
   unsigned char ping_salt[8];
 } praef_system_routemgr;

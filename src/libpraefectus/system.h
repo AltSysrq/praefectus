@@ -1014,5 +1014,23 @@ void praef_system_conf_ping_interval(praef_system*, unsigned);
  * may be lost.
  */
 void praef_system_conf_max_pong_silence(praef_system*, unsigned);
+/**
+ * Controls the amount of time after a node has received the DENY status that
+ * the local node permanently kills its route to that node.
+ *
+ * When a remote node first gets killed, the local node will continue
+ * maintaining communications with it for a while, in case new information
+ * causes the DENY status to be retroactively removed. This reduces the
+ * negative effects of such an error, though the local node will continue
+ * attempting to make the DENY status permanent.
+ *
+ * Larger values improve the resilience to DENY revocations. However, there is
+ * a (potentially substantial) cost of both bandwidth and CPU if the node
+ * incorrectly or maliciously acts as if it is still alive, due to divergence
+ * of hash trees and ack lists.
+ *
+ * The default is 256*std_latency.
+ */
+void praef_system_conf_route_kill_delay(praef_system*, unsigned);
 
 #endif /* LIBPRAEFECTUS_SYSTEM_H_ */
