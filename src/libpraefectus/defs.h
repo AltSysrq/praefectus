@@ -42,6 +42,14 @@
 #define UNDOT(type,member,ptr)                  \
   ((type*)(((char*)(ptr)) - offsetof(type, member)))
 
+/* Since asn1c makes all its integer types "long", explicitly define our
+ * intended sizes here.
+ *
+ * It would be nice to have something less fragile, though.
+ */
+#define SIZEOF_ASN1_SHORT 2
+#define SIZEOF_ASN1_DWORD 4
+
 #else /* LIBPRAEFECTUS_DEFS_H_ already defined... */
 
 #error "defs.h" included twice. This probably means a header included it, which is forbidden.

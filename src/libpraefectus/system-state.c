@@ -228,6 +228,31 @@ static void praef_system_state_process_message(
     praef_system_join_recv_msg_join_tree_entry(sys, &msg->choice.jtentry);
     break;
 
+  case PraefMsg_PR_htls:
+    if (sender)
+      praef_node_htm_recv_msg_htls(sender, &msg->choice.htls);
+    break;
+
+  case PraefMsg_PR_htdir:
+    if (sender)
+      praef_node_htm_recv_msg_htdir(sender, &msg->choice.htdir);
+    break;
+
+  case PraefMsg_PR_htread:
+    if (sender)
+      praef_node_htm_recv_msg_htread(sender, &msg->choice.htread);
+    break;
+
+  case PraefMsg_PR_htrange:
+    if (sender)
+      praef_node_htm_recv_msg_htrange(sender, &msg->choice.htrange);
+    break;
+
+  case PraefMsg_PR_htrangenext:
+    if (sender)
+      praef_node_htm_recv_msg_htrangenext(sender, &msg->choice.htrangenext);
+    break;
+
   case PraefMsg_PR_ping:
     if (sender)
       praef_node_routemgr_recv_msg_ping(sender, &msg->choice.ping);

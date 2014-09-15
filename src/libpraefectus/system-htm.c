@@ -34,6 +34,7 @@
 #include "keccak.h"
 #include "system.h"
 #include "-system.h"
+#include "defs.h"
 
 static int praef_node_htm_is_visible(praef_node*, praef_instant);
 static const praef_hash_tree* praef_system_htm_get_snapshot(
@@ -260,7 +261,7 @@ static PraefDword_t praef_system_htm_objhash(
 
   praef_keccak_sponge_absorb(&sponge, pubkey, PRAEF_PUBKEY_SIZE);
   praef_keccak_sponge_absorb_integer(&sponge, instant, sizeof(praef_instant));
-  return praef_keccak_sponge_squeeze_integer(&sponge, sizeof(PraefDword_t));
+  return praef_keccak_sponge_squeeze_integer(&sponge, SIZEOF_ASN1_DWORD);
 }
 
 static PraefDword_t praef_system_htm_dirhash(
@@ -274,7 +275,7 @@ static PraefDword_t praef_system_htm_dirhash(
   praef_keccak_sponge_absorb_integer(&sponge, sid, sizeof(sid));
   praef_keccak_sponge_absorb(&sponge, pubkey, PRAEF_PUBKEY_SIZE);
   praef_keccak_sponge_absorb_integer(&sponge, instant, sizeof(instant));
-  return praef_keccak_sponge_squeeze_integer(&sponge, sizeof(PraefDword_t));
+  return praef_keccak_sponge_squeeze_integer(&sponge, SIZEOF_ASN1_DWORD);
 }
 
 void praef_node_htm_recv_msg_htdir(praef_node* node,
@@ -624,7 +625,7 @@ void praef_node_htm_update(praef_node* node, unsigned elapsed) {
   praef_node* other;
   PraefMsg_t query;
 
-  if (!praef_nd_positive != node->disposition ||
+  if (praef_nd_positive != node->disposition ||
       node == node->sys->local_node) return;
 
   if (praef_sjs_scanning_hash_tree == node->sys->join_state) {
