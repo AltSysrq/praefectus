@@ -31,6 +31,28 @@
 
 #include "-system.h"
 
+void praef_system_conf_commit_interval(praef_system* sys, unsigned i) {
+  sys->commit.commit_interval = i;
+}
+
+void praef_system_conf_max_commit_lag(praef_system* sys, unsigned i) {
+  sys->commit.max_commit_lag = i;
+}
+
+void praef_system_conf_max_validated_lag(praef_system* sys, unsigned i) {
+  sys->commit.max_validated_lag = i;
+}
+
+void praef_system_conf_commit_lag_laxness(praef_system* sys, unsigned i) {
+  sys->commit.commit_lag_laxness = i;
+}
+
+void praef_system_conf_self_commit_lag_compensation(praef_system* sys,
+                                                    unsigned n,
+                                                    unsigned d) {
+  sys->commit.self_commit_lag_compensation_16 = n*65536 / d;
+}
+
 int praef_system_commit_init(praef_system* sys) {
   sys->commit.commit_interval = sys->std_latency/2?
     sys->std_latency/2 : 1;
