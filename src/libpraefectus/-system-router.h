@@ -57,10 +57,10 @@ typedef struct {
 
 int praef_system_router_init(praef_system*);
 void praef_system_router_destroy(praef_system*);
-void praef_system_router_update(praef_system*, unsigned);
+void praef_system_router_update(praef_system*);
 
 int praef_node_router_init(struct praef_node_s*);
 void praef_node_router_destroy(struct praef_node_s*);
-void praef_node_router_update(struct praef_node_s*, unsigned);
+void praef_node_router_update(struct praef_node_s*);
 
 #endif /* LIBPRAEFECTUS__SYSTEM_ROUTER_H_ */

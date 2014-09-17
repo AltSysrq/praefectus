@@ -61,7 +61,7 @@ int praef_node_mod_init(praef_node* node) {
 
 void praef_node_mod_destroy(praef_node* node) { }
 
-void praef_system_mod_update(praef_system* sys, unsigned delta) {
+void praef_system_mod_update(praef_system* sys) {
   PraefMsg_t msg;
 
   if (!sys->local_node) return;
@@ -89,7 +89,7 @@ void praef_system_mod_update(praef_system* sys, unsigned delta) {
   }
 }
 
-void praef_node_mod_update(praef_node* node, unsigned delta) {
+void praef_node_mod_update(praef_node* node) {
   PraefMsg_t msg;
 
   /* Deliberately include the local node as a possibility; this is how graceful

@@ -139,7 +139,7 @@ static int praef_node_routemgr_should_kill(praef_node* node) {
     node->sys->clock.monotime;
 }
 
-void praef_node_routemgr_update(praef_node* node, unsigned elapsed) {
+void praef_node_routemgr_update(praef_node* node) {
   unsigned route_interval;
 
   /* Ignoring the local node, we want to ensure there is a route to any

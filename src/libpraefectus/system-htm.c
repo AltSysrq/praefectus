@@ -539,7 +539,7 @@ static unsigned praef_system_htm_popcount(unsigned i) {
   return n;
 }
 
-void praef_system_htm_update(praef_system* sys, unsigned elapsed) {
+void praef_system_htm_update(praef_system* sys) {
   praef_instant current_snapshot;
   unsigned prog_num_saturation = 0, prog_denom_saturation = 0,
     prog_num_completed = 0, prog_denom_completed = 0,
@@ -619,7 +619,7 @@ void praef_system_htm_update(praef_system* sys, unsigned elapsed) {
   }
 }
 
-void praef_node_htm_update(praef_node* node, unsigned elapsed) {
+void praef_node_htm_update(praef_node* node) {
   unsigned rq_concurrency, i;
   unsigned char processes_in_progress[PRAEF_SYSTEM_HTM_NUM_SCAN_PROCESSES];
   praef_node* other;

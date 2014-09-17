@@ -109,7 +109,7 @@ void praef_system_conf_max_live_nodes(
   sys->join.max_live_nodes = max;
 }
 
-void praef_system_join_update(praef_system* sys, unsigned et) {
+void praef_system_join_update(praef_system* sys) {
   PraefMsg_t request;
   OCTET_STRING_t auth;
   unsigned char auth_data[64];

@@ -61,11 +61,11 @@ typedef struct {
 
 int praef_system_state_init(praef_system*);
 void praef_system_state_destroy(praef_system*);
-void praef_system_state_update(praef_system*, unsigned);
+void praef_system_state_update(praef_system*);
 void praef_system_state_recv_message(praef_system*, praef_hlmsg*);
 
 int praef_node_state_init(struct praef_node_s*);
 void praef_node_state_destroy(struct praef_node_s*);
-void praef_node_state_update(struct praef_node_s*, unsigned);
+void praef_node_state_update(struct praef_node_s*);
 
 #endif /* LIBPRAEFECTUS__SYSTEM_STATE_H_ */

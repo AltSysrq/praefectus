@@ -70,7 +70,7 @@ void praef_system_state_destroy(praef_system* sys) {
   if (sys->state.hash_tree) praef_hash_tree_delete(sys->state.hash_tree);
 }
 
-void praef_system_state_update(praef_system* sys, unsigned delta) {
+void praef_system_state_update(praef_system* sys) {
   unsigned char data[65536];
   size_t size;
   praef_hlmsg msg;
@@ -318,5 +318,4 @@ static void praef_system_state_process_vote(
                            msg->serialnumber);
 }
 
-void praef_node_state_update(praef_node* node, unsigned delta) {
-}
+void praef_node_state_update(praef_node* node) { }

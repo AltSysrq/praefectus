@@ -45,11 +45,11 @@ typedef struct {
 
 int praef_system_mod_init(praef_system*);
 void praef_system_mod_destroy(praef_system*);
-void praef_system_mod_update(praef_system*, unsigned);
+void praef_system_mod_update(praef_system*);
 
 int praef_node_mod_init(struct praef_node_s*);
 void praef_node_mod_destroy(struct praef_node_s*);
-void praef_node_mod_update(struct praef_node_s*, unsigned);
+void praef_node_mod_update(struct praef_node_s*);
 
 void praef_node_mod_recv_msg_chmod(struct praef_node_s*,
                                    praef_instant envelope_instant,

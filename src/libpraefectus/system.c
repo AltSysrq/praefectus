@@ -328,21 +328,21 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
   elapsed_monotime = this->clock.monotime - old_monotime;
 
   RB_FOREACH(node, praef_node_map, &this->nodes) {
-    praef_node_state_update(node, elapsed);
-    praef_node_router_update(node, elapsed);
-    praef_node_htm_update(node, elapsed);
-    praef_node_routemgr_update(node, elapsed);
+    praef_node_state_update(node);
+    praef_node_router_update(node);
+    praef_node_htm_update(node);
+    praef_node_routemgr_update(node);
     praef_node_commit_update(node);
-    praef_node_mod_update(node, elapsed);
+    praef_node_mod_update(node);
   }
 
-  praef_system_join_update(this, elapsed);
-  praef_system_htm_update(this, elapsed);
-  praef_system_mod_update(this, elapsed);
-  praef_system_state_update(this, elapsed);
+  praef_system_join_update(this);
+  praef_system_htm_update(this);
+  praef_system_mod_update(this);
+  praef_system_state_update(this);
   (*this->app->advance_bridge)(this->app, elapsed_monotime);
   praef_system_commit_update(this);
-  praef_system_router_update(this, elapsed);
+  praef_system_router_update(this);
 
   if (this->abnormal_status)
     return this->abnormal_status;

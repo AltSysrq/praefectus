@@ -89,7 +89,7 @@ typedef struct {
 
 int praef_system_join_init(praef_system*);
 void praef_system_join_destroy(praef_system*);
-void praef_system_join_update(praef_system*, unsigned);
+void praef_system_join_update(praef_system*);
 int praef_node_join_init(struct praef_node_s*);
 void praef_node_join_destroy(struct praef_node_s*);
 

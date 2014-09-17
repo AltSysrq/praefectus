@@ -113,10 +113,10 @@ typedef struct {
 
 int praef_system_htm_init(praef_system*);
 void praef_system_htm_destroy(praef_system*);
-void praef_system_htm_update(praef_system*, unsigned);
+void praef_system_htm_update(praef_system*);
 int praef_node_htm_init(struct praef_node_s*);
 void praef_node_htm_destroy(struct praef_node_s*);
-void praef_node_htm_update(struct praef_node_s*, unsigned);
+void praef_node_htm_update(struct praef_node_s*);
 
 void praef_node_htm_recv_msg_htls(struct praef_node_s*,
                                   const PraefMsgHtLs_t*);
