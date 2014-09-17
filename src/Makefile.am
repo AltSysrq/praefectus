@@ -50,6 +50,7 @@ libpraefectus/system-join.c \
 libpraefectus/system-htm.c \
 libpraefectus/system-routemgr.c \
 libpraefectus/system-mod.c \
+libpraefectus/system-commit.c \
 libpraefectus/system.c \
 libpraefectus/stdsys.c
 

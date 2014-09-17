@@ -71,7 +71,8 @@ praef_system* praef_system_new(praef_app* app,
       !praef_system_join_init(this) ||
       !praef_system_htm_init(this) ||
       !praef_system_routemgr_init(this) ||
-      !praef_system_mod_init(this)) {
+      !praef_system_mod_init(this) ||
+      !praef_system_commit_init(this)) {
     praef_system_delete(this);
     return NULL;
   }
@@ -90,6 +91,7 @@ void praef_system_delete(praef_system* this) {
     praef_node_delete(node);
   }
 
+  praef_system_commit_destroy(this);
   praef_system_mod_destroy(this);
   praef_system_routemgr_destroy(this);
   praef_system_htm_destroy(this);
@@ -163,12 +165,14 @@ praef_node* praef_node_new(praef_system* sys,
     !praef_node_join_init(node) ||
     !praef_node_htm_init(node) ||
     !praef_node_routemgr_init(node) ||
-    !praef_node_mod_init(node));
+    !praef_node_mod_init(node) ||
+    !praef_node_commit_init(node));
 
   return node;
 }
 
 void praef_node_delete(praef_node* node) {
+  praef_node_commit_destroy(node);
   praef_node_mod_destroy(node);
   praef_node_routemgr_destroy(node);
   praef_node_htm_destroy(node);
@@ -328,12 +332,14 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
     praef_node_router_update(node, elapsed);
     praef_node_htm_update(node, elapsed);
     praef_node_routemgr_update(node, elapsed);
+    praef_node_commit_update(node);
   }
 
   praef_system_join_update(this, elapsed);
   praef_system_htm_update(this, elapsed);
   praef_system_state_update(this, elapsed);
   (*this->app->advance_bridge)(this->app, elapsed_monotime);
+  praef_system_commit_update(this);
   praef_system_router_update(this, elapsed);
 
   if (this->abnormal_status)

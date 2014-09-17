@@ -158,7 +158,6 @@ void praef_system_state_recv_message(
 
   /* TODO (probably not exhastive):
    *
-   * - Add messages to commitment chains when appropriate
    * - Filter messages by time (in some cases)
    * - Sample clock source
    */
@@ -171,6 +170,9 @@ void praef_system_state_recv_message(
     sender = RB_FIND(praef_node_map, &sys->nodes, (praef_node*)&sender_id);
   else
     sender = NULL;
+
+  if (praef_htf_committed_redistributable == praef_hlmsg_type(msg) && sender)
+    praef_node_commit_observe_message(sender, msg);
 
   instant = praef_hlmsg_instant(msg);
 
@@ -271,6 +273,11 @@ static void praef_system_state_process_message(
   case PraefMsg_PR_route:
     if (sender)
       praef_system_routemgr_recv_msg_route(sys, &msg->choice.route);
+    break;
+
+  case PraefMsg_PR_commit:
+    if (sender)
+      praef_node_commit_recv_msg_commit(sender, &msg->choice.commit);
     break;
 
   /* TODO: Handle all cases, remove default */
