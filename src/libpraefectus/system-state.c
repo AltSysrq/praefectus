@@ -138,7 +138,22 @@ void praef_system_state_recv_message(
 
   if (!praef_hlmsg_is_valid(msg)) return;
 
-  if (praef_htf_rpc_type != praef_hlmsg_type(msg)) {
+  /* TODO (probably not exhastive):
+   *
+   * - Filter messages by time (in some cases)
+   * - Sample clock source
+   */
+
+  sender_id = praef_verifier_verify(
+    sys->verifier, praef_hlmsg_pubkey_hint(msg),
+    praef_hlmsg_signature(msg),
+    praef_hlmsg_signable(msg), praef_hlmsg_signable_sz(msg));
+  if (sender_id)
+    sender = RB_FIND(praef_node_map, &sys->nodes, (praef_node*)&sender_id);
+  else
+    sender = NULL;
+
+  if (sender && praef_htf_rpc_type != praef_hlmsg_type(msg)) {
     ht_objref.size = msg->size - 1;
     ht_objref.data = msg->data;
     switch (praef_hash_tree_add(sys->state.hash_tree, &ht_objref)) {
@@ -155,21 +170,6 @@ void praef_system_state_recv_message(
       break;
     }
   }
-
-  /* TODO (probably not exhastive):
-   *
-   * - Filter messages by time (in some cases)
-   * - Sample clock source
-   */
-
-  sender_id = praef_verifier_verify(
-    sys->verifier, praef_hlmsg_pubkey_hint(msg),
-    praef_hlmsg_signature(msg),
-    praef_hlmsg_signable(msg), praef_hlmsg_signable_sz(msg));
-  if (sender_id)
-    sender = RB_FIND(praef_node_map, &sys->nodes, (praef_node*)&sender_id);
-  else
-    sender = NULL;
 
   if (praef_htf_committed_redistributable == praef_hlmsg_type(msg) && sender)
     praef_node_commit_observe_message(sender, msg);
