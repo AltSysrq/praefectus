@@ -661,7 +661,8 @@ PraefMsgHtRangeNext ::= SEQUENCE {
 PraefMsgReceived ::= SEQUENCE {
   -- The node from which listed advisory serial numbers were generated
   node          PraefNodeId,
-  -- The first advisory serial number being acknowledged
+  -- The first advisory serial number being acknowledged (either positively or
+  -- negatively).
   base          PraefAdvSerNo,
   -- A bitmap of messages within the range that have been received. The range
   -- is defined to be from base, inclusive, to (base + sizeof(received)*8),
