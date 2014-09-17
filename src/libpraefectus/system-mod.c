@@ -64,6 +64,8 @@ void praef_node_mod_destroy(praef_node* node) { }
 void praef_system_mod_update(praef_system* sys, unsigned delta) {
   PraefMsg_t msg;
 
+  if (!sys->local_node) return;
+
   if (praef_node_has_grant(sys->local_node)) {
     if (praef_sjs_requesting_grant == sys->join_state) {
       ++sys->join_state;
