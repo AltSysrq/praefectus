@@ -90,7 +90,7 @@ int praef_comchain_commit(praef_comchain*,
  * happen if an object which would hypothetically invalidate the commit is
  * added before the commit itself.
  *
- * It is an error to reveal the same object multiple times.
+ * The comchain becomes invalid if the same object is revealed more than once.
  *
  * @return Whether the operation succeeds. Note that an operation that kills
  * the comchain is still considered success, as are operations ignored due to a

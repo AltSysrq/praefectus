@@ -171,10 +171,11 @@ void praef_system_state_recv_message(
     }
   }
 
-  if (praef_htf_committed_redistributable == praef_hlmsg_type(msg) && sender)
-    praef_node_commit_observe_message(sender, msg);
-
   instant = praef_hlmsg_instant(msg);
+
+  if (praef_htf_committed_redistributable == praef_hlmsg_type(msg) && sender)
+    praef_node_commit_observe_message(sender, instant,
+                                      praef_hash_tree_get_hash_of(&ht_objref));
 
   for (seg = praef_hlmsg_first(msg); seg; seg = praef_hlmsg_snext(seg)) {
     decoded = praef_hlmsg_sdec(seg);
@@ -277,7 +278,7 @@ static void praef_system_state_process_message(
 
   case PraefMsg_PR_commit:
     if (sender)
-      praef_node_commit_recv_msg_commit(sender, &msg->choice.commit);
+      praef_node_commit_recv_msg_commit(sender, instant, &msg->choice.commit);
     break;
 
   /* TODO: Handle all cases, remove default */

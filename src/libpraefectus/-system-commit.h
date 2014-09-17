@@ -30,7 +30,6 @@
 
 #include "system.h"
 #include "commitment-chain.h"
-#include "hl-msg.h"
 #include "messages/PraefMsgCommit.h"
 
 typedef struct {
@@ -59,8 +58,10 @@ void praef_node_commit_update(struct praef_node_s*);
 praef_instant praef_node_visibility_threshold(struct praef_node_s*);
 
 void praef_node_commit_observe_message(struct praef_node_s*,
-                                       const praef_hlmsg*);
+                                       praef_instant,
+                                       const unsigned char[PRAEF_HASH_SIZE]);
 void praef_node_commit_recv_msg_commit(struct praef_node_s*,
+                                       praef_instant,
                                        const PraefMsgCommit_t*);
 
 #endif /* LIBPRAEFECTUS__SYSTEM_COMMIT_H_ */

@@ -66,14 +66,25 @@ void praef_node_commit_destroy(praef_node* node) {
     praef_comchain_delete(node->commit.comchain);
 }
 
-void praef_node_commit_observe_message(praef_node* node,
-                                       const praef_hlmsg* msg) {
-  /* TODO */
+void praef_node_commit_observe_message(
+  praef_node* node, praef_instant instant,
+  const unsigned char hash[PRAEF_HASH_SIZE]
+) {
+  PRAEF_OOM_IF_NOT(node->sys, praef_comchain_reveal(
+                     node->commit.comchain, instant, hash));
 }
 
 void praef_node_commit_recv_msg_commit(praef_node* node,
+                                       praef_instant end,
                                        const PraefMsgCommit_t* msg) {
-  /* TODO */
+  if (end < msg->start) {
+    node->disposition = praef_nd_negative;
+    return;
+  }
+
+  PRAEF_OOM_IF_NOT(node->sys, praef_comchain_commit(
+                     node->commit.comchain, msg->start,
+                     end+1,  msg->hash.buf));
 }
 
 praef_instant praef_node_visibility_threshold(praef_node* node) {
