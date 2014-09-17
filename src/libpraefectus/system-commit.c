@@ -29,7 +29,12 @@
 #include <config.h>
 #endif
 
+#include <string.h>
+
+#include "keccak.h"
 #include "-system.h"
+#include "messages/PraefMsg.h"
+#include "defs.h"
 
 static void praef_system_commit_cr_loopback_broadcast(
   praef_message_bus*, const void*, size_t);
@@ -126,7 +131,26 @@ void praef_node_commit_recv_msg_commit(praef_node* node,
 void praef_system_commit_cr_loopback_broadcast(
   praef_message_bus* cr_loopback, const void* data, size_t sz
 ) {
-  /* TODO */
+  const praef_hlmsg hlmsg = { sz + 1, data };
+  unsigned char hash[PRAEF_HASH_SIZE];
+  praef_keccak_sponge sponge;
+  praef_system* sys;
+
+  sys = UNDOT(praef_system, commit,
+              UNDOT(praef_system_commit, cr_loopback, cr_loopback));
+
+  praef_sha3_init(&sponge);
+  praef_keccak_sponge_absorb(&sponge, data, sz);
+  praef_keccak_sponge_squeeze(&sponge, hash, PRAEF_HASH_SIZE);
+
+  PRAEF_OOM_IF_NOT(sys,
+                   praef_comchain_reveal(
+                     sys->commit.commit_builder,
+                     praef_hlmsg_instant(&hlmsg),
+                     hash));
+
+  if (praef_comchain_is_dead(sys->commit.commit_builder))
+    abort();
 }
 
 praef_instant praef_node_visibility_threshold(praef_node* node) {
@@ -135,9 +159,34 @@ praef_instant praef_node_visibility_threshold(praef_node* node) {
 }
 
 void praef_system_commit_update(praef_system* sys) {
+  PraefMsg_t msg;
+  unsigned char hash[PRAEF_HASH_SIZE];
+
   praef_mq_update(sys->commit.cr_intercept);
 
-  /* TODO */
+  if (sys->clock.monotime - sys->commit.last_commit >=
+      sys->commit.commit_interval) {
+    if (!praef_comchain_create_commit(hash, sys->commit.commit_builder,
+                                      sys->commit.last_commit+1,
+                                      sys->clock.monotime+1)) {
+      praef_system_oom(sys);
+      return;
+    }
+
+    memset(&msg, 0, sizeof(msg));
+    msg.present = PraefMsg_PR_commit;
+    msg.choice.commit.start = sys->commit.last_commit+1;
+    msg.choice.commit.hash.buf = hash;
+    msg.choice.commit.hash.size = PRAEF_HASH_SIZE;
+
+    /* Since this runs after the router has flushed encoders immediately prior
+     * to the next update cycle, we need to encode as a singleton.
+     */
+    PRAEF_OOM_IF_NOT(sys, praef_outbox_append_singleton(
+                       sys->router.ur_out, &msg));
+
+    sys->commit.last_commit = sys->clock.monotime;
+  }
 }
 
 void praef_node_commit_update(praef_node* node) {
