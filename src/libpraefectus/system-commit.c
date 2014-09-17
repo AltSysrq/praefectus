@@ -31,6 +31,9 @@
 
 #include "-system.h"
 
+static void praef_system_commit_cr_loopback_broadcast(
+  praef_message_bus*, const void*, size_t);
+
 void praef_system_conf_commit_interval(praef_system* sys, unsigned i) {
   sys->commit.commit_interval = i;
 }
@@ -65,8 +68,16 @@ int praef_system_commit_init(praef_system* sys) {
     praef_sp_strict == sys->profile?
     0 : 65536; /* 0/1 : 1/1 */
 
+  sys->commit.cr_loopback.broadcast =
+    praef_system_commit_cr_loopback_broadcast;
+
   if (!(sys->commit.commit_builder = praef_comchain_new()))
       return 0;
+
+  if (!(sys->commit.cr_intercept = praef_mq_new(sys->router.cr_out,
+                                                &sys->commit.cr_loopback,
+                                                NULL)))
+    return 0;
 
   return 1;
 }
@@ -74,6 +85,9 @@ int praef_system_commit_init(praef_system* sys) {
 void praef_system_commit_destroy(praef_system* sys) {
   if (sys->commit.commit_builder)
     praef_comchain_delete(sys->commit.commit_builder);
+
+  if (sys->commit.cr_intercept)
+    praef_mq_delete(sys->commit.cr_intercept);
 }
 
 int praef_node_commit_init(praef_node* node) {
@@ -109,12 +123,20 @@ void praef_node_commit_recv_msg_commit(praef_node* node,
                      end+1,  msg->hash.buf));
 }
 
+void praef_system_commit_cr_loopback_broadcast(
+  praef_message_bus* cr_loopback, const void* data, size_t sz
+) {
+  /* TODO */
+}
+
 praef_instant praef_node_visibility_threshold(praef_node* node) {
   /* TODO */
   return ~0u;
 }
 
 void praef_system_commit_update(praef_system* sys) {
+  praef_mq_update(sys->commit.cr_intercept);
+
   /* TODO */
 }
 

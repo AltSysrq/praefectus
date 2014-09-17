@@ -324,12 +324,28 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
       this->clock.monotime >= PRAEF_END_OF_TIME)
     return praef_ss_overflow;
 
+
+  /* Flush anything leftover from the previous frame, since we're about to
+   * update the times on the encoders. We can't do this at the end of
+   * advance(), since the application may add events between calls.
+   */
+  RB_FOREACH(node, praef_node_map, &this->nodes)
+    praef_node_router_flush(node);
+
+  praef_system_router_flush(this);
+  /* Commit update needs to run *after* anything that could produce CR messages
+   * has run, and after all message encoders have flushed.
+   */
+  praef_system_commit_update(this);
+
   praef_clock_tick(&this->clock, elapsed, praef_system_self_alive(this));
   elapsed_monotime = this->clock.monotime - old_monotime;
 
+  praef_system_router_update(this);
+
   RB_FOREACH(node, praef_node_map, &this->nodes) {
-    praef_node_state_update(node);
     praef_node_router_update(node);
+    praef_node_state_update(node);
     praef_node_htm_update(node);
     praef_node_routemgr_update(node);
     praef_node_commit_update(node);
@@ -341,8 +357,6 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
   praef_system_mod_update(this);
   praef_system_state_update(this);
   (*this->app->advance_bridge)(this->app, elapsed_monotime);
-  praef_system_commit_update(this);
-  praef_system_router_update(this);
 
   if (this->abnormal_status)
     return this->abnormal_status;

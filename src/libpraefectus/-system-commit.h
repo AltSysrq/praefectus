@@ -30,6 +30,8 @@
 
 #include "system.h"
 #include "commitment-chain.h"
+#include "outbox.h"
+#include "message-bus.h"
 #include "messages/PraefMsgCommit.h"
 
 typedef struct {
@@ -40,6 +42,8 @@ typedef struct {
   unsigned self_commit_lag_compensation_16;
 
   praef_comchain* commit_builder;
+  praef_mq* cr_intercept;
+  praef_message_bus cr_loopback;
   praef_instant last_commit;
 } praef_system_commit;
 
