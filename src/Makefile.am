@@ -44,6 +44,7 @@ libpraefectus/hl-msg.c \
 libpraefectus/clock.c \
 libpraefectus/dynamic.c \
 libpraefectus/outbox.c \
+libpraefectus/ack-table.c \
 libpraefectus/system-state.c \
 libpraefectus/system-router.c \
 libpraefectus/system-join.c \
