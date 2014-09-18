@@ -112,7 +112,7 @@ deftest(can_create_commits_with_different_hashes) {
   ck_assert_int_ne(0, memcmp(hash0, hash1, PRAEF_HASH_SIZE));
 }
 
-deftest(predicted_hashes_are_consistent_wort_ordering) {
+deftest(predicted_hashes_are_consistent_wrt_ordering) {
   unsigned char hash0[PRAEF_HASH_SIZE], hash1[PRAEF_HASH_SIZE];
 
   ck_assert(praef_comchain_reveal(chains[0], 0, hashes[0]));
@@ -158,6 +158,20 @@ deftest(create_commit_fails_and_invalidates_on_future_overlapping_commit) {
   ck_assert(praef_comchain_create_commit(hash, chains[0], 5, 15));
   ck_assert(!praef_comchain_create_commit(hash, chains[0], 0, 10));
   ck_assert(praef_comchain_is_dead(chains[0]));
+}
+
+deftest(create_commit_works_more_than_once) {
+  unsigned char hash[2][PRAEF_HASH_SIZE];
+
+  ck_assert(praef_comchain_reveal(chains[0], 1, hashes[0]));
+  ck_assert(praef_comchain_create_commit(hash[0], chains[0], 0, 2));
+  ck_assert(praef_comchain_reveal(chains[0], 2, hashes[1]));
+  ck_assert(praef_comchain_create_commit(hash[1], chains[0], 2, 3));
+  ck_assert(praef_comchain_reveal(chains[1], 1, hashes[0]));
+  ck_assert(praef_comchain_reveal(chains[1], 2, hashes[1]));
+  ck_assert(praef_comchain_commit(chains[1], 0, 2, hash[0]));
+  ck_assert(praef_comchain_commit(chains[1], 2, 3, hash[1]));
+  ck_assert_int_eq(3, praef_comchain_validated(chains[1]));
 }
 
 deftest(linear_validated_threshold_advances) {

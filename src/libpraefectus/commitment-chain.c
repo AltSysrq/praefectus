@@ -459,7 +459,7 @@ int praef_comchain_reveal(praef_comchain* this,
   else if (!commit)
     commit = RB_MAX(praef_comchain_commitment_tree, &this->commits);
 
-  if (commit) {
+  if (commit && instant >= commit->start && instant < commit->end) {
     if (praef_comchain_commitment_add_object_without_rehash(commit, object)) {
       praef_comchain_commitment_rehash(commit);
       commit = praef_comchain_commitment_coalesce(this, commit);
