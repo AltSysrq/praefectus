@@ -1095,5 +1095,16 @@ void praef_system_conf_vote_deny_interval(praef_system*, unsigned);
  * The default is 16*std_latency.
  */
 void praef_system_conf_vote_chmod_offset(praef_system*, unsigned);
+/**
+ * Configures the amount of time that a new node has before it is expected to
+ * begin adhering to timeliness requirements, in particular the commit lag
+ * requirements.
+ *
+ * This necessarily needs to be greater than intervals (such as the commit
+ * interval) upon which this is based.
+ *
+ * The default is 16*std_latency.
+ */
+void praef_system_conf_grace_period(praef_system*, unsigned);
 
 #endif /* LIBPRAEFECTUS_SYSTEM_H_ */

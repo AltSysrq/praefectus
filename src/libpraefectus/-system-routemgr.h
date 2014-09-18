@@ -53,7 +53,7 @@ typedef struct {
   int in_flight_ping;
   unsigned latency;
   unsigned latency_samples[PRAEF_NODE_ROUTEMGR_NUM_LATENCY_SAMPLES];
-  PraefPingId_t current_ping_id;
+  unsigned current_ping_id;
 } praef_node_routemgr;
 
 int praef_system_routemgr_init(praef_system*);

@@ -132,6 +132,7 @@ static void advance(unsigned delta) {
 }
 
 deftest(can_send_minimal_events) {
+  unsigned i;
   int has_created_node = 0, has_created_obj = 0;
   int has_received_evt = 0, has_received_vote = 0;
   praef_event* evt_to_free;
@@ -176,13 +177,13 @@ deftest(can_send_minimal_events) {
     has_received_vote = 1);
   app[0].advance_bridge = lambdav(
     (praef_app* this, unsigned delta),
-    ck_assert_int_eq(10, delta));
+    ck_assert_int_eq(2, delta));
 
   praef_system_bootstrap(sys[0]);
   ck_assert(praef_system_add_event(sys[0], &encoded_event, 1));
   ck_assert(praef_system_vote_event(sys[0], 1, 0, 123));
-  ck_assert_int_eq(praef_ss_ok, praef_system_advance(sys[0], 10));
-  ck_assert_int_eq(praef_ss_ok, praef_system_advance(sys[0], 10));
+  for (i = 0; i < 10; ++i)
+    ck_assert_int_eq(praef_ss_ok, praef_system_advance(sys[0], 2));
 
   ck_assert(has_created_node);
   ck_assert(has_created_obj);

@@ -164,10 +164,11 @@ void praef_system_commit_update(praef_system* sys) {
 
   praef_mq_update(sys->commit.cr_intercept);
 
-  if (sys->clock.monotime - sys->commit.last_commit >=
+  if (sys->commit.last_commit < sys->clock.monotime &&
+      sys->clock.monotime - sys->commit.last_commit >=
       sys->commit.commit_interval) {
     if (!praef_comchain_create_commit(hash, sys->commit.commit_builder,
-                                      sys->commit.last_commit+1,
+                                      sys->commit.last_commit,
                                       sys->clock.monotime+1)) {
       praef_system_oom(sys);
       return;
@@ -175,7 +176,7 @@ void praef_system_commit_update(praef_system* sys) {
 
     memset(&msg, 0, sizeof(msg));
     msg.present = PraefMsg_PR_commit;
-    msg.choice.commit.start = sys->commit.last_commit+1;
+    msg.choice.commit.start = sys->commit.last_commit;
     msg.choice.commit.hash.buf = hash;
     msg.choice.commit.hash.size = PRAEF_HASH_SIZE;
 
@@ -185,10 +186,30 @@ void praef_system_commit_update(praef_system* sys) {
     PRAEF_OOM_IF_NOT(sys, praef_outbox_append_singleton(
                        sys->router.ur_out, &msg));
 
-    sys->commit.last_commit = sys->clock.monotime;
+    /* Need to post-date by 1 since we included things from this frame. */
+    sys->commit.last_commit = sys->clock.monotime + 1;
   }
 }
 
 void praef_node_commit_update(praef_node* node) {
-  /* TODO */
+  praef_instant committed, validated;
+  praef_instant systime = node->sys->clock.systime;
+
+  if (praef_node_is_in_grace_period(node)) return;
+
+  if (praef_comchain_is_dead(node->commit.comchain)) {
+    node->disposition = praef_nd_negative;
+    return;
+  }
+
+  committed = praef_comchain_committed(node->commit.comchain);
+  validated = praef_comchain_validated(node->commit.comchain);
+
+  if ((committed < systime && systime - committed >
+       node->sys->commit.max_commit_lag) ||
+      (validated < systime && systime - validated >
+       node->sys->commit.max_validated_lag)) {
+    node->disposition = praef_nd_negative;
+    return;
+  }
 }

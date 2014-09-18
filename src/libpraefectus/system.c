@@ -40,6 +40,10 @@ int praef_compare_nodes(const praef_node* a, const praef_node* b) {
 
 RB_GENERATE(praef_node_map, praef_node_s, map, praef_compare_nodes)
 
+void praef_system_conf_grace_period(praef_system* sys, unsigned i) {
+  sys->grace_period = i;
+}
+
 praef_system* praef_system_new(praef_app* app,
                                praef_message_bus* bus,
                                const PraefNetworkIdentifierPair_t* self,
@@ -61,6 +65,7 @@ praef_system* praef_system_new(praef_app* app,
   this->ip_version = ipv;
   this->net_locality = net_locality;
   this->self_net_id = self;
+  this->grace_period = std_latency * 16;
   praef_clock_init(&this->clock, 5 * std_latency, std_latency);
   RB_INIT(&this->nodes);
 
@@ -155,6 +160,7 @@ praef_node* praef_node_new(praef_system* sys,
   node->id = id;
   node->sys = sys;
   node->bus = bus;
+  node->created_at = sys->clock.ticks;
   node->disposition = disposition;
   memcpy(node->pubkey, pubkey, PRAEF_PUBKEY_SIZE);
   PRAEF_OOM_IF(
@@ -291,15 +297,20 @@ void praef_system_bootstrap(praef_system* this) {
     (*this->app->acquire_id_opt)(this->app, PRAEF_BOOTSTRAP_NODE);
 }
 
+int praef_node_is_in_grace_period(praef_node* node) {
+  return node->sys->clock.ticks - node->created_at <= node->sys->grace_period &&
+    !praef_node_has_deny(node);
+}
+
 int praef_node_has_grant(praef_node* node) {
   praef_system* sys = node->sys;
-  return sys->clock.monotime <
+  return sys->clock.monotime >
      (*sys->app->get_node_grant_bridge)(sys->app, node->id);
 }
 
 int praef_node_has_deny(praef_node* node) {
   praef_system* sys = node->sys;
-  return sys->clock.monotime <
+  return sys->clock.monotime >
     (*sys->app->get_node_deny_bridge)(sys->app, node->id);
 }
 

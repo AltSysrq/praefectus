@@ -78,6 +78,13 @@ void praef_node_router_destroy(praef_node* node) {
 }
 
 void praef_system_router_update(praef_system* sys) {
+  /* In the case of loopback to the local node, it is possible for the
+   * mq_update() call after the normal flush to add additional messages to the
+   * outboxen, so flush again (without an mq_update()) to ensure it's safe to
+   * move to the next time-step.
+   */
+  PRAEF_OOM_IF_NOT(sys, praef_outbox_flush(sys->router.cr_out));
+  PRAEF_OOM_IF_NOT(sys, praef_outbox_flush(sys->router.ur_out));
   praef_outbox_set_now(sys->router.cr_out, sys->clock.monotime);
   praef_outbox_set_now(sys->router.ur_out, sys->clock.monotime);
 }
@@ -90,6 +97,7 @@ void praef_system_router_flush(praef_system* sys) {
 
 
 void praef_node_router_update(praef_node* node) {
+  PRAEF_OOM_IF_NOT(node->sys, praef_outbox_flush(node->router.rpc_out));
   praef_outbox_set_now(node->router.rpc_out, node->sys->clock.monotime);
 }
 

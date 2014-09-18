@@ -86,6 +86,7 @@ typedef struct praef_node_s {
   PraefNetworkIdentifierPair_t net_id;
   praef_system* sys;
   praef_message_bus* bus;
+  praef_instant created_at;
 
   praef_node_disposition disposition;
 
@@ -110,6 +111,7 @@ struct praef_system_s {
   praef_system_ip_version ip_version;
   praef_system_network_locality net_locality;
   unsigned mtu;
+  unsigned grace_period;
   const PraefNetworkIdentifierPair_t* self_net_id;
 
   praef_signator* signator;
@@ -152,6 +154,7 @@ int praef_system_is_permissible_netid(
 int praef_system_net_id_pair_equal(
   const PraefNetworkIdentifierPair_t*, const PraefNetworkIdentifierPair_t*);
 
+int praef_node_is_in_grace_period(praef_node*);
 int praef_node_has_grant(praef_node*);
 int praef_node_has_deny(praef_node*);
 int praef_node_is_alive(praef_node*);
