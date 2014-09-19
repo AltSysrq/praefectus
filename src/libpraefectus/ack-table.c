@@ -146,6 +146,8 @@ unsigned praef_ack_find_missing(const praef_hlmsg* dst[PRAEF_ACK_TABLE_SIZE],
     if (local->received[sn & PRAEF_ACK_TABLE_MASK] &&
         praef_are_nak == remote->received[sn & PRAEF_ACK_TABLE_MASK])
       dst[ix++] = local->received[sn & PRAEF_ACK_TABLE_MASK];
+
+    ++sn;
   }
 
   return ix;

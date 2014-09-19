@@ -42,6 +42,8 @@ static praef_ack_remote remote;
 static praef_hlmsg_encoder* encoder;
 static praef_advisory_serial_number encoder_serno;
 
+defsuite(libpraefectus_ack_table);
+
 defsetup {
   praef_ack_local_init(&local);
   praef_ack_remote_init(&remote);
@@ -71,7 +73,7 @@ static praef_hlmsg* mkmsg(praef_advisory_serial_number serno) {
   msg.present = PraefMsg_PR_ping;
   msg.choice.ping.id = 0;
 
-  hlmsg = praef_hlmsg_of(buf, sizeof(buf-1));
+  hlmsg = praef_hlmsg_of(buf, sizeof(buf));
   praef_hlmsg_encoder_singleton(hlmsg, encoder, &msg);
   return hlmsg;
 }
@@ -117,8 +119,8 @@ deftest(local_put_shunt_clears_table_totally) {
   praef_ack_local_put(&local, mkmsg(1));
   praef_ack_local_put(&local, mkmsg(~0u));
 
-  ck_assert_int_eq(0 - PRAEF_ACK_TABLE_SIZE, local.base);
-  ck_assert_int_eq(0 - PRAEF_ACK_TABLE_SIZE, local.delta_start);
+  ck_assert_int_eq((unsigned)(0 - PRAEF_ACK_TABLE_SIZE), local.base);
+  ck_assert_int_eq((unsigned)(0 - PRAEF_ACK_TABLE_SIZE), local.delta_start);
   ck_assert_int_eq(0, local.delta_end);
   ck_assert_ptr_ne(NULL, local.received[PRAEF_ACK_TABLE_MASK]);
   ck_assert_ptr_eq(NULL, local.received[1]);
