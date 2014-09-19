@@ -135,6 +135,7 @@ void praef_system_state_recv_message(
   PraefMsg_t* decoded;
   praef_instant instant;
   praef_hash_tree_objref ht_objref;
+  praef_hlmsg msg_in_ht;
 
   if (!praef_hlmsg_is_valid(msg)) return;
 
@@ -169,6 +170,17 @@ void praef_system_state_recv_message(
       /* Continue processing as normal */
       break;
     }
+
+    /* Neither msg nor the data it points to will be valid after this call
+     * returns. The ack table will shallow-copy the hlmsg into itself, so we
+     * can use a local variable anyway, but need to point at the data stored in
+     * the hash tree, which is actually preserved. (We only reach this point if
+     * a new message was added to the hash tree, in which case ht_objref has
+     * been populated with data from the hash tree.)
+     */
+    msg_in_ht.size = msg->size;
+    msg_in_ht.data = ht_objref.data;
+    praef_node_ack_observe_msg(sender, &msg_in_ht);
   }
 
   instant = praef_hlmsg_instant(msg);
@@ -279,6 +291,11 @@ static void praef_system_state_process_message(
   case PraefMsg_PR_commit:
     if (sender)
       praef_node_commit_recv_msg_commit(sender, instant, &msg->choice.commit);
+    break;
+
+  case PraefMsg_PR_received:
+    if (sender)
+      praef_node_ack_recv_msg_received(sender, &msg->choice.received);
     break;
 
   /* TODO: Handle all cases, remove default */

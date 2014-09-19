@@ -70,13 +70,24 @@ void praef_ack_local_put(praef_ack_local* this, const praef_hlmsg* msg) {
   }
 
   if (!this->received[sn & PRAEF_ACK_TABLE_MASK]) {
-    this->received[sn & PRAEF_ACK_TABLE_MASK] = msg;
+    memcpy(&this->messages[sn & PRAEF_ACK_TABLE_MASK],
+           msg, sizeof(praef_hlmsg));
+    this->received[sn & PRAEF_ACK_TABLE_MASK] =
+      &this->messages[sn & PRAEF_ACK_TABLE_MASK];
 
     if (!praef_ack_in_range(this->delta_start, sn))
       this->delta_start = sn;
     if (!praef_ack_in_range(sn+1, this->delta_end))
       this->delta_end = sn+1;
   }
+}
+
+const praef_hlmsg* praef_ack_local_get(const praef_ack_local* this,
+                                       praef_advisory_serial_number sn) {
+  if (praef_ack_in_range(this->base, sn))
+    return this->received[sn & PRAEF_ACK_TABLE_MASK];
+  else
+    return NULL;
 }
 
 void praef_ack_remote_init(praef_ack_remote* this) {

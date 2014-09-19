@@ -1106,5 +1106,32 @@ void praef_system_conf_vote_chmod_offset(praef_system*, unsigned);
  * The default is 16*std_latency.
  */
 void praef_system_conf_grace_period(praef_system*, unsigned);
+/**
+ * Configures the interval at which acknowledgement packets are sent to the
+ * node which sent the packets they are acknowledging.
+ *
+ * Smaller values will improve behaviour in the face of accidental packet loss,
+ * in exchange for greater bandwidth usage.
+ *
+ * The default is 4*std_latency.
+ */
+void praef_system_conf_direct_ack_interval(praef_system*, unsigned);
+/**
+ * Configures the interval at which acknowledgement packets are sent to nodes
+ * other than the node which sent the packets they are acknowledging.
+ *
+ * Smaller values will improve behaviour in the face of both accidental and
+ * deliberate packet loss, in exchange for greater bandwidth usage. This is
+ * only a fallback mechanism which only offers partial protection from
+ * deliberate packet loss; the hash tree system covers for the rest of
+ * this. Indirect acks consume quadratic bandwidth per peer with respect to the
+ * number of live nodes in a system.
+ *
+ * There is generally no reason to set this to a low value, unless the
+ * application also reduces the hash tree query interval.
+ *
+ * The default is 16*std_latency.
+ */
+void praef_system_conf_indirect_ack_interval(praef_system*, unsigned);
 
 #endif /* LIBPRAEFECTUS_SYSTEM_H_ */

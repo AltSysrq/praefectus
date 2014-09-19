@@ -64,6 +64,7 @@
 #include "-system-routemgr.h"
 #include "-system-mod.h"
 #include "-system-commit.h"
+#include "-system-ack.h"
 
 typedef enum {
   praef_nd_neutral = 0,
@@ -97,6 +98,7 @@ typedef struct praef_node_s {
   praef_node_routemgr routemgr;
   praef_node_mod mod;
   praef_node_commit commit;
+  praef_node_ack ack;
 
   RB_ENTRY(praef_node_s) map;
 } praef_node;
@@ -127,6 +129,7 @@ struct praef_system_s {
   praef_system_routemgr routemgr;
   praef_system_mod mod;
   praef_system_commit commit;
+  praef_system_ack ack;
 
   struct praef_node_map nodes;
 

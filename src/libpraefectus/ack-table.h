@@ -59,6 +59,10 @@ typedef struct {
    */
   const praef_hlmsg* received[PRAEF_ACK_TABLE_SIZE];
   /**
+   * Backing store for received used internally.
+   */
+  praef_hlmsg messages[PRAEF_ACK_TABLE_SIZE];
+  /**
    * The logically earliest serial number in the received array. In cases of
    * wrap-around, this is not necessarily the _least_ serial number, however.
    */
@@ -123,8 +127,18 @@ void praef_ack_local_init(praef_ack_local*);
  * Inserts a message into the local ack table, adjusting base, delta_start, and
  * delta_end as necessary. If this collides with an existing message, the call
  * has no effect.
+ *
+ * The hlmsg is shallow-copied into the praef_ack_local. The data it points to
+ * must remain valid for the life of the praef_ack_local.
  */
 void praef_ack_local_put(praef_ack_local*, const praef_hlmsg*);
+
+/**
+ * Returns the hlmsg at the given serial number, or NULL if absent or out of
+ * range.
+ */
+const praef_hlmsg* praef_ack_local_get(const praef_ack_local*,
+                                       praef_advisory_serial_number);
 
 /**
  * Initialises the given praef_ack_remote, setting every element to an

@@ -126,7 +126,8 @@ typedef struct {
   praef_instant instant;
   /**
    * The data associated with this object. If this points to the data within a
-   * hash tree, it is guaranteed to be valid until the hash tree's destruction.
+   * hash tree, it is guaranteed to be valid until the hash tree's destruction,
+   * and there is guaranteed to be an initialised 0 byte at data[size].
    */
   const void* data;
 } praef_hash_tree_objref;

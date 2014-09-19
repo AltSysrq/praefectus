@@ -158,13 +158,14 @@ static praef_hash_tree_object* praef_hash_tree_object_new(
   const unsigned char hash[PRAEF_HASH_SIZE]
 ) {
   praef_hash_tree_object* this = malloc(offsetof(praef_hash_tree_object, data) +
-                                        ref->size);
+                                        ref->size + 1);
   if (!this) return NULL;
 
   memcpy(this->hash, hash, PRAEF_HASH_SIZE);
   this->size = ref->size;
   this->instant = ref->instant;
   memcpy(this->data, ref->data, ref->size);
+  this->data[this->size] = 0;
   return this;
 }
 
