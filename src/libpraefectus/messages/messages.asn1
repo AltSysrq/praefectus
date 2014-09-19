@@ -657,6 +657,11 @@ PraefMsgHtRangeNext ::= SEQUENCE {
 -- serial number that has *not* been received, since affirmative
 -- acknowledgements have little effect.
 --
+-- A node which retransmits a message in response to this message SHOULD mark
+-- that message as positively acknowledged, even without a Received message
+-- saying so. Receivers SHOULD NOT allow a Received message to change the
+-- status of a tracked message from positive to negative acknowledgement.
+--
 -- This is an RPC-type message.
 PraefMsgReceived ::= SEQUENCE {
   -- The node from which listed advisory serial numbers were generated
@@ -664,6 +669,11 @@ PraefMsgReceived ::= SEQUENCE {
   -- The first advisory serial number being acknowledged (either positively or
   -- negatively).
   base          PraefAdvSerNo,
+  -- The number of serial numbers before base that the sender asserts have not
+  -- changed status since the last Received message it sent. The receiver
+  -- SHOULD interpret anything formerly negatively acknowledged in this range
+  -- which it still track to be another negative acknowledgement.
+  negoff        INTEGER (0..1023),
   -- A bitmap of messages within the range that have been received. The range
   -- is defined to be from base, inclusive, to (base + sizeof(received)*8),
   -- exclusive, modulo 2**32. The lowest bit of the first octet corresponds to
