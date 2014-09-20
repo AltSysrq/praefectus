@@ -77,6 +77,7 @@ typedef enum {
   praef_sjs_request_cxn,
   praef_sjs_walking_join_tree,
   praef_sjs_scanning_hash_tree,
+  praef_sjs_syncing_clock,
   praef_sjs_requesting_grant,
   praef_sjs_connected
 } praef_system_join_state;
@@ -114,12 +115,17 @@ struct praef_system_s {
   praef_system_network_locality net_locality;
   unsigned mtu;
   unsigned grace_period;
+  unsigned max_advance_per_frame;
   const PraefNetworkIdentifierPair_t* self_net_id;
 
   praef_signator* signator;
   praef_verifier* verifier;
   praef_event_serial_number evt_serno;
   praef_clock clock;
+  /* The monotime as perceived in the application via calls to
+   * praef_app_advance_t().
+   */
+  praef_instant app_monotime;
   praef_system_join_state join_state;
 
   praef_system_state state;

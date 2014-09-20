@@ -44,6 +44,19 @@ void praef_system_conf_grace_period(praef_system* sys, unsigned i) {
   sys->grace_period = i;
 }
 
+void praef_system_conf_max_advance_per_frame(praef_system* sys, unsigned i) {
+  sys->max_advance_per_frame = i;
+}
+
+void praef_system_conf_clock_obsolescence_interval(praef_system* sys,
+                                                   unsigned i) {
+  sys->clock.obsolescence_interval = i;
+}
+
+void praef_system_conf_clock_tolerance(praef_system* sys, unsigned i) {
+  sys->clock.tolerance = i;
+}
+
 praef_system* praef_system_new(praef_app* app,
                                praef_message_bus* bus,
                                const PraefNetworkIdentifierPair_t* self,
@@ -66,6 +79,7 @@ praef_system* praef_system_new(praef_app* app,
   this->net_locality = net_locality;
   this->self_net_id = self;
   this->grace_period = std_latency * 16;
+  this->max_advance_per_frame = ~0u;
   praef_clock_init(&this->clock, 5 * std_latency, std_latency);
   RB_INIT(&this->nodes);
 
@@ -330,7 +344,7 @@ static int praef_system_self_alive(praef_system* this) {
 #define PRAEF_END_OF_TIME ((praef_instant)0x80000000)
 
 praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
-  unsigned old_monotime = this->clock.monotime, elapsed_monotime;
+  unsigned elapsed_monotime;
   unsigned num_live_nodes, num_negative_nodes;
   praef_node* node;
 
@@ -354,7 +368,6 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
   praef_system_commit_update(this);
 
   praef_clock_tick(&this->clock, elapsed, praef_system_self_alive(this));
-  elapsed_monotime = this->clock.monotime - old_monotime;
 
   praef_system_router_update(this);
 
@@ -373,7 +386,21 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
   praef_system_mod_update(this);
   praef_system_state_update(this);
   praef_system_ack_update(this);
-  (*this->app->advance_bridge)(this->app, elapsed_monotime);
+  if (this->join_state >= praef_sjs_requesting_grant) {
+    elapsed_monotime = this->clock.monotime - this->app_monotime;
+
+    if (elapsed_monotime > this->max_advance_per_frame) {
+      elapsed_monotime = this->max_advance_per_frame;
+    } else if (praef_sjs_syncing_clock == this->join_state) {
+      ++this->join_state;
+      if (PRAEF_APP_HAS(this->app, clock_synced_opt))
+        (*this->app->clock_synced_opt)(this->app);
+    }
+
+    (*this->app->advance_bridge)(this->app, elapsed_monotime);
+
+    this->app_monotime += elapsed_monotime;
+  }
 
   if (this->abnormal_status)
     return this->abnormal_status;

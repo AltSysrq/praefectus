@@ -284,12 +284,16 @@ typedef void (*praef_app_vote_t)(praef_app*,
  * Many applications will simply wish to use the implementation provided by the
  * standard system bridge.
  *
+ * This will not be called when a system has not at least reached the
+ * clock-synchronisation phase of connection setup.
+ *
  * @param delta The number of steps to advance. This may be zero; in such a
  * case, the application must still ensure that it has reached a consistent
  * state before returning. The application SHOULD consider having some maximum
  * delta it is willing to process, as advancing, eg, 3 billion steps into the
  * future will usually take an unacceptably large amount of time and is likely
  * indicative of an attack.
+ * @see praef_system_conf_max_advance_per_frame()
  */
 typedef void (*praef_app_advance_t)(praef_app*, unsigned delta);
 
@@ -397,6 +401,13 @@ typedef void (*praef_app_ht_scan_progress_t)(
   praef_app*, unsigned numerator, unsigned denominator);
 
 /**
+ * Notifies the application that the local node's clock is believed to be
+ * reasonably synchronised with the rest of the system, and that the
+ * application's state has been advanced up to that point.
+ */
+typedef void (*praef_app_clock_synced_t)(praef_app*);
+
+/**
  * Notifies the application that the local node has tenatively received the
  * GRANT status for the first time. This is usually permanent, though in
  * certain circumstances the status could be temporarily or even permanently
@@ -463,6 +474,7 @@ struct praef_app_s {
   praef_app_remove_node_t remove_node_opt;
   praef_app_join_tree_traversed_t join_tree_traversed_opt;
   praef_app_ht_scan_progress_t ht_scan_progress_opt;
+  praef_app_clock_synced_t clock_synced_opt;
   praef_app_gained_grant_t gained_grant_opt;
 
   /* Optional application-defined-message callbacks */
@@ -1133,5 +1145,17 @@ void praef_system_conf_direct_ack_interval(praef_system*, unsigned);
  * The default is 16*std_latency.
  */
 void praef_system_conf_indirect_ack_interval(praef_system*, unsigned);
+/**
+ * Configures the maximum number of ticks that the system will advance the
+ * application layer (via praef_app_advance_t()) per frame.
+ *
+ * This allows the application to remain responsive while catching up to an
+ * existing system that has already advanced quite far. It also provides some
+ * protection from malicious nodes that deliberately skew the clock by large
+ * amounts.
+ *
+ * The default is ~0u; ie, there is effectively no limit.
+ */
+void praef_system_conf_max_advance_per_frame(praef_system*, unsigned);
 
 #endif /* LIBPRAEFECTUS_SYSTEM_H_ */

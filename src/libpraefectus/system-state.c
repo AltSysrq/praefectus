@@ -138,11 +138,11 @@ void praef_system_state_recv_message(
   praef_hlmsg msg_in_ht;
 
   if (!praef_hlmsg_is_valid(msg)) return;
+  instant = praef_hlmsg_instant(msg);
 
   /* TODO (probably not exhastive):
    *
    * - Filter messages by time (in some cases)
-   * - Sample clock source
    */
 
   sender_id = praef_verifier_verify(
@@ -153,6 +153,12 @@ void praef_system_state_recv_message(
     sender = RB_FIND(praef_node_map, &sys->nodes, (praef_node*)&sender_id);
   else
     sender = NULL;
+
+  if (sender &&
+      sender != sys->local_node &&
+      praef_node_is_alive(sender))
+    praef_clock_source_sample(&sender->state.clock_source, &sys->clock,
+                              instant, sender->routemgr.latency);
 
   if (sender && praef_htf_rpc_type != praef_hlmsg_type(msg)) {
     ht_objref.size = msg->size - 1;
@@ -182,8 +188,6 @@ void praef_system_state_recv_message(
     msg_in_ht.data = ht_objref.data;
     praef_node_ack_observe_msg(sender, &msg_in_ht);
   }
-
-  instant = praef_hlmsg_instant(msg);
 
   if (praef_htf_committed_redistributable == praef_hlmsg_type(msg) && sender)
     praef_node_commit_observe_message(sender, instant,
