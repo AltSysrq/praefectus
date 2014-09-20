@@ -159,6 +159,11 @@ praef_instant praef_node_visibility_threshold(praef_node* node) {
   unsigned min_latency = ~0u;
   unsigned long long frac;
 
+  if (node == node->sys->local_node)
+    return ~0u;
+  else if (praef_node_has_deny(node))
+    return 0;
+
   thresh += node->sys->commit.commit_lag_laxness;
 
   RB_FOREACH(other, praef_node_map, &node->sys->nodes)
