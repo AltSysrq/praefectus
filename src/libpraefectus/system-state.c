@@ -212,6 +212,7 @@ void praef_system_state_recv_message(
   if (sender && praef_htf_rpc_type != praef_hlmsg_type(msg)) {
     ht_objref.size = msg->size - 1;
     ht_objref.data = msg->data;
+    ht_objref.instant = instant;
     switch (praef_hash_tree_add(sys->state.hash_tree, &ht_objref)) {
     case praef_htar_failed:
       sys->abnormal_status = praef_ss_oom;
