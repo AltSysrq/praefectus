@@ -395,7 +395,6 @@ void praef_system_join_recv_msg_network_info(
     if (sys->join.connect_mq)
       praef_mq_set_triangular(sys->join.connect_mq, 0);
   }
-  return;
 }
 
 static int praef_system_join_verify_jr_signature(
