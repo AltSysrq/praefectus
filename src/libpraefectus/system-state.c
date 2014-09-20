@@ -161,11 +161,6 @@ void praef_system_state_recv_message(
   if (!praef_hlmsg_is_valid(msg)) return;
   instant = praef_hlmsg_instant(msg);
 
-  /* TODO (probably not exhastive):
-   *
-   * - Filter messages by time (in some cases)
-   */
-
   sender_id = praef_verifier_verify(
     sys->verifier, praef_hlmsg_pubkey_hint(msg),
     praef_hlmsg_signature(msg),
