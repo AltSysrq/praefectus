@@ -160,7 +160,7 @@ PraefIpAddress ::= CHOICE {
 -- This is typically the first message sent by a prospective node. In NAT
 -- environments, it must often be proxied by a third party. Prospective nodes
 -- which do not receive a response after some timeout SHOULD retry sending it,
--- possibly with a different node known to be part of the system.
+-- possibly to a different node known to be part of the system.
 PraefMsgGetNetworkInfo ::= SEQUENCE {
   -- The network identifier that wishes to receive the information. This is not
   -- necessarily the same as the apparent source address, due to triangular
@@ -203,10 +203,10 @@ PraefMsgNetworkInfo ::= SEQUENCE {
 -- instant and advisory serial number on the high-level message MUST be zero.
 --
 -- Receiving nodes SHOULD accept the new node (with a JoinAccept). The sender
--- SHOULD NOT reattempt this exact request if it receives no response after a
--- certain time-out, but instead generate a new public key and restart with a
+-- MAY reattempt this exact request if it receives no response after a certain
+-- time-out, but MAY instead generate a new public key and restart with a
 -- NetworkInfo message, generally to a different node known to be a part of the
--- system. However, it MAY retry several times over a shorter interval.
+-- system.
 --
 -- Receiving nodes MAY ignore this message if they have not recently received a
 -- GetNetworkInfo message from the same return address, unless the application
@@ -371,7 +371,7 @@ PraefMsgAppEvent ::= SEQUENCE {
   serialnumber  PraefSerialNumber,
   -- The encoded form of the application event. How to decode this is
   -- application-specific.
-  data          OCTET STRING SIZE(1..256)
+  data          OCTET STRING SIZE(1..248)
 }
 
 -- Indicates that the sender wishes to accept a particular event.
@@ -554,7 +554,7 @@ PraefHtdirEntry ::= CHOICE {
   -- prefix + 4 bit offset) is expected to require 24.5 trillion plaintexts to
   -- succeed. Each level lower multiplies this requirement by a factor of
   -- 16. Applications can make such attacks even less practical by deliberately
-  -- producing messages to rappidly pollute the upper levels of the tree.
+  -- producing messages to rapidly pollute the upper levels of the tree.
   subdirsid     PraefDword
 }
 
@@ -612,7 +612,8 @@ PraefMsgHtRange ::= SEQUENCE {
   offset        PraefByte,
   mask          PraefByte,
   -- An arbitrary integer identifier for this query, to be sent on the
-  -- corresponding HtRangeNext message. This may be predictable.
+  -- corresponding HtRangeNext message. This MAY be predictable, though no
+  -- sequence is defined.
   id            PraefByte
 }
 
@@ -693,7 +694,7 @@ PraefMsgReceived ::= SEQUENCE {
 -- This is an RPC-type message.
 PraefMsgAppUnicast ::= SEQUENCE {
   -- The application-defined message.
-  data          OCTET STRING SIZE(1..256)
+  data          OCTET STRING SIZE(1..250)
 }
 
 -- Indicates that the sender believes it is maintaining active communication
@@ -718,7 +719,7 @@ PraefMsgRoute ::= SEQUENCE {
   node          PraefNodeId,
   -- The estimated latency between the source node and the destination of this
   -- route, in instants. This is purely advisory.
-  latency       INTEGER (0..255)
+  latency       PraefByte
 }
 
 PraefMsg ::= CHOICE {
