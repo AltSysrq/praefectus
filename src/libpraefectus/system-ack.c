@@ -35,7 +35,7 @@
 
 static int praef_node_ack_is_visible(praef_node* node,
                                      praef_instant instant) {
-  return instant <= praef_node_visibility_threshold(node);
+  return instant < praef_node_visibility_threshold(node);
 }
 
 static void praef_system_ack_create_received(PraefMsg_t*,

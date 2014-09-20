@@ -154,8 +154,29 @@ void praef_system_commit_cr_loopback_broadcast(
 }
 
 praef_instant praef_node_visibility_threshold(praef_node* node) {
-  /* TODO */
-  return ~0u;
+  praef_node* other;
+  praef_instant thresh = praef_comchain_committed(node->commit.comchain);
+  unsigned min_latency = ~0u;
+  unsigned long long frac;
+
+  thresh += node->sys->commit.commit_lag_laxness;
+
+  RB_FOREACH(other, praef_node_map, &node->sys->nodes)
+    if (other != node->sys->local_node &&
+        praef_nd_positive == other->disposition &&
+        other->routemgr.latency < min_latency)
+      min_latency = other->routemgr.latency;
+
+  if (!~min_latency) min_latency = 0;
+
+  /* Reduce from round-trip to half-one-way */
+  min_latency /= 4;
+  /* Scale according to settings */
+  frac = min_latency;
+  frac *= node->sys->commit.self_commit_lag_compensation_16;
+  thresh += frac >> 16;
+
+  return thresh;
 }
 
 void praef_system_commit_update(praef_system* sys) {

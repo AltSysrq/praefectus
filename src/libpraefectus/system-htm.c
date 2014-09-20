@@ -147,8 +147,7 @@ void praef_system_conf_ht_root_query_offset(praef_system* sys,
 
 static int praef_node_htm_is_visible(praef_node* node,
                                      praef_instant instant) {
-  /* TODO */
-  return 1;
+  return instant < praef_node_visibility_threshold(node);
 }
 
 static const praef_hash_tree* praef_system_htm_get_snapshot(
