@@ -302,9 +302,14 @@ static void praef_system_state_process_message(
       praef_node_ack_recv_msg_received(sender, &msg->choice.received);
     break;
 
-  /* TODO: Handle all cases, remove default */
-  default:
-    abort();
+  case PraefMsg_PR_appuni:
+    if (sender && praef_node_is_alive(sender) &&
+        PRAEF_APP_HAS(sys->app, recv_unicast_opt))
+      (*sys->app->recv_unicast_opt)(
+        sys->app, sender->id, instant,
+        msg->choice.appuni.data.buf,
+        msg->choice.appuni.data.size);
+    break;
   }
 }
 
