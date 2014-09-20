@@ -135,9 +135,6 @@ void praef_node_mod_recv_msg_chmod(praef_node* node,
     return;
   }
 
-  /* TODO: The whole hlmsg must be discarded if we don't know about the node in
-   * this message.
-   */
   target = praef_system_get_node(node->sys, msg->node);
   assert(target);
 

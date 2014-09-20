@@ -169,6 +169,7 @@ void praef_system_state_recv_message(
   praef_instant instant;
   praef_hash_tree_objref ht_objref;
   praef_hlmsg msg_in_ht;
+  int discard_message;
 
   if (!praef_hlmsg_is_valid(msg)) return;
   instant = praef_hlmsg_instant(msg);
@@ -181,6 +182,26 @@ void praef_system_state_recv_message(
     sender = RB_FIND(praef_node_map, &sys->nodes, (praef_node*)&sender_id);
   else
     sender = NULL;
+
+  /* The whole message must be discarded if it contains a chmod referencing an
+   * unknown node.
+   */
+  if (praef_htf_committed_redistributable == praef_hlmsg_type(msg)) {
+    for (seg = praef_hlmsg_first(msg); seg; seg = praef_hlmsg_snext(seg)) {
+      decoded = praef_hlmsg_sdec(seg);
+      if (!decoded) {
+        praef_system_oom(sys);
+        return;
+      } else {
+        discard_message =
+          (PraefMsg_PR_chmod == decoded->present &&
+           !praef_system_get_node(sys, decoded->choice.chmod.node));
+        (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, decoded, 0);
+
+        if (discard_message) return;
+      }
+    }
+  }
 
   if (sender &&
       sender != sys->local_node &&
