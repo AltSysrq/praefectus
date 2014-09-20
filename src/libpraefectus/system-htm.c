@@ -468,9 +468,9 @@ void praef_node_htm_recv_msg_htrange(praef_node* node,
   response.choice.htrangenext.id = msg->id;
   if (n == node->sys->htm.range_max) {
     /* Still more to go */
-    /* TODO: Minify hash */
     rhash.buf = (unsigned char*)praef_hash_tree_get_hash_of(&objects[n-1]);
-    rhash.size = PRAEF_HASH_SIZE;
+    rhash.size = (praef_hash_tree_minimum_hash_length(
+                    node->sys->state.hash_tree, rhash.buf) + 1)/2;
     response.choice.htrangenext.hash = &rhash;
   }
 

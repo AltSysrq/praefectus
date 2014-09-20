@@ -263,6 +263,14 @@ const praef_hash_tree_directory*
 praef_hash_tree_readdir(const praef_hash_tree*, const praef_hash_tree_cursor*);
 
 /**
+ * Returns the minimum number of nybbles required from the given hash to
+ * uniquely identify the final directory or object a tree traversal
+ * encounters.
+ */
+unsigned praef_hash_tree_minimum_hash_length(
+  const praef_hash_tree*, const unsigned char hash[PRAEF_HASH_SIZE]);
+
+/**
  * Obtains the hash value of an object within a hash tree. The effect of this
  * call is undefined if the objref is not present in a hash tree (eg, if the
  * caller constructed it itself and didn't pass it to a successful call to

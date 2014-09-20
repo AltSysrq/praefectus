@@ -472,6 +472,24 @@ const praef_hash_tree_directory* praef_hash_tree_readdir(
   return &dir->directory;
 }
 
+unsigned praef_hash_tree_minimum_hash_length(
+  const praef_hash_tree* tree, const unsigned char hash[PRAEF_HASH_SIZE]
+) {
+  praef_hash_tree_fulldir* dir;
+  unsigned n, ix;
+
+  for (n = 0, dir = tree->root; n < PRAEF_HASH_SIZE*2; ++n) {
+    ix = nybble(hash, n);
+
+    if (praef_htet_directory != dir->directory.types[ix])
+      return n+1;
+    else
+      dir = dir->subdirectories[ix];
+  }
+
+  return n;
+}
+
 void praef_hash_tree_hash_of(unsigned char dst[PRAEF_HASH_SIZE],
                              const praef_hash_tree_objref* ref) {
   const praef_hash_tree_object* object =
