@@ -661,10 +661,19 @@ void praef_system_join_recv_msg_join_accept(
       return;
     }
 
-    /* The request is valid, create the new node */
-    /* TODO: Be smarter about the initial disposition */
+    /* The request is valid, create the new node. The disposition for nodes we
+     * accept ourselves always starts out as positive. Other new nodes start
+     * neutral; they become positive as we see that other nodes indicate the
+     * same.
+     *
+     * The latter is so that accepts received long after the node actually
+     * joined and left, which frequently happens during node joining, will not
+     * cause the local node to waste time trying to connect to them.
+     */
     new_node = praef_node_new(sys, id, &msg->request.identifier,
-                              sys->bus, praef_nd_positive,
+                              sys->bus,
+                              from_node == sys->local_node?
+                              praef_nd_positive : praef_nd_neutral,
                               msg->request.publickey.buf);
     if (!new_node) {
       sys->abnormal_status = praef_ss_oom;
