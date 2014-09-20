@@ -1157,5 +1157,25 @@ void praef_system_conf_indirect_ack_interval(praef_system*, unsigned);
  * The default is ~0u; ie, there is effectively no limit.
  */
 void praef_system_conf_max_advance_per_frame(praef_system*, unsigned);
+/**
+ * Configures the maximum offset (absolute value) of an event-vote from the
+ * event itself.
+ *
+ * This value MUST be the same across all nodes in the system, or malicious
+ * nodes will be able to cause the system to diverge. Vote messages which
+ * violate this constraint are discarded and cause the local node to begin
+ * voting to DENY the offending node.
+ *
+ * Stricter values reduce the possibility for malicious nodes to change the
+ * vote outcome of an event long after the event actually occurred.
+ *
+ * It is the application's responsibility to ensure it does not violate this
+ * constraint.
+ *
+ * The default is ~0u (ie, unlimited), since the application needs to be fully
+ * aware of this configuration itself. Virtually all applications will want to
+ * set this to something more reasonable.
+ */
+void praef_system_conf_max_event_vote_offset(praef_system*, unsigned);
 
 #endif /* LIBPRAEFECTUS_SYSTEM_H_ */

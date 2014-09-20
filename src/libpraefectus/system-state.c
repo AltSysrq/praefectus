@@ -52,9 +52,14 @@ static void praef_system_state_process_appevt(
 static void praef_system_state_process_vote(
   praef_system*, praef_node*, praef_instant, PraefMsgVote_t*);
 
+void praef_system_conf_max_event_vote_offset(praef_system* sys, unsigned i) {
+  sys->state.max_event_vote_offset = i;
+}
+
 int praef_system_state_init(praef_system* sys) {
   sys->state.loopback.unicast = praef_system_state_loopback_unicast;
   sys->state.loopback.broadcast = praef_system_state_loopback_broadcast;
+  sys->state.max_event_vote_offset = ~0u;
 
   if (!(sys->state.ur_mq = praef_mq_new(sys->router.ur_out,
                                         &sys->state.loopback,
@@ -337,7 +342,14 @@ static void praef_system_state_process_vote(
   praef_system* sys, praef_node* sender, praef_instant instant,
   PraefMsgVote_t* msg
 ) {
-  /* TODO: Enforce time boundaries on msg->instant vs hlmsg instant */
+  if ((msg->instant < instant &&
+       instant - msg->instant > sys->state.max_event_vote_offset) ||
+      (instant < msg->instant &&
+       msg->instant - instant > sys->state.max_event_vote_offset)) {
+    sender->disposition = praef_nd_negative;
+    return;
+  }
+
   /* TODO: Check for duplicate voting */
   (*sys->app->vote_bridge)(sys->app, sender->id,
                            msg->node,

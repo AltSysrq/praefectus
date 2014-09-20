@@ -37,6 +37,8 @@
 struct praef_node_s;
 
 typedef struct {
+  unsigned max_event_vote_offset;
+
   /* MQ for uncommitted-redistributable messages. There is no separate MQ for
    * comitted-redistributable messages since every node already has its own;
    * the local node's is just hooked up to the loopback bus instead of the main
