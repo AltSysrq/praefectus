@@ -145,7 +145,7 @@ struct praef_system_s {
 
 praef_node* praef_system_get_node(praef_system*, praef_object_id);
 praef_node* praef_node_new(
-  praef_system*, praef_object_id,
+  praef_system*, int will_be_local_node, praef_object_id,
   const PraefNetworkIdentifierPair_t*,
   praef_message_bus*, praef_node_disposition,
   const unsigned char pubkey[PRAEF_PUBKEY_SIZE]);

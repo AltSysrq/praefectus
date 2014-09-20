@@ -46,7 +46,6 @@ typedef struct {
 #define PRAEF_NODE_ROUTEMGR_NUM_LATENCY_SAMPLES 8
 
 typedef struct {
-  int has_route;
   praef_instant last_route_message;
   praef_instant last_ping;
   praef_instant last_pong;

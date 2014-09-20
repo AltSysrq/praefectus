@@ -162,6 +162,7 @@ static int praef_copy_net_id_pair(
 }
 
 praef_node* praef_node_new(praef_system* sys,
+                           int will_be_local_node,
                            praef_object_id id,
                            const PraefNetworkIdentifierPair_t* net_id,
                            praef_message_bus* bus,
@@ -179,6 +180,9 @@ praef_node* praef_node_new(praef_system* sys,
   node->created_at = sys->clock.ticks;
   node->disposition = disposition;
   memcpy(node->pubkey, pubkey, PRAEF_PUBKEY_SIZE);
+  if (will_be_local_node)
+    sys->local_node = node;
+
   PRAEF_OOM_IF(
     sys,
     !praef_copy_net_id_pair(&node->net_id, net_id) ||
@@ -290,7 +294,7 @@ void praef_system_bootstrap(praef_system* this) {
   praef_node* node;
 
   praef_signator_pubkey(pubkey, this->signator);
-  node = praef_node_new(this, PRAEF_BOOTSTRAP_NODE,
+  node = praef_node_new(this, 1, PRAEF_BOOTSTRAP_NODE,
                         this->self_net_id,
                         &this->state.loopback,
                         praef_nd_positive,

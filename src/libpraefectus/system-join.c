@@ -375,7 +375,7 @@ void praef_system_join_recv_msg_network_info(
     memcpy(sys->join.system_salt, msg->salt.buf, msg->salt.size);
     memcpy(sys->join.system_salt_sig, msg->saltsig.buf, msg->saltsig.size);
 
-    bootstrap = praef_node_new(sys, PRAEF_BOOTSTRAP_NODE,
+    bootstrap = praef_node_new(sys, 0, PRAEF_BOOTSTRAP_NODE,
                                sys->join.connect_target,
                                sys->bus, praef_nd_positive,
                                msg->bootstrapkey.buf);
@@ -612,7 +612,7 @@ void praef_system_join_recv_msg_join_accept(
     /* This is us. Create local node object and notify application of our new
      * id.
      */
-    new_node = praef_node_new(sys, id, sys->self_net_id,
+    new_node = praef_node_new(sys, 1, id, sys->self_net_id,
                               &sys->state.loopback, praef_nd_positive,
                               local_pubkey);
     if (!new_node) {
@@ -670,7 +670,7 @@ void praef_system_join_recv_msg_join_accept(
      * joined and left, which frequently happens during node joining, will not
      * cause the local node to waste time trying to connect to them.
      */
-    new_node = praef_node_new(sys, id, &msg->request.identifier,
+    new_node = praef_node_new(sys, 0, id, &msg->request.identifier,
                               sys->bus,
                               from_node == sys->local_node?
                               praef_nd_positive : praef_nd_neutral,

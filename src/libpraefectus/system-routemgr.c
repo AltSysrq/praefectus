@@ -147,14 +147,22 @@ void praef_node_routemgr_update(praef_node* node) {
    * had DENY for the requisite amount of time.
    */
   if (node != node->sys->local_node) {
-    if (praef_nd_positive == node->disposition && !node->routemgr.has_route) {
+    if (praef_nd_positive == node->disposition && !node->router.cr_mq) {
       (*node->bus->create_route)(node->bus, &node->net_id);
-      node->routemgr.has_route = 1;
+      node->router.cr_mq = praef_mq_new(node->sys->router.cr_out,
+                                        node->bus,
+                                        &node->net_id);
+      if (node->router.cr_mq)
+        praef_mq_set_threshold(node->router.cr_mq,
+                               praef_node_visibility_threshold(node));
+      else
+        praef_system_oom(node->sys);
     } else if (praef_nd_negative == node->disposition &&
-               node->routemgr.has_route &&
+               node->router.cr_mq &&
                praef_node_routemgr_should_kill(node)) {
       (*node->bus->delete_route)(node->bus, &node->net_id);
-      node->routemgr.has_route = 0;
+      praef_mq_delete(node->router.cr_mq);
+      node->router.cr_mq = NULL;
     }
   }
 

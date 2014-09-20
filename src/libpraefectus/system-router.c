@@ -57,18 +57,24 @@ void praef_system_router_destroy(praef_system* sys) {
 }
 
 int praef_node_router_init(praef_node* node) {
-  return
-    (node->router.rpc_out = praef_outbox_new(
-      praef_hlmsg_encoder_new(praef_htf_rpc_type,
-                              node->sys->signator,
-                              NULL,
-                              node->sys->mtu, 0), node->sys->mtu)) &&
-    (node->router.cr_mq = praef_mq_new(node->sys->router.cr_out,
-                                       node->bus,
-                                       &node->net_id)) &&
-    (node->router.rpc_mq = praef_mq_new(node->router.rpc_out,
-                                        node->bus,
-                                        &node->net_id));
+  if (!(node->router.rpc_out = praef_outbox_new(
+          praef_hlmsg_encoder_new(praef_htf_rpc_type,
+                                  node->sys->signator,
+                                  NULL,
+                                  node->sys->mtu, 0),
+          node->sys->mtu)))
+    return 0;
+
+  if (!(node->router.rpc_mq = praef_mq_new(
+          node->router.rpc_out, node->bus, &node->net_id)))
+    return 0;
+
+  if (node == node->sys->local_node)
+    if (!(node->router.cr_mq = praef_mq_new(
+            node->sys->router.cr_out, node->bus, &node->net_id)))
+      return 0;
+
+  return 1;
 }
 
 void praef_node_router_destroy(praef_node* node) {
@@ -104,5 +110,6 @@ void praef_node_router_update(praef_node* node) {
 void praef_node_router_flush(praef_node* node) {
   PRAEF_OOM_IF_NOT(node->sys, praef_outbox_flush(node->router.rpc_out));
   praef_mq_update(node->router.rpc_mq);
-  praef_mq_update(node->router.cr_mq);
+  if (node->router.cr_mq)
+    praef_mq_update(node->router.cr_mq);
 }
