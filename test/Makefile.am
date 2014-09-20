@@ -5,7 +5,7 @@ TESTS = libpraefectus/core.t libpraefectus/core-fullstack.t \
 libpraefectus/transactor.t libpraefectus/metatransactor.t \
 libpraefectus/hash-tree.t libpraefectus/commitment-chain.t \
 libpraefectus/dsa.t libpraefectus/virtual-bus.t \
-libpraefectus/hl-msg.t libpraefectus/clock.t libpraefectus/dynamic.t \
+libpraefectus/hl-msg.t libpraefectus/clock.t \
 libpraefectus/outbox.t libpraefectus/ack-table.t \
 libpraefectus/system.t libpraefectus/system-unit.t
 AM_CFLAGS = $(CHECK_CFLAGS) -I$(top_builddir)/src \
@@ -39,8 +39,6 @@ libpraefectus_hl_msg_t_SOURCES = libpraefectus/hl-msg.c
 libpraefectus_hl_msg_t_LDADD = $(TEST_LIBS)
 libpraefectus_clock_t_SOURCES = libpraefectus/clock.c
 libpraefectus_clock_t_LDADD = $(TEST_LIBS)
-libpraefectus_dynamic_t_SOURCES = libpraefectus/dynamic.c
-libpraefectus_dynamic_t_LDADD = $(TEST_LIBS)
 libpraefectus_outbox_t_SOURCES = libpraefectus/outbox.c
 libpraefectus_outbox_t_LDADD = $(TEST_LIBS)
 libpraefectus_ack_table_t_SOURCES = libpraefectus/ack-table.c
