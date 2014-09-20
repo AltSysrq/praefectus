@@ -383,6 +383,8 @@ PraefMsgAppEvent ::= SEQUENCE {
 -- Nodes MUST accept Votes which specify nonexistent events and eventually
 -- apply them if the event comes into existence.
 --
+-- A node MUST NOT send more than one Vote message for each Event message.
+--
 -- This is a committed redistributable event.
 PraefMsgVote ::= SEQUENCE {
   -- The node which sent the event that this message votes for.

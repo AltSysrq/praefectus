@@ -36,6 +36,18 @@
 
 struct praef_node_s;
 
+typedef struct praef_system_state_present_vote_s {
+  praef_instant instant;
+  praef_event_serial_number serial_number;
+  praef_object_id against_object;
+  praef_object_id from_node;
+
+  SPLAY_ENTRY(praef_system_state_present_vote_s) tree;
+} praef_system_state_present_vote;
+
+SPLAY_HEAD(praef_system_state_present_votes,
+           praef_system_state_present_vote_s);
+
 typedef struct {
   unsigned max_event_vote_offset;
 
@@ -57,6 +69,7 @@ typedef struct {
   praef_hash_tree* hash_tree;
 
   struct praef_event_sequence present_events;
+  struct praef_system_state_present_votes present_votes;
 } praef_system_state;
 
 typedef struct {
@@ -71,5 +84,12 @@ void praef_system_state_recv_message(praef_system*, praef_hlmsg*);
 int praef_node_state_init(struct praef_node_s*);
 void praef_node_state_destroy(struct praef_node_s*);
 void praef_node_state_update(struct praef_node_s*);
+
+int praef_compare_system_state_present_vote(
+  const praef_system_state_present_vote* a,
+  const praef_system_state_present_vote* b);
+SPLAY_PROTOTYPE(praef_system_state_present_votes,
+                praef_system_state_present_vote_s,
+                tree, praef_compare_system_state_present_vote)
 
 #endif /* LIBPRAEFECTUS__SYSTEM_STATE_H_ */

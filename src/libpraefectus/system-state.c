@@ -67,6 +67,7 @@ int praef_system_state_init(praef_system* sys) {
   sys->state.max_event_vote_offset = ~0u;
 
   SPLAY_INIT(&sys->state.present_events);
+  SPLAY_INIT(&sys->state.present_votes);
 
   if (!(sys->state.ur_mq = praef_mq_new(sys->router.ur_out,
                                         &sys->state.loopback,
@@ -78,16 +79,27 @@ int praef_system_state_init(praef_system* sys) {
 }
 
 void praef_system_state_destroy(praef_system* sys) {
-  praef_event* pe, * tmp;
+  praef_event* pe, * pe_tmp;
+  praef_system_state_present_vote* pv, * pv_tmp;
 
   if (sys->state.ur_mq) praef_mq_delete(sys->state.ur_mq);
   if (sys->state.hash_tree) praef_hash_tree_delete(sys->state.hash_tree);
 
   for (pe = SPLAY_MIN(praef_event_sequence, &sys->state.present_events);
-       pe; pe = tmp) {
-    tmp = SPLAY_NEXT(praef_event_sequence, &sys->state.present_events, pe);
+       pe; pe = pe_tmp) {
+    pe_tmp = SPLAY_NEXT(praef_event_sequence, &sys->state.present_events, pe);
     SPLAY_REMOVE(praef_event_sequence, &sys->state.present_events, pe);
     free(pe);
+  }
+
+  for (pv = SPLAY_MIN(praef_system_state_present_votes,
+                      &sys->state.present_votes);
+       pv; pv = pv_tmp) {
+    pv_tmp = SPLAY_NEXT(praef_system_state_present_votes,
+                        &sys->state.present_votes, pv);
+    SPLAY_REMOVE(praef_system_state_present_votes,
+                 &sys->state.present_votes, pv);
+    free(pv);
   }
 }
 
@@ -380,6 +392,8 @@ static void praef_system_state_process_vote(
   praef_system* sys, praef_node* sender, praef_instant instant,
   PraefMsgVote_t* msg
 ) {
+  praef_system_state_present_vote example, * entry;
+
   if ((msg->instant < instant &&
        instant - msg->instant > sys->state.max_event_vote_offset) ||
       (instant < msg->instant &&
@@ -388,11 +402,49 @@ static void praef_system_state_process_vote(
     return;
   }
 
-  /* TODO: Check for duplicate voting */
+  /* Ensure that no such vote has already been sent down */
+  example.from_node = sender->id;
+  example.against_object = msg->node;
+  example.instant = msg->instant;
+  example.serial_number = msg->serialnumber;
+  if (SPLAY_FIND(praef_system_state_present_votes,
+                 &sys->state.present_votes, &example)) {
+    sender->disposition = praef_nd_negative;
+    return;
+  }
+
   (*sys->app->vote_bridge)(sys->app, sender->id,
                            msg->node,
                            msg->instant,
                            msg->serialnumber);
+
+  /* Record the vote here so we can detect duplicates later */
+  entry = malloc(sizeof(praef_system_state_present_vote));
+  if (!entry) {
+    praef_system_oom(sys);
+    return;
+  }
+
+  memcpy(entry, &example, sizeof(praef_system_state_present_vote));
+  SPLAY_INSERT(praef_system_state_present_votes,
+               &sys->state.present_votes, entry);
 }
 
 void praef_node_state_update(praef_node* node) { }
+
+int praef_compare_system_state_present_vote(
+  const praef_system_state_present_vote* a,
+  const praef_system_state_present_vote* b
+) {
+#define C(f) if (a->f != b->f) return (a->f < b->f) - (b->f < a->f)
+  C(instant);
+  C(serial_number);
+  C(against_object);
+  C(from_node);
+  return 0;
+#undef C
+}
+
+SPLAY_GENERATE(praef_system_state_present_votes,
+               praef_system_state_present_vote_s,
+               tree, praef_compare_system_state_present_vote)
