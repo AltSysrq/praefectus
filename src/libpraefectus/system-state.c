@@ -36,6 +36,11 @@
 #include "-system-join.h"
 #include "defs.h"
 
+typedef struct {
+  praef_event self;
+  praef_event* actual;
+} praef_system_state_wrapped_event;
+
 static void praef_system_state_loopback_unicast(
   praef_message_bus*, const PraefNetworkIdentifierPair_t*,
   const void*, size_t);
@@ -61,6 +66,8 @@ int praef_system_state_init(praef_system* sys) {
   sys->state.loopback.broadcast = praef_system_state_loopback_broadcast;
   sys->state.max_event_vote_offset = ~0u;
 
+  SPLAY_INIT(&sys->state.present_events);
+
   if (!(sys->state.ur_mq = praef_mq_new(sys->router.ur_out,
                                         &sys->state.loopback,
                                         NULL)) ||
@@ -71,8 +78,17 @@ int praef_system_state_init(praef_system* sys) {
 }
 
 void praef_system_state_destroy(praef_system* sys) {
+  praef_event* pe, * tmp;
+
   if (sys->state.ur_mq) praef_mq_delete(sys->state.ur_mq);
   if (sys->state.hash_tree) praef_hash_tree_delete(sys->state.hash_tree);
+
+  for (pe = SPLAY_MIN(praef_event_sequence, &sys->state.present_events);
+       pe; pe = tmp) {
+    tmp = SPLAY_NEXT(praef_event_sequence, &sys->state.present_events, pe);
+    SPLAY_REMOVE(praef_event_sequence, &sys->state.present_events, pe);
+    free(pe);
+  }
 }
 
 void praef_system_state_update(praef_system* sys) {
@@ -322,7 +338,8 @@ static void praef_system_state_process_appevt(
   praef_system* sys, praef_node* sender, praef_instant instant,
   PraefMsgAppEvent_t* msg
 ) {
-  /* TODO: Check for duplicate event */
+  praef_system_state_wrapped_event* wrapped;
+  praef_event* already_existing;
   praef_event* evt = (*sys->app->decode_event)(
     sys->app, instant, sender->id,
     msg->serialnumber,
@@ -333,8 +350,34 @@ static void praef_system_state_process_appevt(
     return;
   }
 
-  /* TODO: Store the event somewhere for duplicate checking */
+  if ((already_existing =
+       SPLAY_FIND(praef_event_sequence, &sys->state.present_events, evt))) {
+    /* An event with this identifying triple already exists. Neutralise the
+     * original and do not process this one.
+     */
+    wrapped = (praef_system_state_wrapped_event*)already_existing;
+    (*sys->app->neutralise_event_bridge)(sys->app, wrapped->actual);
+    (*evt->free)(evt);
+    sender->disposition = praef_nd_negative;
+  }
+
   (*sys->app->insert_event_bridge)(sys->app, evt);
+
+  /* Record this event triple so that we can't produce a duplicate event
+   * later.
+   */
+  wrapped = malloc(sizeof(praef_system_state_wrapped_event));
+  if (!wrapped) {
+    praef_system_oom(sys);
+    return;
+  }
+
+  memcpy(wrapped, evt, sizeof(praef_event));
+  wrapped->self.apply = NULL;
+  wrapped->self.free = NULL;
+  wrapped->actual = evt;
+  SPLAY_INSERT(praef_event_sequence, &sys->state.present_events,
+               (praef_event*)wrapped);
 }
 
 

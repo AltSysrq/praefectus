@@ -55,6 +55,8 @@ typedef struct {
    */
   praef_message_bus loopback;
   praef_hash_tree* hash_tree;
+
+  struct praef_event_sequence present_events;
 } praef_system_state;
 
 typedef struct {
