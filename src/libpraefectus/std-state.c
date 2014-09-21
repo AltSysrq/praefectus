@@ -51,8 +51,8 @@ int praef_std_state_init(praef_std_state* this) {
 }
 
 void praef_std_state_cleanup(praef_std_state* this) {
-  praef_metatransactor_delete(this->mtx);
   praef_transactor_delete(this->tx);
+  praef_metatransactor_delete(this->mtx);
 }
 
 void praef_std_state_advance(praef_std_state* this,
