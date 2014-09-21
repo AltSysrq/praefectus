@@ -90,6 +90,7 @@ praef_app* praef_stdsys_new(praef_std_state* stack) {
   this->app.has_chmod_bridge = praef_stdsys_has_chmod;
   this->app.vote_bridge = praef_stdsys_vote;
   this->app.advance_bridge = praef_stdsys_advance;
+  this->app.size = sizeof(praef_app);
   return (praef_app*)this;
 }
 
