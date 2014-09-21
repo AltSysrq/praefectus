@@ -646,13 +646,16 @@ void praef_system_join_recv_msg_join_accept(
      */
     if (!from_node) return;
 
-    /* If a node with the new id has already joined, there is no action to
-     * take, except to ensure that the node is somewhere in the join tree (it
-     * might not be if it is the local node and we connected via a
+    /* If a node with the new id and public key has already joined, there is no
+     * action to take, except to ensure that the node is somewhere in the join
+     * tree (it might not be if it is the local node and we connected via a
      * non-bootstrap node, since that path won't actually the node that's
      * accepting it into the system).
      */
-    if ((existing_node = praef_system_get_node(sys, id))) {
+    existing_node = praef_system_get_node(sys, id);
+    if (existing_node && 0 == memcmp(
+          existing_node->pubkey, msg->request.publickey.buf,
+          PRAEF_PUBKEY_SIZE)) {
       if (!existing_node->join.join_tree.data_size)
         praef_system_join_record_in_join_tree(
           from_node, existing_node, envelope);
@@ -682,13 +685,13 @@ void praef_system_join_recv_msg_join_accept(
     if (praef_system_register_node(sys, new_node)) {
       if (PRAEF_APP_HAS(sys->app, discover_node_opt))
         (*sys->app->discover_node_opt)(sys->app, &new_node->net_id, id);
+
+      praef_system_join_record_in_join_tree(from_node, new_node, envelope);
+
+      /* Feed the Accept message back to the new node */
+      (*new_node->bus->unicast)(new_node->bus, &new_node->net_id,
+                                envelope->data, envelope->size-1);
     }
-
-    praef_system_join_record_in_join_tree(from_node, new_node, envelope);
-
-    /* Feed the Accept message back to the new node */
-    (*new_node->bus->unicast)(new_node->bus, &new_node->net_id,
-                              envelope->data, envelope->size-1);
   }
 }
 

@@ -35,6 +35,7 @@
 #include <libpraefectus/virtual-bus.h>
 #include <libpraefectus/object.h>
 #include <libpraefectus/event.h>
+#include <libpraefectus/keccak.h>
 
 #define NUM_VNODES 8
 #define STD_LATENCY 16
@@ -96,7 +97,7 @@ static void create_node_object(praef_app* app, praef_object_id id) {
   memset(objects[num_objects].evts, 0, sizeof(objects[num_objects].evts));
   objects[num_objects].now = 0;
 
-  ck_assert_ptr_eq(objects+num_objects,
+  ck_assert_ptr_eq(NULL,
                    praef_context_add_object(
                      state.context, (praef_object*)objects+num_objects));
   ++num_objects;
@@ -145,7 +146,8 @@ defsetup {
 
     signator[i] = praef_signator_new();
     rpc_enc[i] = praef_hlmsg_encoder_new(praef_htf_rpc_type, signator[i],
-                                         NULL, PRAEF_HLMSG_MTU_MIN, 0);
+                                         &message_serno,
+                                         PRAEF_HLMSG_MTU_MIN, 0);
     ur_enc[i] = praef_hlmsg_encoder_new(praef_htf_uncommitted_redistributable,
                                         signator[i], &message_serno,
                                         PRAEF_HLMSG_MTU_MIN, 0);
@@ -215,10 +217,10 @@ static void do_send_message(praef_virtual_bus* vbus,
   (*bus->triangular_unicast)(bus, sys_id, encoded.data, encoded.size-1);
 }
 
-#define SEND(type, from, ...) do {                              \
+#define SEND(type, from, ...) ({do {                            \
     PraefMsg_t _msg = __VA_ARGS__;                              \
     do_send_message(bus[from], type##_enc[from], &_msg);        \
-  } while (0)
+  } while (0);})
 
 typedef int (*message_matcher)(unsigned received_by, const PraefMsg_t*);
 typedef void (*matched_callback)(void);
@@ -353,4 +355,68 @@ deftest(get_network_info) {
         MATCHER(
           0,
           SUB(present, IS(PraefMsg_PR_netinfo))))));
+}
+
+deftest(detects_chimera_node_on_join) {
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE], unrelated_pubkey[PRAEF_PUBKEY_SIZE];
+  praef_keccak_sponge sponge;
+  praef_node* artificial;
+
+  praef_system_bootstrap(sys);
+
+  /* Create an artifical node which has the same id that would be produced by
+   * virtual node 0 joining.
+   */
+  praef_signator_pubkey(pubkey, signator[0]);
+  praef_signator_pubkey(unrelated_pubkey, signator[2]);
+  praef_sha3_init(&sponge);
+  praef_keccak_sponge_absorb(&sponge, sys->join.system_salt,
+                             sizeof(sys->join.system_salt));
+  praef_keccak_sponge_absorb(&sponge, pubkey, sizeof(pubkey));
+  artificial = praef_node_new(
+    sys, 0, praef_keccak_sponge_squeeze_integer(
+      &sponge, sizeof(praef_object_id)),
+    net_id[2], BUS(2), praef_nd_positive, unrelated_pubkey);
+  ck_assert(praef_system_register_node(sys, artificial));
+
+  SEND(rpc, 0, {
+      .present = PraefMsg_PR_getnetinfo,
+      .choice = {
+        .getnetinfo = {
+          .retaddr = *net_id[0]
+        }
+      }
+    });
+  EXPECT(
+    3,
+    EXCHANGE(
+      NO_ACTION,
+      MATCHERS(
+        MATCHER(
+          0,
+          SUB(present, IS(PraefMsg_PR_netinfo))))));
+  message_serno = 0;
+  SEND(rpc, 0, {
+      .present = PraefMsg_PR_joinreq,
+      .choice = {
+        .joinreq = {
+          .publickey = {
+            .buf = pubkey,
+            .size = PRAEF_PUBKEY_SIZE
+          },
+          .identifier = *net_id[0],
+          .auth = NULL
+        }
+      }
+    });
+  EXPECT(
+    5,
+    EXCHANGE(
+      NO_ACTION,
+      MATCHERS(
+        MATCHER(
+          0,
+          SUB(present, IS(PraefMsg_PR_accept))))));
+
+  ck_assert_int_eq(praef_nd_negative, artificial->disposition);
 }
