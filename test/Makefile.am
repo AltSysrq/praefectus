@@ -7,7 +7,8 @@ libpraefectus/hash-tree.t libpraefectus/commitment-chain.t \
 libpraefectus/dsa.t libpraefectus/virtual-bus.t \
 libpraefectus/hl-msg.t libpraefectus/clock.t \
 libpraefectus/outbox.t libpraefectus/ack-table.t \
-libpraefectus/system.t libpraefectus/system-unit.t
+libpraefectus/system.t libpraefectus/system-unit.t \
+libpraefectus/system-fullstack.t
 AM_CFLAGS = $(CHECK_CFLAGS) -I$(top_builddir)/src \
   -I$(top_builddir)/src/asn1-support -Wall -Wextra \
   -Wno-unused-parameter -Wno-long-long -Wno-missing-field-initializers \
@@ -47,6 +48,8 @@ libpraefectus_system_t_SOURCES = libpraefectus/system.c
 libpraefectus_system_t_LDADD = $(TEST_LIBS)
 libpraefectus_system_unit_t_SOURCES = libpraefectus/system-unit.c
 libpraefectus_system_unit_t_LDADD = $(TEST_LIBS)
+libpraefectus_system_fullstack_t_SOURCES = libpraefectus/system-fullstack.c
+libpraefectus_system_fullstack_t_LDADD = $(TEST_LIBS)
 
 libpraefectus_clock_sim_SOURCES = libpraefectus/clock-sim.c
 libpraefectus_clock_sim_LDADD = ../src/libpraefectus.la
