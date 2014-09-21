@@ -99,7 +99,7 @@ static void create_node_object(praef_app* app, praef_object_id id) {
 
   ck_assert_ptr_eq(NULL,
                    praef_context_add_object(
-                     state.context, (praef_object*)objects+num_objects));
+                     state.context, (praef_object*)(objects+num_objects)));
   ++num_objects;
 }
 
@@ -231,6 +231,13 @@ typedef struct {
 } exchange;
 
 #define BUS(n) praef_virtual_bus_mb(bus[n])
+static void advance(unsigned n) {
+  while (n--) {
+    praef_virtual_network_advance(vnet, 1);
+    praef_system_advance(sys, 1);
+  }
+}
+
 static void do_expectation(
   exchange* exchanges,
   unsigned num_exchanges,
@@ -253,8 +260,7 @@ static void do_expectation(
     if (complete) return;
 
     ++current_instant;
-    praef_virtual_network_advance(vnet, 1);
-    praef_system_advance(sys, 1);
+    advance(1);
 
     for (n = 0; n < NUM_VNODES; ++n) {
       while ((hlmsg.size = (*BUS(n)->recv)(
@@ -335,6 +341,9 @@ static void no_action(void) { }
   }                                                     \
   if (!ANONYMOUS(VALUE.field)) return 0
 #define IS(n) WHERE(VALUE == (n))
+
+#define CONSTANTLY(value)                       \
+  ({ typeof(value) ANONYMOUS() { return (value); }; ANONYMOUS; })
 
 deftest(get_network_info) {
   praef_system_bootstrap(sys);
@@ -422,4 +431,81 @@ deftest(detects_chimera_node_on_join) {
           SUB(present, IS(PraefMsg_PR_accept))))));
 
   ck_assert_int_eq(praef_nd_negative, artificial->disposition);
+}
+
+deftest(ignores_join_request_with_invalid_signature) {
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE] = { 0 };
+
+  praef_system_bootstrap(sys);
+  SEND(rpc, 0, {
+      .present = PraefMsg_PR_joinreq,
+      .choice = {
+        .joinreq = {
+          .publickey = {
+            .buf = pubkey,
+            .size = PRAEF_PUBKEY_SIZE
+          },
+          .identifier = *net_id[0],
+          .auth = NULL
+        }
+      }
+    });
+  advance(5);
+  ck_assert_int_eq(1, num_objects);
+}
+
+deftest(ignores_join_request_with_missing_auth) {
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE];
+
+  app->is_auth_valid_opt =
+    (praef_app_is_auth_valid_t)CONSTANTLY(1);
+
+  praef_signator_pubkey(pubkey, signator[0]);
+
+  praef_system_bootstrap(sys);
+  SEND(rpc, 0, {
+      .present = PraefMsg_PR_joinreq,
+      .choice = {
+        .joinreq = {
+          .publickey = {
+            .buf = pubkey,
+            .size = PRAEF_PUBKEY_SIZE
+          },
+          .identifier = *net_id[0],
+          .auth = NULL
+        }
+      }
+    });
+  advance(5);
+  ck_assert_int_eq(1, num_objects);
+}
+
+deftest(ignores_join_request_with_invalid_auth) {
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE];
+  OCTET_STRING_t broken_auth = {
+    .buf = (void*)"uiae",
+    .size = 4
+  };
+
+  app->is_auth_valid_opt =
+    (praef_app_is_auth_valid_t)CONSTANTLY(0);
+
+  praef_signator_pubkey(pubkey, signator[0]);
+
+  praef_system_bootstrap(sys);
+  SEND(rpc, 0, {
+      .present = PraefMsg_PR_joinreq,
+      .choice = {
+        .joinreq = {
+          .publickey = {
+            .buf = pubkey,
+            .size = PRAEF_PUBKEY_SIZE
+          },
+          .identifier = *net_id[0],
+          .auth = &broken_auth
+        }
+      }
+    });
+  advance(5);
+  ck_assert_int_eq(1, num_objects);
 }
