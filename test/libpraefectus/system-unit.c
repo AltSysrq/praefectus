@@ -308,7 +308,7 @@ static void do_expectation(
     }
   }
 
-  ck_assert(0);
+  abort();
 }
 
 #include "system-unit-expect-macro.h"
@@ -329,17 +329,18 @@ static void no_action(void) { }
 #define VALUE (*_value)
 #define WHERE(expr) if (!(expr)) return 0
 #define SUB(field,body)                                 \
-  int ANONYMOUS(const typeof(VALUE.field)* _value) {    \
+  int GLUE(field,ANONYMOUS)(const typeof(VALUE.field)* _value) {        \
     body;                                               \
     return 1;                                           \
   }                                                     \
-  if (!ANONYMOUS(&VALUE.field)) return 0
+  if (!GLUE(field,ANONYMOUS)(&VALUE.field)) return 0
 #define SUB_OPT(field,body)                             \
-  int ANONYMOUS(const typeof(VALUE.field)* _value) {    \
+  int GLUE(field,ANONYMOUS)(const typeof(VALUE.field)* _value) {        \
     body;                                               \
     return 1;                                           \
   }                                                     \
-  if (!ANONYMOUS(VALUE.field)) return 0
+  if (!GLUE(field,ANONYMOUS)(VALUE.field)) return 0
+#define CSUB(field,body) SUB(choice, SUB(field, body))
 #define IS(n) WHERE(VALUE == (n))
 
 #define CONSTANTLY(value)                       \
@@ -351,7 +352,8 @@ static void incarnate(unsigned n) {
 
   praef_signator_pubkey(pubkey, signator[n]);
   node = praef_node_new(
-    sys, 0, 100 + n, net_id[n], BUS(n), praef_nd_positive, pubkey);
+    sys, 0, 100 + n, net_id[n],
+    praef_virtual_bus_mb(sysbus), praef_nd_positive, pubkey);
   ck_assert(praef_system_register_node(sys, node));
 
   (*BUS(n)->create_route)(BUS(n), sys_id);
@@ -559,4 +561,36 @@ deftest(broadcasts_accept_to_all_nodes) {
           2,
           SUB(present, IS(PraefMsg_PR_accept))))));
   ck_assert_int_eq(4, num_objects);
+}
+
+deftest(agrees_to_grant_positive_node) {
+  debug_receive = 1;
+  praef_system_bootstrap(sys);
+  incarnate(0);
+  advance(2);
+
+  SEND(cr, 0, {
+      .present = PraefMsg_PR_chmod,
+      .choice = {
+        .chmod = {
+          .node = 100,
+          .effective = 8,
+          .bit = PraefMsgChmod__bit_grant
+        }
+      }
+    });
+  EXPECT(
+    6,
+    EXCHANGE(
+      NO_ACTION,
+      MATCHERS(
+        MATCHER(
+          0,
+          SUB(present, IS(PraefMsg_PR_chmod));
+          CSUB(chmod,
+              SUB(node, IS(100));
+              SUB(effective, IS(8));
+              SUB(bit, IS(PraefMsgChmod__bit_grant)))))));
+  advance(5);
+  ck_assert(praef_node_is_alive(praef_system_get_node(sys, 100)));
 }
