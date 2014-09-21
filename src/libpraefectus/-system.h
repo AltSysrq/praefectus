@@ -29,6 +29,7 @@
 #define LIBPRAEFECTUS__SYSTEM_H_
 
 #include <stddef.h>
+#include <stdio.h>
 
 /* This is an internal header file.
  *
@@ -138,6 +139,8 @@ struct praef_system_s {
   praef_system_ack ack;
 
   struct praef_node_map nodes;
+
+  FILE* debug_receive;
 
   praef_node* local_node;
   praef_system_status abnormal_status;

@@ -258,6 +258,16 @@ static void praef_system_state_process_message(
   praef_system* sys, praef_node* sender, praef_instant instant,
   PraefMsg_t* msg, const praef_hlmsg* envelope
 ) {
+  if (sys->debug_receive) {
+    fprintf(sys->debug_receive,
+            "%08X:%d: Received message from node %08X, time %d\n",
+            sys->local_node? sys->local_node->id : 0,
+            sys->clock.monotime,
+            sender? sender->id : 0,
+            instant);
+    xer_fprint(sys->debug_receive, &asn_DEF_PraefMsg, msg);
+  }
+
   switch (msg->present) {
   case PraefMsg_PR_NOTHING: abort();
   case PraefMsg_PR_appevt:
