@@ -361,10 +361,11 @@ deftest(detects_chimera_node_on_join) {
   unsigned char pubkey[PRAEF_PUBKEY_SIZE], unrelated_pubkey[PRAEF_PUBKEY_SIZE];
   praef_keccak_sponge sponge;
   praef_node* artificial;
+  praef_object_id artificial_id;
 
   praef_system_bootstrap(sys);
 
-  /* Create an artifical node which has the same id that would be produced by
+  /* Create an artificial node which has the same id that would be produced by
    * virtual node 0 joining.
    */
   praef_signator_pubkey(pubkey, signator[0]);
@@ -373,9 +374,11 @@ deftest(detects_chimera_node_on_join) {
   praef_keccak_sponge_absorb(&sponge, sys->join.system_salt,
                              sizeof(sys->join.system_salt));
   praef_keccak_sponge_absorb(&sponge, pubkey, sizeof(pubkey));
+  artificial_id = praef_keccak_sponge_squeeze_integer(
+    &sponge, sizeof(praef_object_id));
+  if (artificial_id <= 1) artificial_id = 2;
   artificial = praef_node_new(
-    sys, 0, praef_keccak_sponge_squeeze_integer(
-      &sponge, sizeof(praef_object_id)),
+    sys, 0, artificial_id,
     net_id[2], BUS(2), praef_nd_positive, unrelated_pubkey);
   ck_assert(praef_system_register_node(sys, artificial));
 
