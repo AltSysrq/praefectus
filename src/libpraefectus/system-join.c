@@ -121,6 +121,7 @@ void praef_system_join_update(praef_system* sys) {
   if (!sys->join.connect_out) return;
 
   memset(&request, 0, sizeof(request));
+  PRAEF_OOM_IF_NOT(sys, praef_outbox_flush(sys->join.connect_out));
   praef_outbox_set_now(sys->join.connect_out, sys->clock.monotime);
 
   /* If still in the handshake portion of the connection protocol, retransmit
