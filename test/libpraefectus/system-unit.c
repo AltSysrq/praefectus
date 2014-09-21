@@ -345,6 +345,18 @@ static void no_action(void) { }
 #define CONSTANTLY(value)                       \
   ({ typeof(value) ANONYMOUS() { return (value); }; ANONYMOUS; })
 
+static void incarnate(unsigned n) {
+  praef_node* node;
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE];
+
+  praef_signator_pubkey(pubkey, signator[n]);
+  node = praef_node_new(
+    sys, 0, 100 + n, net_id[n], BUS(n), praef_nd_positive, pubkey);
+  ck_assert(praef_system_register_node(sys, node));
+
+  (*BUS(n)->create_route)(BUS(n), sys_id);
+}
+
 deftest(get_network_info) {
   praef_system_bootstrap(sys);
 
@@ -508,4 +520,43 @@ deftest(ignores_join_request_with_invalid_auth) {
     });
   advance(5);
   ck_assert_int_eq(1, num_objects);
+}
+
+deftest(broadcasts_accept_to_all_nodes) {
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE];
+
+  praef_signator_pubkey(pubkey, signator[2]);
+
+  praef_system_bootstrap(sys);
+  incarnate(0);
+  incarnate(1);
+  advance(2);
+  SEND(rpc, 2, {
+      .present = PraefMsg_PR_joinreq,
+      .choice = {
+        .joinreq = {
+          .publickey = {
+            .buf = pubkey,
+            .size = PRAEF_PUBKEY_SIZE
+          },
+          .identifier = *net_id[2],
+          .auth = NULL
+        }
+      }
+    });
+  EXPECT(
+    5,
+    EXCHANGE(
+      NO_ACTION,
+      MATCHERS(
+        MATCHER(
+          0,
+          SUB(present, IS(PraefMsg_PR_accept))),
+        MATCHER(
+          1,
+          SUB(present, IS(PraefMsg_PR_accept))),
+        MATCHER(
+          2,
+          SUB(present, IS(PraefMsg_PR_accept))))));
+  ck_assert_int_eq(4, num_objects);
 }
