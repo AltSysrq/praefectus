@@ -48,6 +48,7 @@ struct praef_virtual_link_s {
    * link.
    */
   praef_instant last_xmit, last_xmit_exttime;
+  int any_xmit;
   int is_route_open;
 
   SLIST_ENTRY(praef_virtual_link_s) next;
@@ -213,6 +214,7 @@ static praef_virtual_link* praef_virtual_link_new(void) {
   this->reverse = NULL;
   this->destination = NULL;
   this->last_xmit = 0;
+  this->any_xmit = 0;
   this->is_route_open = 0;
   return this;
 }
@@ -330,6 +332,7 @@ static int praef_virtual_bus_delete_route(
       link->is_route_open = 0;
       link->last_xmit = this->network->now;
       link->last_xmit_exttime = this->network->exttime;
+      link->any_xmit = 1;
       return 1;
     }
   }
@@ -371,6 +374,7 @@ static void praef_virtual_bus_do_unicast(
    */
   link->last_xmit = this->network->now;
   link->last_xmit_exttime = this->network->exttime;
+  link->any_xmit = 1;
 
   praef_virtual_bus_send_packet(this, link, is_triangular, data, sz);
 }
@@ -398,16 +402,21 @@ static void praef_virtual_bus_send_packet(
   int bypass_firewall, const void* data, size_t sz
 ) {
   praef_instant reverse_xmit;
+  int any_xmit;
   praef_virtual_bus_message* message;
 
-  if (link->reverse)
+  if (link->reverse) {
     reverse_xmit = link->reverse->last_xmit;
-  else
+    any_xmit = link->reverse->any_xmit;
+  } else {
     reverse_xmit = 0;
+    any_xmit = 0;
+  }
 
   if (!bypass_firewall &&
       (!link->reverse || !link->reverse->is_route_open) &&
-      reverse_xmit + link->parms.firewall_grace_period <= this->network->now)
+      (reverse_xmit + link->parms.firewall_grace_period <= this->network->now ||
+       !any_xmit))
     /* This packet is not routed so as to bypass firewall/NAT effects, and the
      * destination is not holding the route open and has not transmitted a
      * packet to the sender since the grace period ended. The packet gets
