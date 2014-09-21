@@ -125,7 +125,10 @@ void praef_stdsys_delete(praef_app* this) {
 static int praef_stdsys_create_node(
   praef_app* this, praef_object_id node
 ) {
-  return praef_metatransactor_add_node(STACK->mtx, node);
+  if (1 != node)
+    return praef_metatransactor_add_node(STACK->mtx, node);
+  else
+    return 1;
 }
 
 static praef_instant praef_stdsys_get_node_grant(
