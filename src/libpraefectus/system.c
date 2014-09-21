@@ -423,8 +423,11 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
   num_live_nodes = 0;
   num_negative_nodes = 0;
   RB_FOREACH(node, praef_node_map, &this->nodes) {
-    if (praef_node_is_alive(node)) ++num_live_nodes;
-    if (praef_nd_negative == node->disposition) ++num_negative_nodes;
+    if (praef_node_is_alive(node)) {
+      ++num_live_nodes;
+      if (praef_nd_negative == node->disposition)
+        ++num_negative_nodes;
+    }
   }
 
   if (num_live_nodes < num_negative_nodes*2)
