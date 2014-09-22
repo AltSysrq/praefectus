@@ -391,7 +391,7 @@ praef_system_status praef_system_advance(praef_system* this, unsigned elapsed) {
   praef_system_mod_update(this);
   praef_system_state_update(this);
   praef_system_ack_update(this);
-  if (this->join_state >= praef_sjs_requesting_grant) {
+  if (this->join_state >= praef_sjs_syncing_clock) {
     elapsed_monotime = this->clock.monotime - this->app_monotime;
 
     if (elapsed_monotime > this->max_advance_per_frame) {
