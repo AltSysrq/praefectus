@@ -73,7 +73,7 @@ void praef_system_mod_update(praef_system* sys) {
       if (PRAEF_APP_HAS(sys->app, gained_grant_opt))
         (*sys->app->gained_grant_opt)(sys->app);
     }
-  } else {
+  } else if (praef_sjs_requesting_grant == sys->join_state) {
     if (sys->clock.ticks - sys->mod.last_grant_proposal >=
         sys->mod.propose_grant_interval) {
       memset(&msg, 0, sizeof(msg));
