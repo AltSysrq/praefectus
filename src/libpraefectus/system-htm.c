@@ -533,7 +533,7 @@ static unsigned praef_system_htm_popcount(unsigned i) {
   /* We don't need to do this particular efficiently, so just use the simplest,
    * most portable solution.
    */
-  for (n = 0; i; ++n, i >>= 2);
+  for (n = 0; i; ++n, i >>= 1);
 
   return n;
 }
