@@ -443,6 +443,12 @@ typedef void (*praef_app_recv_unicast_t)(praef_app*, praef_object_id from_node,
                                          praef_instant instant,
                                          const void* data, size_t size);
 
+/**
+ * Notifies the application of a developer-targetted log message produced by
+ * the system.
+ */
+typedef void (*praef_app_log_t)(praef_app*, const char*);
+
 struct praef_app_s {
   /**
    * Equal to the compile-time value of sizeof(praef_app). (This allows new
@@ -476,6 +482,7 @@ struct praef_app_s {
   praef_app_ht_scan_progress_t ht_scan_progress_opt;
   praef_app_clock_synced_t clock_synced_opt;
   praef_app_gained_grant_t gained_grant_opt;
+  praef_app_log_t log_opt;
 
   /* Optional application-defined-message callbacks */
   praef_app_recv_unicast_t recv_unicast_opt;

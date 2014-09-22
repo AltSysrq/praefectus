@@ -385,7 +385,7 @@ static void praef_system_state_process_appevt(
     msg->data.buf, msg->data.size);
   if (!evt) {
     /* Invalid event */
-    sender->disposition = praef_nd_negative;
+    praef_node_negative(sender, "Invalid event");
     return;
   }
 
@@ -394,10 +394,11 @@ static void praef_system_state_process_appevt(
     /* An event with this identifying triple already exists. Neutralise the
      * original and do not process this one.
      */
+    praef_node_negative(sender, "Duplicate event (%d,%d,%d)",
+                        evt->instant, evt->object, evt->serial_number);
     wrapped = (praef_system_state_wrapped_event*)already_existing;
     (*sys->app->neutralise_event_bridge)(sys->app, wrapped->actual);
     (*evt->free)(evt);
-    sender->disposition = praef_nd_negative;
   }
 
   (*sys->app->insert_event_bridge)(sys->app, evt);
@@ -430,7 +431,9 @@ static void praef_system_state_process_vote(
        instant - msg->instant > sys->state.max_event_vote_offset) ||
       (instant < msg->instant &&
        msg->instant - instant > sys->state.max_event_vote_offset)) {
-    sender->disposition = praef_nd_negative;
+    praef_node_negative(sender, "Event-vote offset violated; "
+                        "vote at %d, event at %d",
+                        instant, msg->instant);
     return;
   }
 
@@ -441,7 +444,9 @@ static void praef_system_state_process_vote(
   example.serial_number = msg->serialnumber;
   if (SPLAY_FIND(praef_system_state_present_votes,
                  &sys->state.present_votes, &example)) {
-    sender->disposition = praef_nd_negative;
+    praef_node_negative(sender, "Voted for event (%d,%d,%d) more than once",
+                        example.instant, example.against_object,
+                        example.serial_number);
     return;
   }
 

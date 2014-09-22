@@ -30,6 +30,7 @@
 
 #include <stddef.h>
 #include <stdio.h>
+#include <stdarg.h>
 
 /* This is an internal header file.
  *
@@ -191,5 +192,9 @@ static inline void praef_system_oom_if_not(
 #define PRAEF_APP_HAS(app, method)                      \
   (((app)->size >= offsetof(praef_app, method)) &&      \
    (app)->method)
+
+void praef_system_log(praef_system*, const char*, ...);
+void praef_system_logv(praef_system*, const char*, va_list);
+void praef_node_negative(praef_node*, const char*, ...);
 
 #endif /* LIBPRAEFECTUS__SYSTEM_H_ */

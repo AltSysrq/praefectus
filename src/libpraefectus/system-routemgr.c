@@ -171,7 +171,10 @@ void praef_node_routemgr_update(praef_node* node) {
 
   if (node->sys->clock.ticks - node->routemgr.last_pong >
       node->sys->routemgr.max_pong_silence) {
-    node->disposition = praef_nd_negative;
+    praef_node_negative(node, "Pong silence exceeded; "
+                        "last pong = %d ticks, now = %d ticks",
+                        node->routemgr.last_pong,
+                        node->sys->clock.ticks);
     return;
   }
 

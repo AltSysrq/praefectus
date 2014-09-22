@@ -119,7 +119,8 @@ void praef_node_commit_recv_msg_commit(praef_node* node,
                                        praef_instant end,
                                        const PraefMsgCommit_t* msg) {
   if (end < msg->start) {
-    node->disposition = praef_nd_negative;
+    praef_node_negative(node, "Received commit with end (%d) < start (%d)",
+                        end, (praef_instant)msg->start);
     return;
   }
 
@@ -228,7 +229,7 @@ void praef_node_commit_update(praef_node* node) {
   if (praef_node_is_in_grace_period(node)) return;
 
   if (praef_comchain_is_dead(node->commit.comchain)) {
-    node->disposition = praef_nd_negative;
+    praef_node_negative(node, "Comchain is broken");
     return;
   }
 
@@ -239,7 +240,9 @@ void praef_node_commit_update(praef_node* node) {
        node->sys->commit.max_commit_lag) ||
       (validated < systime && systime - validated >
        node->sys->commit.max_validated_lag)) {
-    node->disposition = praef_nd_negative;
+    praef_node_negative(node, "Commit or validated lag exceeded; "
+                        "committed = %d, validated = %d, systime = %d",
+                        committed, validated, systime);
     return;
   }
 }

@@ -588,7 +588,7 @@ void praef_system_join_recv_msg_join_accept(
   if (!praef_system_join_is_valid_join_request(
         sys, &msg->request, msg->signature.buf, msg->instant)) {
     if (from_node)
-      from_node->disposition = praef_nd_negative;
+      praef_node_negative(from_node, "Sent Accept with invalid JoinRequest");
     return;
   }
 

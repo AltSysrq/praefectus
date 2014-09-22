@@ -274,7 +274,8 @@ int praef_system_register_node(
    * the disposition to negative, don't reregister, and return failure.
    */
   if (praef_system_get_node(this, node->id)) {
-    praef_system_get_node(this, node->id)->disposition = praef_nd_negative;
+    praef_node_negative(praef_system_get_node(this, node->id),
+                        "Node became chimera");
     praef_node_delete(node);
     return 0;
   }
@@ -513,4 +514,44 @@ int praef_system_net_id_pair_equal(
     return 0;
 
   return 1;
+}
+
+void praef_system_logv(praef_system* sys, const char* fmt, va_list args) {
+  char buf[1024];
+
+  if (PRAEF_APP_HAS(sys->app, log_opt)) {
+    vsnprintf(buf, sizeof(buf), fmt, args);
+    (*sys->app->log_opt)(sys->app, buf);
+  }
+}
+
+void praef_system_log(praef_system* sys, const char* fmt, ...) {
+  va_list args;
+
+  va_start(args, fmt);
+  praef_system_logv(sys, fmt, args);
+  va_end(args);
+}
+
+/* These are for setting convenient breakpoints in debug builds */
+static void praef_node_remote_node_becomes_negative(void) { }
+static void praef_node_local_node_becomes_negative(void) { }
+
+void praef_node_negative(praef_node* node, const char* fmt, ...) {
+  char actual_format[1024];
+  va_list args;
+
+  if (node->disposition != praef_nd_negative) {
+    if (node == node->sys->local_node)
+      praef_node_local_node_becomes_negative();
+    else
+      praef_node_remote_node_becomes_negative();
+
+    node->disposition = praef_nd_negative;
+    snprintf(actual_format, sizeof(actual_format),
+             "Node %d gains negative disposition: %s",
+             node->id, fmt);
+    va_start(args, fmt);
+    praef_system_logv(node->sys, actual_format, args);
+  }
 }

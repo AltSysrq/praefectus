@@ -131,7 +131,7 @@ void praef_node_mod_recv_msg_chmod(praef_node* node,
   if (!praef_system_mod_is_chmod_permissible(
         node->sys, envelope_instant, msg)) {
     /* Out of bounds. Ignore the request and exact revenge. */
-    node->disposition = praef_nd_negative;
+    praef_node_negative(node, "Sent non-permissible chmod");
     return;
   }
 
