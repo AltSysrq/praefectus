@@ -145,6 +145,10 @@ static praef_event* decode_event(praef_app* this, praef_instant instant,
   return (praef_event*)evt;
 }
 
+static void applog(praef_app* _, const char* str) {
+  puts(str);
+}
+
 defsetup {
   /* This is only to complement the teardown block. Actual setup is done by
    * set_up(), so the tests can specify different parameters.
@@ -201,13 +205,16 @@ static void set_up(unsigned std_latency,
 
     app[i]->decode_event = decode_event;
     app[i]->create_node_object = create_node_object;
+    app[i]->log_opt = applog;
   }
 
   for (i = 0; i < NUM_NODES; ++i) {
     for (j = 0; j < NUM_NODES; ++j) {
+      if (i == j) continue;
       link_from_to[i][j] = praef_virtual_bus_link(vbus[i], vbus[j]);
       link_from_to[i][j]->base_latency = min_latency;
       link_from_to[i][j]->variable_latency = max_latency - min_latency;
+      link_from_to[i][j]->firewall_grace_period = std_latency;
     }
   }
 }
@@ -238,7 +245,6 @@ deftest(can_run_alone) {
   set_up(10, 0, 0, praef_sp_lax);
 
   praef_system_bootstrap(sys[0]);
-  sys[0]->debug_receive = stdout;
   activity[0] = ts_active;
   advance(1024);
   activity[0] = ts_idle;
@@ -247,4 +253,28 @@ deftest(can_run_alone) {
   ck_assert_int_eq(praef_ss_ok, status[0]);
   ck_assert_int_eq(1, num_objects[0]);
   ck_assert_int_ne(0, objects[0][0].state[1000]);
+}
+
+deftest(can_join_system_with_populated_events) {
+  set_up(10, 0, 0, praef_sp_lax);
+
+  praef_system_bootstrap(sys[0]);
+  sys[0]->debug_receive = stdout;
+  activity[0] = ts_active;
+  advance(100);
+  praef_system_connect(sys[1], net_id[0]);
+  sys[1]->debug_receive = stdout;
+  activity[1] = ts_idle;
+  advance(512);
+  ck_assert_int_eq(praef_ss_ok, status[0]);
+  ck_assert_int_eq(praef_ss_ok, status[1]);
+  activity[1] = ts_active;
+  advance(100);
+  activity[0] = activity[1] = ts_inactive;
+  advance(100);
+
+  ck_assert_int_eq(praef_ss_ok, status[0]);
+  ck_assert_int_eq(praef_ss_ok, status[1]);
+  ck_assert_int_eq(objects[0][0].state[750], objects[1][0].state[750]);
+  ck_assert_int_eq(objects[0][1].state[750], objects[1][1].state[750]);
 }
