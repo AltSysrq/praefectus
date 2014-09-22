@@ -80,7 +80,8 @@ void praef_system_mod_update(praef_system* sys) {
       msg.present = PraefMsg_PR_chmod;
       msg.choice.chmod.node = sys->local_node->id;
       msg.choice.chmod.effective =
-        sys->clock.systime + sys->mod.vote_chmod_offset;
+        praef_outbox_get_now(sys->router.cr_out) +
+        sys->mod.vote_chmod_offset;
       msg.choice.chmod.bit = PraefMsgChmod__bit_grant;
       PRAEF_OOM_IF_NOT(sys, praef_outbox_append(
                          sys->router.cr_out, &msg));
