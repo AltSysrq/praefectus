@@ -292,4 +292,15 @@ void praef_hlmsg_encoder_singleton(praef_hlmsg* dst,
  */
 int praef_hlmsg_encoder_flush(praef_hlmsg* dst, praef_hlmsg_encoder*);
 
+/**
+ * Dumps the given message to stderr in human-readable format.
+ *
+ * This is intended only for debugging.
+ */
+void praef_hlmsg_debug_dump(const praef_hlmsg*);
+/**
+ * Like praef_hlmsg_debug_dump(), but takes a raw data array and size pair.
+ */
+void praef_hlmsg_debug_ddump(const void*, size_t);
+
 #endif /* LIBPRAEFECTUS_HL_MSG_H_ */

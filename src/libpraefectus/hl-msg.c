@@ -513,3 +513,32 @@ static void praef_hlmsg_encoder_finish_msg(praef_hlmsg* message,
                         praef_hlmsg_signable_sz(message));
 }
 
+void praef_hlmsg_debug_dump(const praef_hlmsg* msg) {
+  const praef_hlmsg_segment* seg;
+  PraefMsg_t* decoded;
+
+  fprintf(stderr, "hl-msg of type %d, instant %d, serno %d\n",
+          praef_hlmsg_type(msg), praef_hlmsg_instant(msg),
+          praef_hlmsg_serno(msg));
+
+  for (seg = praef_hlmsg_first(msg); seg; seg = praef_hlmsg_snext(seg)) {
+    fprintf(stderr, "Segment of size %d bytes\n",
+            (unsigned)*(const unsigned char*)seg);
+    decoded = praef_hlmsg_sdec(seg);
+    xer_fprint(stderr, &asn_DEF_PraefMsg, decoded);
+    (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, decoded, 0);
+  }
+  fprintf(stderr, "\n");
+}
+
+void praef_hlmsg_debug_ddump(const void* data, size_t sz) {
+  unsigned char cpy[65536];
+  praef_hlmsg msg;
+
+  memcpy(cpy, data, sz);
+  cpy[sz] = 0;
+
+  msg.data = cpy;
+  msg.size = sz+1;
+  praef_hlmsg_debug_dump(&msg);
+}
