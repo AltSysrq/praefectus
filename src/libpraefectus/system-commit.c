@@ -192,11 +192,11 @@ void praef_system_commit_update(praef_system* sys) {
   praef_mq_update(sys->commit.cr_intercept);
 
   if (sys->commit.last_commit < sys->clock.monotime &&
-      sys->clock.monotime - sys->commit.last_commit >=
+      sys->clock.monotime - sys->commit.last_commit - 1 >=
       sys->commit.commit_interval) {
     if (!praef_comchain_create_commit(hash, sys->commit.commit_builder,
                                       sys->commit.last_commit,
-                                      sys->clock.monotime+1)) {
+                                      sys->clock.monotime)) {
       praef_system_oom(sys);
       return;
     }
@@ -209,12 +209,16 @@ void praef_system_commit_update(praef_system* sys) {
 
     /* Since this runs after the router has flushed encoders immediately prior
      * to the next update cycle, we need to encode as a singleton.
+     *
+     * Back-date the commit by 1 since it is possible for multiple frames to
+     * execute within the same monotime instant.
      */
+    praef_outbox_set_now(sys->router.ur_out, sys->clock.monotime - 1);
     PRAEF_OOM_IF_NOT(sys, praef_outbox_append_singleton(
                        sys->router.ur_out, &msg));
+    praef_outbox_set_now(sys->router.ur_out, sys->clock.monotime);
 
-    /* Need to post-date by 1 since we included things from this frame. */
-    sys->commit.last_commit = sys->clock.monotime + 1;
+    sys->commit.last_commit = sys->clock.monotime;
   }
 }
 
