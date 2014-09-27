@@ -40,6 +40,7 @@ typedef struct {
   unsigned max_validated_lag;
   unsigned commit_lag_laxness;
   unsigned self_commit_lag_compensation_16;
+  unsigned public_visibility_lag;
 
   praef_comchain* commit_builder;
   praef_mq* cr_intercept;

@@ -340,6 +340,11 @@ static void praef_system_state_process_message(
       praef_node_htm_recv_msg_htrangenext(sender, &msg->choice.htrangenext);
     break;
 
+  case PraefMsg_PR_htrangeunk:
+    if (sender)
+      praef_node_htm_recv_msg_htrangeunk(sender, &msg->choice.htrangeunk);
+    break;
+
   case PraefMsg_PR_ping:
     if (sender)
       praef_node_routemgr_recv_msg_ping(sender, &msg->choice.ping);

@@ -77,6 +77,7 @@ libpraefectus/messages/PraefMsgHtDir.c \
 libpraefectus/messages/PraefMsgHtLs.c \
 libpraefectus/messages/PraefMsgHtRange.c \
 libpraefectus/messages/PraefMsgHtRangeNext.c \
+libpraefectus/messages/PraefMsgHtRangeUnknown.c \
 libpraefectus/messages/PraefMsgHtRead.c \
 libpraefectus/messages/PraefMsgJoinAccept.c \
 libpraefectus/messages/PraefMsgJoinRequest.c \

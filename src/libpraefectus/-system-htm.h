@@ -84,6 +84,10 @@ typedef struct {
    */
   int is_running_scan_process;
   /**
+   * Whether this node supports running scan processes.
+   */
+  int can_run_scan_process;
+  /**
    * If is_running_scan_process, the range query offset being used for the
    * current scan process.
    */
@@ -131,5 +135,7 @@ void praef_node_htm_recv_msg_htrange(struct praef_node_s*,
                                      const PraefMsgHtRange_t*);
 void praef_node_htm_recv_msg_htrangenext(struct praef_node_s*,
                                          const PraefMsgHtRangeNext_t*);
+void praef_node_htm_recv_msg_htrangeunk(struct praef_node_s*,
+                                        const PraefMsgHtRangeUnknown_t*);
 
 #endif /* LIBPRAEFECTUS__SYSTEM_HTM_H_ */

@@ -841,6 +841,17 @@ void praef_system_conf_commit_lag_laxness(praef_system*, unsigned);
 void praef_system_conf_self_commit_lag_compensation(
   praef_system*, unsigned numerator, unsigned denominator);
 /**
+ * Controls the threshold beyond which all information is assumed public.
+ *
+ * Larger values reduce the possibility of using side-channels to gain
+ * information without committing, but reduces the synchronicity of a new node
+ * immediately after connecting.
+ *
+ * The default is 4 * std_latency.
+ */
+void praef_system_conf_public_visibility_lag(
+  praef_system*, unsigned lag);
+/**
  * Configures the interval upon which queries to the node join tree are
  * retried.
  *

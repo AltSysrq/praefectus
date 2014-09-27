@@ -639,6 +639,13 @@ PraefMsgHtRangeNext ::= SEQUENCE {
   id            PraefByte
 }
 
+-- Informs the receiver that the sender is not currently in a good position to
+-- service HtRange requests, so the receiver should stop trying to perform such
+-- queries against it.
+--
+-- This is an RPC-type message.
+PraefMsgHtRangeUnknown ::= NULL
+
 -- Advises the receiver of a bitmap of affirmative and negative
 -- acknowledgements of message reception from another node (which may be the
 -- receiver or some other node), according to the advisory serial numbers on
@@ -740,6 +747,7 @@ PraefMsg ::= CHOICE {
   htread        PraefMsgHtRead,
   htrange       PraefMsgHtRange,
   htrangenext   PraefMsgHtRangeNext,
+  htrangeunk    PraefMsgHtRangeUnknown,
   jointree      PraefMsgJoinTree,
   jtentry       PraefMsgJoinTreeEntry,
   received      PraefMsgReceived,

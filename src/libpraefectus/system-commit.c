@@ -61,6 +61,10 @@ void praef_system_conf_self_commit_lag_compensation(praef_system* sys,
   sys->commit.self_commit_lag_compensation_16 = n*65536 / d;
 }
 
+void praef_system_conf_public_visibility_lag(praef_system* sys, unsigned i) {
+  sys->commit.public_visibility_lag = i;
+}
+
 int praef_system_commit_init(praef_system* sys) {
   sys->commit.commit_interval = sys->std_latency/2?
     sys->std_latency/2 : 1;
@@ -72,6 +76,7 @@ int praef_system_commit_init(praef_system* sys) {
   sys->commit.self_commit_lag_compensation_16 =
     praef_sp_strict == sys->profile?
     0 : 65536; /* 0/1 : 1/1 */
+  sys->commit.public_visibility_lag = 8 * sys->std_latency;
 
   sys->commit.cr_loopback.broadcast =
     praef_system_commit_cr_loopback_broadcast;
@@ -181,6 +186,12 @@ praef_instant praef_node_visibility_threshold(praef_node* node) {
   frac = min_latency;
   frac *= node->sys->commit.self_commit_lag_compensation_16;
   thresh += frac >> 16;
+
+  if (node->sys->clock.monotime > node->sys->commit.public_visibility_lag &&
+      thresh < node->sys->clock.monotime -
+      node->sys->commit.public_visibility_lag)
+    thresh = node->sys->clock.monotime -
+      node->sys->commit.public_visibility_lag;
 
   return thresh;
 }

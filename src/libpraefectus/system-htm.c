@@ -87,6 +87,7 @@ void praef_system_htm_destroy(praef_system* sys) {
 }
 
 int praef_node_htm_init(praef_node* node) {
+  node->htm.can_run_scan_process = 1;
   return 1;
 }
 
@@ -466,6 +467,17 @@ void praef_node_htm_recv_msg_htrange(praef_node* node,
   praef_hash_tree_objref objects[node->sys->htm.range_max];
   unsigned i, n;
 
+  /* We can't usefully service the query until we have ourselves completed the
+   * hash tree scan.
+   */
+  if (node->sys->join_state <= praef_sjs_scanning_hash_tree) {
+    memset(&response, 0, sizeof(response));
+    response.present = PraefMsg_PR_htrangeunk;
+    PRAEF_OOM_IF_NOT(node->sys, praef_outbox_append(
+                       node->router.rpc_out, &response));
+    return;
+  }
+
   memset(hash, 0, sizeof(hash));
   memcpy(hash, msg->hash.buf, msg->hash.size);
   n = praef_hash_tree_get_range(objects, node->sys->htm.range_max,
@@ -517,6 +529,11 @@ void praef_node_htm_recv_msg_htrangenext(praef_node* node,
       node->htm.is_running_scan_process = 0;
     }
   }
+}
+
+void praef_node_htm_recv_msg_htrangeunk(praef_node* node,
+                                        const PraefMsgHtRangeUnknown_t* msg) {
+  node->htm.can_run_scan_process = 0;
 }
 
 static void praef_node_htm_request_htrange(praef_node* node) {
@@ -587,7 +604,8 @@ void praef_system_htm_update(praef_system* sys) {
   if (praef_sjs_scanning_hash_tree == sys->join_state) {
     RB_FOREACH(node, praef_node_map, &sys->nodes) {
       if (praef_nd_positive == node->disposition &&
-          sys->local_node != node) {
+          sys->local_node != node &&
+          node->htm.can_run_scan_process) {
         prog_denom_saturation += PRAEF_SYSTEM_HTM_NUM_SCAN_PROCESSES;
         prog_num_saturation += praef_system_htm_popcount(
           node->htm.completed_scan_processes);
@@ -640,7 +658,8 @@ void praef_node_htm_update(praef_node* node) {
   PraefMsg_t query;
 
   if (praef_nd_positive != node->disposition ||
-      node == node->sys->local_node) return;
+      node == node->sys->local_node ||
+      !node->htm.can_run_scan_process) return;
 
   if (praef_sjs_scanning_hash_tree == node->sys->join_state) {
     if (node->htm.is_running_scan_process) {

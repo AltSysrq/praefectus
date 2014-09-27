@@ -201,6 +201,8 @@ static void set_up(unsigned std_latency,
                    praef_system_profile profile) {
   unsigned i, j;
 
+  printf("\n---\n");
+
   vnet = praef_virtual_network_new();
   for (i = 0; i < NUM_NODES; ++i) {
     praef_std_state_init(&state[i]);
@@ -330,6 +332,8 @@ deftest(two_node_partition_results_in_netsplit) {
   ck_assert_int_eq(praef_ss_ok, status[0]);
   ck_assert_int_eq(praef_ss_ok, status[1]);
 
+  printf("Expect nodes %08X, %08X to become negative\n",
+         1, sys[1]->local_node->id);
   link_from_to[0][1]->reliability = 0;
   link_from_to[1][0]->reliability = 0;
   advance(256);
@@ -353,6 +357,7 @@ deftest(vanising_node_gets_kicked) {
   ck_assert_int_eq(praef_ss_ok, status[1]);
   ck_assert_int_eq(praef_ss_ok, status[2]);
 
+  printf("Expect node %08X to become negative\n", 1);
   activity[0] = ts_inactive;
   advance(256);
   ck_assert_int_eq(praef_ss_ok, status[1]);
@@ -386,6 +391,7 @@ deftest(network_partition_detected_5_nodes) {
     }
   }
 
+  printf("Expect all nodes to become negative to someone\n");
   advance(256);
   ck_assert_int_eq(praef_ss_partitioned, status[0]);
   ck_assert_int_eq(praef_ss_partitioned, status[1]);
@@ -415,6 +421,8 @@ deftest(can_kick_nodes) {
     ck_assert_int_eq(praef_ss_ok, status[i]);
 
   /* Nodes 2 and 3 spontaneously decide node 1 needs to go */
+  printf("Forcing %08X to become negative\n",
+         sys[1]->local_node->id);
   praef_system_get_node(sys[2], sys[1]->local_node->id)->disposition =
     praef_nd_negative;
   praef_system_get_node(sys[3], sys[1]->local_node->id)->disposition =
