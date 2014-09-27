@@ -92,6 +92,19 @@ typedef struct {
 static test_object objects[NUM_NODES][NUM_NODES];
 static unsigned num_objects[NUM_NODES];
 
+static test_object* object_at(unsigned perceived_by,
+                              unsigned subject) {
+  unsigned i;
+
+  if (!sys[subject]->local_node) return NULL;
+
+  for (i = 0; i < num_objects[perceived_by]; ++i)
+    if (objects[perceived_by][i].self.id == sys[subject]->local_node->id)
+      return &objects[perceived_by][i];
+
+  return NULL;
+}
+
 static unsigned app_ix(void* a) {
   return ((praef_app**)praef_stdsys_userdata(a)) - app;
 }
@@ -259,11 +272,9 @@ deftest(can_join_system_with_populated_events) {
   set_up(10, 0, 0, praef_sp_lax);
 
   praef_system_bootstrap(sys[0]);
-  sys[0]->debug_receive = stdout;
   activity[0] = ts_active;
   advance(100);
   praef_system_connect(sys[1], net_id[0]);
-  sys[1]->debug_receive = stdout;
   activity[1] = ts_idle;
   advance(512);
   ck_assert_int_eq(praef_ss_ok, status[0]);
@@ -275,6 +286,35 @@ deftest(can_join_system_with_populated_events) {
 
   ck_assert_int_eq(praef_ss_ok, status[0]);
   ck_assert_int_eq(praef_ss_ok, status[1]);
-  ck_assert_int_eq(objects[0][0].state[750], objects[1][0].state[750]);
-  ck_assert_int_eq(objects[0][1].state[750], objects[1][1].state[750]);
+  ck_assert_int_eq(object_at(0,0)->state[750], object_at(1,0)->state[750]);
+  ck_assert_int_eq(object_at(0,1)->state[750], object_at(1,1)->state[750]);
+}
+
+deftest(can_join_system_via_non_bootstrap_node) {
+  set_up(10, 0, 0, praef_sp_lax);
+
+  sys[0]->debug_receive = stdout;
+  sys[1]->debug_receive = stdout;
+  sys[2]->debug_receive = stdout;
+
+  praef_system_bootstrap(sys[0]);
+  activity[0] = ts_active;
+  praef_system_connect(sys[1], net_id[0]);
+  activity[1] = ts_idle;
+  advance(512);
+  ck_assert_int_eq(praef_ss_ok, status[0]);
+  ck_assert_int_eq(praef_ss_ok, status[1]);
+  activity[1] = ts_active;
+  printf("Starting connection[2]\n");
+  praef_system_connect(sys[2], net_id[1]);
+  activity[2] = ts_idle;
+  advance(512);
+  activity[0] = activity[1] = ts_idle;
+  advance(100);
+
+  ck_assert_int_eq(praef_ss_ok, status[0]);
+  ck_assert_int_eq(praef_ss_ok, status[1]);
+  ck_assert_int_eq(praef_ss_ok, status[2]);
+  ck_assert_int_eq(object_at(0,0)->state[600], object_at(2,0)->state[600]);
+  ck_assert_int_eq(object_at(0,2)->state[600], object_at(2,2)->state[600]);
 }
