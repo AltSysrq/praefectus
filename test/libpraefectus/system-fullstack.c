@@ -293,10 +293,6 @@ deftest(can_join_system_with_populated_events) {
 deftest(can_join_system_via_non_bootstrap_node) {
   set_up(10, 0, 0, praef_sp_lax);
 
-  sys[0]->debug_receive = stdout;
-  sys[1]->debug_receive = stdout;
-  sys[2]->debug_receive = stdout;
-
   praef_system_bootstrap(sys[0]);
   activity[0] = ts_active;
   praef_system_connect(sys[1], net_id[0]);
@@ -305,7 +301,6 @@ deftest(can_join_system_via_non_bootstrap_node) {
   ck_assert_int_eq(praef_ss_ok, status[0]);
   ck_assert_int_eq(praef_ss_ok, status[1]);
   activity[1] = ts_active;
-  printf("Starting connection[2]\n");
   praef_system_connect(sys[2], net_id[1]);
   activity[2] = ts_idle;
   advance(512);
@@ -317,4 +312,123 @@ deftest(can_join_system_via_non_bootstrap_node) {
   ck_assert_int_eq(praef_ss_ok, status[2]);
   ck_assert_int_eq(object_at(0,0)->state[600], object_at(2,0)->state[600]);
   ck_assert_int_eq(object_at(0,2)->state[600], object_at(2,2)->state[600]);
+}
+
+deftest(two_node_partition_results_in_netsplit) {
+  /* This simultaneously tests the ability to handle the disappearance of the
+   * bootstrap and non-bootstrap nodes, and that the system continues
+   * functioning in the case where a two-node system loses one of the nodes.
+   */
+
+  set_up(10, 0, 0, praef_sp_lax);
+
+  praef_system_bootstrap(sys[0]);
+  activity[0] = ts_idle;
+  praef_system_connect(sys[1], net_id[0]);
+  activity[1] = ts_idle;
+  advance(512);
+  ck_assert_int_eq(praef_ss_ok, status[0]);
+  ck_assert_int_eq(praef_ss_ok, status[1]);
+
+  link_from_to[0][1]->reliability = 0;
+  link_from_to[1][0]->reliability = 0;
+  advance(256);
+  ck_assert_int_eq(praef_ss_ok, status[0]);
+  ck_assert(!praef_node_is_alive(praef_system_get_node(
+                                   sys[0], sys[1]->local_node->id)));
+  ck_assert(!praef_node_is_alive(praef_system_get_node(sys[1], 1)));
+}
+
+deftest(vanising_node_gets_kicked) {
+  set_up(10, 0, 0, praef_sp_lax);
+
+  praef_system_bootstrap(sys[0]);
+  activity[0] = ts_idle;
+  praef_system_connect(sys[1], net_id[0]);
+  activity[1] = ts_idle;
+  praef_system_connect(sys[2], net_id[0]);
+  activity[2] = ts_idle;
+  advance(512);
+  ck_assert_int_eq(praef_ss_ok, status[0]);
+  ck_assert_int_eq(praef_ss_ok, status[1]);
+  ck_assert_int_eq(praef_ss_ok, status[2]);
+
+  activity[0] = ts_inactive;
+  advance(256);
+  ck_assert_int_eq(praef_ss_ok, status[1]);
+  ck_assert_int_eq(praef_ss_ok, status[2]);
+  ck_assert(!praef_node_is_alive(praef_system_get_node(sys[1], 1)));
+  ck_assert(!praef_node_is_alive(praef_system_get_node(sys[2], 1)));
+}
+
+deftest(network_partition_detected_5_nodes) {
+  unsigned i, j, is, js;
+
+  set_up(10, 0, 0, praef_sp_lax);
+
+  praef_system_bootstrap(sys[0]);
+  activity[0] = ts_idle;
+  for (i = 1; i < 5; ++i) {
+    praef_system_connect(sys[i], net_id[0]);
+    activity[i] = ts_idle;
+  }
+  advance(512);
+  for (i = 0; i < 5; ++i)
+    ck_assert_int_eq(praef_ss_ok, status[i]);
+
+  /* Partition into (0,1), (2,3,4) */
+  for (i = 0; i < 5; ++i) {
+    is = (i < 2);
+    for (j = 0; j < 5; ++j) {
+      js = (j < 2);
+      if (is != js)
+        link_from_to[i][j]->reliability = 0;
+    }
+  }
+
+  advance(256);
+  ck_assert_int_eq(praef_ss_partitioned, status[0]);
+  ck_assert_int_eq(praef_ss_partitioned, status[1]);
+  for (i = 2; i < 5; ++i) {
+    ck_assert_int_eq(praef_ss_ok, status[i]);
+    for (j = 0; j < 2; ++j) {
+      ck_assert(!praef_node_is_alive(
+                  praef_system_get_node(
+                    sys[i], sys[j]->local_node->id)));
+    }
+  }
+}
+
+deftest(can_kick_nodes) {
+  unsigned i;
+
+  set_up(10, 0, 0, praef_sp_lax);
+
+  praef_system_bootstrap(sys[0]);
+  activity[0] = ts_idle;
+  for (i = 1; i < 4; ++i) {
+    praef_system_connect(sys[i], net_id[0]);
+    activity[i] = ts_idle;
+  }
+  advance(512);
+  for (i = 0; i < 4; ++i)
+    ck_assert_int_eq(praef_ss_ok, status[i]);
+
+  /* Nodes 2 and 3 spontaneously decide node 1 needs to go */
+  praef_system_get_node(sys[2], sys[1]->local_node->id)->disposition =
+    praef_nd_negative;
+  praef_system_get_node(sys[3], sys[1]->local_node->id)->disposition =
+    praef_nd_negative;
+
+  advance(256);
+  ck_assert_int_eq(praef_ss_ok, status[0]);
+  ck_assert(!praef_node_is_alive(praef_system_get_node(
+                                   sys[0], sys[1]->local_node->id)));
+  ck_assert_int_eq(praef_ss_kicked, status[1]);
+  ck_assert_int_eq(praef_ss_ok, status[2]);
+  ck_assert(!praef_node_is_alive(praef_system_get_node(
+                                   sys[2], sys[1]->local_node->id)));
+  ck_assert_int_eq(praef_ss_ok, status[3]);
+  ck_assert(!praef_node_is_alive(praef_system_get_node(
+                                   sys[3], sys[1]->local_node->id)));
 }
