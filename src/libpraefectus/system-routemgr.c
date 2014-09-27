@@ -210,6 +210,8 @@ static void praef_node_routemgr_send_routes(praef_node* to) {
                          to->router.rpc_out, &msg));
     }
   }
+
+  to->routemgr.last_route_message = to->sys->clock.ticks;
 }
 
 static void praef_node_routemgr_send_ping(praef_node* to) {

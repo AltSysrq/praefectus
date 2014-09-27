@@ -687,7 +687,7 @@ void praef_node_htm_update(praef_node* node) {
     }
   } else if (node->sys->join_state > praef_sjs_scanning_hash_tree) {
     /* Start a root tree query if the appropriate interval has elapsed. */
-    if (node->htm.last_root_query - node->sys->clock.ticks >=
+    if (node->sys->clock.ticks - node->htm.last_root_query >=
         node->sys->htm.root_query_interval) {
       memset(&query, 0, sizeof(query));
       query.present = PraefMsg_PR_htls;
