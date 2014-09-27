@@ -191,7 +191,9 @@ PraefMsgNetworkInfo ::= SEQUENCE {
   -- reject all messages it ever sees and eventually give up.
   saltsig       PraefSignature,
   -- The public key of the bootstrap node (ie, the one with id 1).
-  bootstrapkey  PraefPubkey
+  bootstrapkey  PraefPubkey,
+  -- The network identifier of the bootstrap node.
+  bootstrapid   PraefNetworkIdentifierPair
 }
 
 -- Requests to join the system of which the receiver is a part. Receivers MUST

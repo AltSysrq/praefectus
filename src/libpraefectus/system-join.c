@@ -334,20 +334,14 @@ void praef_system_join_recv_msg_get_network_info(
 
   memset(&response, 0, sizeof(response));
   response.present = PraefMsg_PR_netinfo;
-  if (OCTET_STRING_fromBuf(&response.choice.netinfo.salt,
-                           (char*)sys->join.system_salt,
-                           sizeof(sys->join.system_salt)) ||
-      OCTET_STRING_fromBuf(&response.choice.netinfo.saltsig,
-                           (char*)sys->join.system_salt_sig,
-                           sizeof(sys->join.system_salt_sig)) ||
-      OCTET_STRING_fromBuf(&response.choice.netinfo.bootstrapkey,
-                           (char*)bootstrap->pubkey,
-                           PRAEF_PUBKEY_SIZE)) {
-    sys->abnormal_status = praef_ss_oom;
-    (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, &response, 1);
-    return;
-  }
-
+  response.choice.netinfo.salt.buf = sys->join.system_salt;
+  response.choice.netinfo.salt.size = sizeof(sys->join.system_salt);
+  response.choice.netinfo.saltsig.buf = sys->join.system_salt_sig;
+  response.choice.netinfo.saltsig.size = sizeof(sys->join.system_salt_sig);
+  response.choice.netinfo.bootstrapkey.buf = bootstrap->pubkey;
+  response.choice.netinfo.bootstrapkey.size = PRAEF_PUBKEY_SIZE;
+  memcpy(&response.choice.netinfo.bootstrapid,
+         &bootstrap->net_id, sizeof(PraefNetworkIdentifierPair_t));
   response_msg.data = data;
   response_msg.size = sizeof(data);
   praef_hlmsg_encoder_set_now(sys->join.minimal_rpc_encoder,
@@ -356,7 +350,6 @@ void praef_system_join_recv_msg_get_network_info(
                                 &response);
   (*sys->bus->unicast)(sys->bus, &msg->retaddr,
                        response_msg.data, response_msg.size-1);
-  (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, &response, 1);
 }
 
 void praef_system_join_recv_msg_network_info(
@@ -377,7 +370,7 @@ void praef_system_join_recv_msg_network_info(
     memcpy(sys->join.system_salt_sig, msg->saltsig.buf, msg->saltsig.size);
 
     bootstrap = praef_node_new(sys, 0, PRAEF_BOOTSTRAP_NODE,
-                               sys->join.connect_target,
+                               &msg->bootstrapid,
                                sys->bus, praef_nd_positive,
                                msg->bootstrapkey.buf);
     if (!bootstrap) {
