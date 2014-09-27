@@ -229,7 +229,8 @@ static praef_hash_tree_add_result
 praef_hash_tree_add_to(praef_hash_tree_fulldir**,
                        praef_hash_tree_objref*,
                        const unsigned char hash[PRAEF_HASH_SIZE],
-                       unsigned, praef_hash_tree*);
+                       unsigned, praef_hash_tree*,
+                       int is_foreign, praef_hash_tree_sid id);
 
 praef_hash_tree_add_result
 praef_hash_tree_add(praef_hash_tree* this, praef_hash_tree_objref* ref) {
@@ -240,7 +241,16 @@ praef_hash_tree_add(praef_hash_tree* this, praef_hash_tree_objref* ref) {
   praef_keccak_sponge_absorb(&sponge, ref->data, ref->size);
   praef_keccak_sponge_squeeze(&sponge, hash, PRAEF_HASH_SIZE);
 
-  return praef_hash_tree_add_to(&this->root, ref, hash, 0, this);
+  return praef_hash_tree_add_to(&this->root, ref, hash, 0, this, 0, 0);
+}
+
+praef_hash_tree_add_result
+praef_hash_tree_add_foreign(praef_hash_tree* this, praef_hash_tree_sid id) {
+  praef_hash_tree_object* object = this->object_table->objects[id];
+  praef_hash_tree_objref scratch;
+
+  return praef_hash_tree_add_to(&this->root, &scratch,
+                                object->hash, 0, this, 1, id);
 }
 
 static void praef_hash_tree_rehash(praef_hash_tree_fulldir*, unsigned,
@@ -250,9 +260,10 @@ static praef_hash_tree_add_result
 praef_hash_tree_add_to(praef_hash_tree_fulldir** thisp,
                        praef_hash_tree_objref* ref,
                        const unsigned char hash[PRAEF_HASH_SIZE],
-                       unsigned offset, praef_hash_tree* tree) {
+                       unsigned offset, praef_hash_tree* tree,
+                       int is_foreign, praef_hash_tree_sid foreign_id) {
   unsigned ix = nybble(hash, offset);
-  unsigned id = tree->object_table->size;
+  unsigned id;
   praef_hash_tree_object* object;
   praef_hash_tree_fulldir* subdir;
   praef_hash_tree_add_result result;
@@ -260,22 +271,29 @@ praef_hash_tree_add_to(praef_hash_tree_fulldir** thisp,
   switch ((*thisp)->directory.types[ix]) {
   case praef_htet_none:
     /* Simple insertion */
-    object = praef_hash_tree_object_new(ref, hash);
-    if (!object) return praef_htar_failed;
+    if (!is_foreign) {
+      id = tree->object_table->size;
+      object = praef_hash_tree_object_new(ref, hash);
+      if (!object) return praef_htar_failed;
 
-    if (!praef_hash_tree_fulldir_fork(thisp)) {
-      free(object);
-      return praef_htar_failed;
-    }
+      if (!praef_hash_tree_fulldir_fork(thisp)) {
+        free(object);
+        return praef_htar_failed;
+      }
 
-    if (!praef_hash_tree_objtab_push_back(tree->object_table, object)) {
-      free(object);
-      return praef_htar_failed;
+      if (!praef_hash_tree_objtab_push_back(tree->object_table, object)) {
+        free(object);
+        return praef_htar_failed;
+      }
+    } else {
+      id = foreign_id;
+      object = tree->object_table->objects[id];
     }
 
     (*thisp)->directory.types[ix] = praef_htet_object;
     (*thisp)->directory.sids[ix] = id;
     ref->data = object->data;
+    ref->id = id;
     return praef_htar_added;
 
   case praef_htet_object:
@@ -306,7 +324,8 @@ praef_hash_tree_add_to(praef_hash_tree_fulldir** thisp,
     if (!praef_hash_tree_fulldir_fork(thisp)) return 0;
 
     result = praef_hash_tree_add_to(&(*thisp)->subdirectories[ix],
-                                    ref, hash, offset+1, tree);
+                                    ref, hash, offset+1, tree,
+                                    is_foreign, foreign_id);
     praef_hash_tree_rehash(*thisp, ix, tree);
     return result;
   }
@@ -381,6 +400,7 @@ int praef_hash_tree_get_id(praef_hash_tree_objref* dst,
   dst->size = object->size;
   dst->instant = object->instant;
   dst->data = object->data;
+  dst->id = id;
   return 1;
 }
 

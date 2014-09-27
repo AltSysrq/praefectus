@@ -219,6 +219,40 @@ deftest(can_get_object_by_hash_but_not_from_prior_fork) {
   praef_hash_tree_delete(fork);
 }
 
+deftest(can_add_foreign_object_to_fork) {
+  praef_hash_tree* fork;
+  praef_hash_tree_objref object, result;
+  unsigned i;
+  unsigned char hash[PRAEF_HASH_SIZE];
+
+  object.instant = 0;
+  object.size = sizeof(i);
+  for (i = 0; i < 256; ++i) {
+    object.data = &i;
+    ck_assert(praef_hash_tree_add(tree, &object));
+  }
+
+  fork = praef_hash_tree_fork(tree);
+  ck_assert_ptr_ne(NULL, fork);
+
+  i = 31337;
+  object.data = &i;
+  ck_assert(praef_hash_tree_add(tree, &object));
+  ck_assert_int_eq(praef_htar_added,
+                   praef_hash_tree_add_foreign(fork, object.id));
+  praef_hash_tree_hash_of(hash, &object);
+
+  ck_assert(praef_hash_tree_get_hash(&result, tree, hash));
+  ck_assert(!memcmp(&object, &result, sizeof(object)));
+  ck_assert_int_eq(31337, *(const int*)result.data);
+
+  ck_assert(praef_hash_tree_get_hash(&result, fork, hash));
+  ck_assert(!memcmp(&object, &result, sizeof(object)));
+  ck_assert_int_eq(31337, *(const int*)result.data);
+
+  praef_hash_tree_delete(fork);
+}
+
 deftest(equivalent_trees_produce_same_sids) {
   praef_hash_tree* other;
   const praef_hash_tree_directory* dira, * dirb;
@@ -301,7 +335,7 @@ deftest(range_query_finds_items_beyond_first) {
 
   nread = praef_hash_tree_get_range(dst, 256, tree, hash, 0, 0);
   ck_assert_int_gt(nread, 1);
-  ck_assert(!memcmp(&object, dst+0, sizeof(object)));
+  ck_assert(!memcmp(&object, dst, sizeof(object)));
 
   for (i = 1; i < nread; ++i) {
     praef_hash_tree_hash_of(hash, dst+i-1);

@@ -128,6 +128,10 @@ typedef struct {
    */
   praef_instant instant;
   /**
+   * The id of the object within the hash tree.
+   */
+  praef_hash_tree_sid id;
+  /**
    * The data associated with this object. If this points to the data within a
    * hash tree, it is guaranteed to be valid until the hash tree's destruction,
    * and there is guaranteed to be an initialised 0 byte at data[size].
@@ -196,7 +200,8 @@ void praef_hash_tree_delete(const praef_hash_tree*);
  * the given reference is copied into the tree; otherwise, no action is
  * taken. If successful, the given reference's data pointer is updated to point
  * to the tree's copy, permitting it to be used with, eg,
- * praef_hash_tree_hash_of().
+ * praef_hash_tree_hash_of(), and the id field is set to the id of the new
+ * object.
  *
  * Complexity: O(log(n))
  *
@@ -206,6 +211,20 @@ void praef_hash_tree_delete(const praef_hash_tree*);
  */
 praef_hash_tree_add_result praef_hash_tree_add(
   praef_hash_tree*, praef_hash_tree_objref*);
+
+/**
+ * Structurally adds the object with the given id, which must represent an
+ * object in the table shared between this hash tree and its
+ * praef_hash_tree_fork()-derived relatives.
+ *
+ * Complexity: O(lon(n))
+ *
+ * @return praef_htar_failed (0) if the operation fails; praef_htar_added if
+ * the item was inserted; praef_htar_already_present if the object was already
+ * present in the hash tree.
+ */
+praef_hash_tree_add_result praef_hash_tree_add_foreign(
+  praef_hash_tree*, praef_hash_tree_sid);
 
 /**
  * Obtains an object reference by exact hash code. The contents of the given
