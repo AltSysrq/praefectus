@@ -549,7 +549,8 @@ void praef_node_negative(praef_node* node, const char* fmt, ...) {
 
     node->disposition = praef_nd_negative;
     snprintf(actual_format, sizeof(actual_format),
-             "Node %d gains negative disposition: %s",
+             "%08X: Node %08X gains negative disposition: %s",
+             node->sys->local_node? node->sys->local_node->id : 0,
              node->id, fmt);
     va_start(args, fmt);
     praef_system_logv(node->sys, actual_format, args);

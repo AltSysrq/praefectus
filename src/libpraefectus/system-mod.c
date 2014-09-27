@@ -96,7 +96,11 @@ void praef_node_mod_update(praef_node* node) {
   /* Deliberately include the local node as a possibility; this is how graceful
    * disconnect works.
    */
-  if (praef_nd_negative == node->disposition && !praef_node_has_deny(node)) {
+  if (praef_nd_negative == node->disposition && !praef_node_has_deny(node) &&
+      /* Can't send chmod if not yet connected, because we don't know enough
+       * information yet and could construct an invalid one.
+       */
+      praef_sjs_connected == node->sys->join_state) {
     praef_instant vote_to_deny_at = node->sys->clock.systime
       / node->sys->mod.vote_deny_interval * node->sys->mod.vote_deny_interval
       + node->sys->mod.vote_chmod_offset;

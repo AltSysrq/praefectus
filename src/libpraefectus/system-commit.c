@@ -244,9 +244,14 @@ void praef_node_commit_update(praef_node* node) {
        node->sys->commit.max_commit_lag) ||
       (validated < systime && systime - validated >
        node->sys->commit.max_validated_lag)) {
-    praef_node_negative(node, "Commit or validated lag exceeded; "
-                        "committed = %d, validated = %d, systime = %d",
-                        committed, validated, systime);
+    /* Don't enforce these if the node doesn't have GRANT or the local node is
+     * still joining --- we might just be missing a lot of information.
+     */
+    if (praef_sjs_connected == node->sys->join_state &&
+        praef_node_has_grant(node))
+      praef_node_negative(node, "Commit or validated lag exceeded; "
+                          "committed = %d, validated = %d, systime = %d",
+                          committed, validated, systime);
     return;
   }
 }
