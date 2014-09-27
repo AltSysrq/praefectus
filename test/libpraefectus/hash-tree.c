@@ -77,32 +77,6 @@ deftest(fetching_nonexistent_object_returns_zero) {
   ck_assert(!praef_hash_tree_get_id(&object, tree, ~0));
 }
 
-deftest(new_objects_invisible_by_id_to_fork) {
-  const praef_hash_tree* fork;
-  praef_hash_tree_objref object;
-
-  object.instant = 0;
-  object.size = sizeof(praef_instant);
-  object.data = &object.instant;
-  ck_assert(praef_hash_tree_add(tree, &object));
-
-  fork = praef_hash_tree_fork(tree);
-  ck_assert_ptr_ne(NULL, fork);
-  object.instant = 1;
-  object.data = &object.instant;
-  ck_assert(praef_hash_tree_add(tree, &object));
-
-  ck_assert(praef_hash_tree_get_id(&object, tree, 0));
-  ck_assert_int_eq(0, *(const int*)object.data);
-  ck_assert(praef_hash_tree_get_id(&object, fork, 0));
-  ck_assert_int_eq(0, *(const int*)object.data);
-  ck_assert(praef_hash_tree_get_id(&object, tree, 1));
-  ck_assert_int_eq(1, *(const int*)object.data);
-  ck_assert(!praef_hash_tree_get_id(&object, fork, 1));
-
-  praef_hash_tree_delete(fork);
-}
-
 deftest(object_insertion_changes_dir_sids) {
   praef_hash_tree_objref object;
   const praef_hash_tree_directory* dir;

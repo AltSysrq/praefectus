@@ -60,19 +60,18 @@ static praef_hash_tree_object* praef_hash_tree_object_new(
 
 typedef struct {
   praef_hash_tree_object** objects;
-  unsigned capacity;
+  unsigned capacity, size;
   unsigned refcount;
 } praef_hash_tree_objtab;
 
 static praef_hash_tree_objtab* praef_hash_tree_objtab_new(void);
 static void praef_hash_tree_objtab_decref(praef_hash_tree_objtab*);
 static int praef_hash_tree_objtab_push_back(
-  unsigned*, praef_hash_tree_objtab*, praef_hash_tree_object*);
+  praef_hash_tree_objtab*, praef_hash_tree_object*);
 
 struct praef_hash_tree_s {
   praef_hash_tree_fulldir* root;
   praef_hash_tree_objtab* object_table;
-  unsigned next_object_id;
 };
 
 praef_hash_tree* praef_hash_tree_new(void) {
@@ -92,7 +91,7 @@ praef_hash_tree* praef_hash_tree_new(void) {
   return NULL;
 }
 
-const praef_hash_tree* praef_hash_tree_fork(const praef_hash_tree* orig) {
+praef_hash_tree* praef_hash_tree_fork(const praef_hash_tree* orig) {
   praef_hash_tree* this = malloc(sizeof(praef_hash_tree));
   if (!this) return NULL;
 
@@ -198,14 +197,14 @@ static void praef_hash_tree_objtab_decref(praef_hash_tree_objtab* this) {
 }
 
 static int praef_hash_tree_objtab_push_back(
-  unsigned* id, praef_hash_tree_objtab* this,
+  praef_hash_tree_objtab* this,
   praef_hash_tree_object* object
 ) {
   praef_hash_tree_object** new_objects;
 
-  assert(*id <= this->capacity);
+  assert(this->size <= this->capacity);
 
-  if (*id == this->capacity) {
+  if (this->size == this->capacity) {
     new_objects = realloc(
       this->objects, this->capacity * 2 * sizeof(praef_hash_tree_object*));
     if (!new_objects) return 0;
@@ -217,7 +216,7 @@ static int praef_hash_tree_objtab_push_back(
     this->capacity *= 2;
   }
 
-  this->objects[(*id)++] = object;
+  this->objects[this->size++] = object;
   return 1;
 }
 
@@ -253,7 +252,7 @@ praef_hash_tree_add_to(praef_hash_tree_fulldir** thisp,
                        const unsigned char hash[PRAEF_HASH_SIZE],
                        unsigned offset, praef_hash_tree* tree) {
   unsigned ix = nybble(hash, offset);
-  unsigned id = tree->next_object_id;
+  unsigned id = tree->object_table->size;
   praef_hash_tree_object* object;
   praef_hash_tree_fulldir* subdir;
   praef_hash_tree_add_result result;
@@ -269,8 +268,7 @@ praef_hash_tree_add_to(praef_hash_tree_fulldir** thisp,
       return praef_htar_failed;
     }
 
-    if (!praef_hash_tree_objtab_push_back(
-          &tree->next_object_id, tree->object_table, object)) {
+    if (!praef_hash_tree_objtab_push_back(tree->object_table, object)) {
       free(object);
       return praef_htar_failed;
     }
@@ -377,7 +375,7 @@ int praef_hash_tree_get_id(praef_hash_tree_objref* dst,
                            praef_hash_tree_sid id) {
   praef_hash_tree_object* object;
 
-  if (id >= this->next_object_id) return 0;
+  if (id >= this->object_table->size) return 0;
 
   object = this->object_table->objects[id];
   dst->size = object->size;

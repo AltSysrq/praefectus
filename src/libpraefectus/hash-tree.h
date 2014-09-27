@@ -61,8 +61,11 @@
  *
  * This hash tree implementation is semi-persistent. A copy of a hash tree can
  * be created at any time with constant cost. The directory structure of such a
- * read-only copy is unaffected by modifications to the original. However, such
- * copies are read-only in order to avoid needing to copy the object-id table.
+ * copy is unaffected by modifications to the original. However, all copies
+ * share the same object table, and thus will use the same id space for new
+ * objects. It is also possible to locate any object by id from any of the
+ * connected hash trees, even if the object is not actually present in the one
+ * used for reference.
  */
 typedef struct praef_hash_tree_s praef_hash_tree;
 
@@ -174,15 +177,15 @@ typedef enum {
  */
 praef_hash_tree* praef_hash_tree_new(void);
 /**
- * Creates a new, read-only copy of the given hash tree. Changes to directories
- * in the original will not be reflected in the copy. The copy remains valid
- * even after the original is destroyed.
+ * Creates a new copy of the given hash tree. Changes to directories in the
+ * original will not be reflected in the copy. The copy remains valid even
+ * after the original is destroyed.
  *
  * Complexity: O(1)
  *
  * @return The new hash tree, or NULL if memory could not be obtained.
  */
-const praef_hash_tree* praef_hash_tree_fork(const praef_hash_tree*);
+praef_hash_tree* praef_hash_tree_fork(const praef_hash_tree*);
 /**
  * Releases the memory being held by the given hash tree alone.
  */
