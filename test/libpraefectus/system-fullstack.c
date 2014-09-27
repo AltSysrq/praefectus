@@ -270,7 +270,7 @@ deftest(can_join_system_with_populated_events) {
   ck_assert_int_eq(praef_ss_ok, status[1]);
   activity[1] = ts_active;
   advance(100);
-  activity[0] = activity[1] = ts_inactive;
+  activity[0] = activity[1] = ts_idle;
   advance(100);
 
   ck_assert_int_eq(praef_ss_ok, status[0]);

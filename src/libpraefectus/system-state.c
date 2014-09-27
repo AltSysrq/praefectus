@@ -223,7 +223,10 @@ void praef_system_state_recv_message(
       return;
 
     case praef_htar_added:
-      /* Continue processing as normal */
+      /* Continue processing as normal, after retroactively adding to any
+       * snapshots as necessary.
+       */
+      praef_system_htm_observe_new_htobj(sys, ht_objref.id, instant);
       break;
     }
 

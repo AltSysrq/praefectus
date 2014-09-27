@@ -145,6 +145,21 @@ void praef_system_conf_ht_root_query_offset(praef_system* sys,
   sys->htm.root_query_offset = offset;
 }
 
+void praef_system_htm_observe_new_htobj(
+  praef_system* sys, praef_hash_tree_sid id, praef_instant instant
+) {
+  unsigned i;
+
+  /* Retroactively add this object to all snapshots that should contain
+   * it. This greatly improves consistency in snapshots between nodes.
+   */
+  for (i = 0; i < sys->htm.num_snapshots; ++i)
+    if (sys->htm.snapshots[i].tree &&
+        instant <= sys->htm.snapshots[i].instant)
+      praef_hash_tree_add_foreign(
+        sys->htm.snapshots[i].tree, id);
+}
+
 static int praef_node_htm_is_visible(praef_node* node,
                                      praef_instant instant) {
   return instant < praef_node_visibility_threshold(node);

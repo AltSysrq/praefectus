@@ -42,7 +42,7 @@ struct praef_node_s;
 
 typedef struct {
   praef_instant instant;
-  const praef_hash_tree* tree;
+  praef_hash_tree* tree;
 } praef_system_htm_snapshot;
 
 typedef struct {
@@ -117,6 +117,9 @@ void praef_system_htm_update(praef_system*);
 int praef_node_htm_init(struct praef_node_s*);
 void praef_node_htm_destroy(struct praef_node_s*);
 void praef_node_htm_update(struct praef_node_s*);
+
+void praef_system_htm_observe_new_htobj(
+  praef_system*, praef_hash_tree_sid, praef_instant);
 
 void praef_node_htm_recv_msg_htls(struct praef_node_s*,
                                   const PraefMsgHtLs_t*);
