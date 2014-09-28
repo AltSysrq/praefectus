@@ -40,7 +40,7 @@
 #define NUM_VNODES 8
 #define STD_LATENCY 16
 
-defsuite(libpraefectus_system_unit);
+defsuite(libpraefectus_system_wire);
 
 static praef_instant current_instant;
 static int debug_receive;
@@ -311,7 +311,7 @@ static void do_expectation(
   abort();
 }
 
-#include "system-unit-expect-macro.h"
+#include "system-wire-expect-macro.h"
 
 #define EXCHANGE(...) { __VA_ARGS__ }
 #define MATCHERS(...) .matchers = { __VA_ARGS__ }

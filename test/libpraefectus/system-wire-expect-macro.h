@@ -1,4 +1,4 @@
-/* This file is supposed to be part of system-unit.c, but it seriously confuses
+/* This file is supposed to be part of system-wire.c, but it seriously confuses
  * Emacs c-mode when present there for some reason.
  */
 
