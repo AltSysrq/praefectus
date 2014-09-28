@@ -325,16 +325,26 @@ int praef_node_is_in_grace_period(praef_node* node) {
     !praef_node_has_deny(node);
 }
 
-int praef_node_has_grant(praef_node* node) {
+int praef_node_has_grant_with_offset(praef_node* node, unsigned offset) {
   praef_system* sys = node->sys;
-  return sys->clock.monotime >
-     (*sys->app->get_node_grant_bridge)(sys->app, node->id);
+  return sys->clock.monotime >= offset &&
+    sys->clock.monotime - offset >
+    (*sys->app->get_node_grant_bridge)(sys->app, node->id);
+}
+
+int praef_node_has_grant(praef_node* node) {
+  return praef_node_has_grant_with_offset(node, 0);
+}
+
+int praef_node_has_deny_with_offset(praef_node* node, unsigned offset) {
+  praef_system* sys = node->sys;
+  return sys->clock.monotime >= offset &&
+    sys->clock.monotime - offset >
+    (*sys->app->get_node_deny_bridge)(sys->app, node->id);
 }
 
 int praef_node_has_deny(praef_node* node) {
-  praef_system* sys = node->sys;
-  return sys->clock.monotime >
-    (*sys->app->get_node_deny_bridge)(sys->app, node->id);
+  return praef_node_has_deny_with_offset(node, 0);
 }
 
 int praef_node_is_alive(praef_node* node) {

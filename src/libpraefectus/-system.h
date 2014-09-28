@@ -170,6 +170,8 @@ int praef_system_net_id_pair_equal(
 int praef_node_is_in_grace_period(praef_node*);
 int praef_node_has_grant(praef_node*);
 int praef_node_has_deny(praef_node*);
+int praef_node_has_grant_with_offset(praef_node*, unsigned);
+int praef_node_has_deny_with_offset(praef_node*, unsigned);
 int praef_node_is_alive(praef_node*);
 
 int praef_compare_nodes(const praef_node*, const praef_node*);

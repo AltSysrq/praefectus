@@ -259,10 +259,14 @@ void praef_node_commit_update(praef_node* node) {
       (validated < systime && systime - validated >
        node->sys->commit.max_validated_lag)) {
     /* Don't enforce these if the node doesn't have GRANT or the local node is
-     * still joining --- we might just be missing a lot of information.
+     * still joining --- we might just be missing a lot of
+     * information. Additionally give the grace period after getting GRANT
+     * (both locally and for the remote node) before enforcing.
      */
     if (praef_sjs_connected == node->sys->join_state &&
-        praef_node_has_grant(node))
+        praef_node_has_grant_with_offset(node, node->sys->grace_period) &&
+        praef_node_has_grant_with_offset(node->sys->local_node,
+                                         node->sys->grace_period))
       praef_node_negative(node, "Commit or validated lag exceeded; "
                           "committed = %d, validated = %d, systime = %d",
                           committed, validated, systime);
