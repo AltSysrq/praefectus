@@ -239,7 +239,7 @@ void praef_system_state_recv_message(
      */
     msg_in_ht.size = msg->size;
     msg_in_ht.data = ht_objref.data;
-    praef_node_ack_observe_msg(sender, &msg_in_ht);
+    praef_node_ack_observe_msg(sender, &msg_in_ht, ht_objref.id);
   }
 
   if (praef_htf_committed_redistributable == praef_hlmsg_type(msg) && sender)
@@ -368,6 +368,11 @@ static void praef_system_state_process_message(
   case PraefMsg_PR_received:
     if (sender)
       praef_node_ack_recv_msg_received(sender, &msg->choice.received);
+    break;
+
+  case PraefMsg_PR_ack:
+    if (sender)
+      praef_node_ack_recv_msg_ack(sender, &msg->choice.ack);
     break;
 
   case PraefMsg_PR_appuni:

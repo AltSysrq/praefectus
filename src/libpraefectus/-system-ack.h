@@ -61,8 +61,11 @@ void praef_node_ack_destroy(struct praef_node_s*);
 void praef_node_ack_update(struct praef_node_s*);
 
 void praef_node_ack_observe_msg(struct praef_node_s*,
-                                const praef_hlmsg*);
+                                const praef_hlmsg*,
+                                praef_hash_tree_sid);
 void praef_node_ack_recv_msg_received(struct praef_node_s*,
                                       const PraefMsgReceived_t*);
+void praef_node_ack_recv_msg_ack(struct praef_node_s*,
+                                 const PraefMsgAck_t*);
 
 #endif /* LIBPRAEFECTUS__SYSTEM_ACK_H_ */

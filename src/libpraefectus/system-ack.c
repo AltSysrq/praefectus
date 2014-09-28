@@ -71,7 +71,8 @@ void praef_node_ack_destroy(praef_node* node) { }
 void praef_node_ack_update(praef_node* node) { }
 
 void praef_node_ack_observe_msg(praef_node* node,
-                                const praef_hlmsg* msg) {
+                                const praef_hlmsg* msg,
+                                praef_hash_tree_sid sid) {
   praef_ack_local_put(&node->ack.al_direct, msg);
   praef_ack_local_put(&node->ack.al_indirect, msg);
 }
@@ -110,6 +111,11 @@ void praef_node_ack_recv_msg_received(praef_node* sender,
       praef_ack_remote_put(ack_remote, praef_hlmsg_serno(missing[i]), 1);
     }
   }
+}
+
+void praef_node_ack_recv_msg_ack(praef_node* node,
+                                 const PraefMsgAck_t* msg) {
+  /* TODO */
 }
 
 void praef_system_ack_update(praef_system* sys) {

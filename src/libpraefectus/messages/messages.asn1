@@ -722,6 +722,34 @@ PraefMsgReceived ::= SEQUENCE {
   received      OCTET STRING SIZE(1..128)
 }
 
+-- Informs the recipient that the sender has received every
+-- committed-redistributable and uncommitted-redistributable message the
+-- recipient produced up to and including a certain limit.
+--
+-- This mechanism only works if the recipient sends its first UR or CR message
+-- with serial number 0, and increments serial numbers by 1 for each
+-- consecutive UR or CR message, with RPC serial numbers being in a different
+-- space.
+--
+-- Upon receiving this message, the receiver SHOULD retransmit messages it
+-- believes the sender should already have which are beyond the limit.
+--
+-- This mechanism exists because the HtRange scan on node connection will
+-- typically interfere with the Received mechanism, leading to a "hole" of
+-- messages which came into existence immediately beyond the visibility
+-- threshold of the HtRange responses. It allows nodes to work with another
+-- node to quickly recover their own holes.
+--
+-- This is an RPC-type message.
+PraefMsgAck ::= SEQUENCE {
+  -- The intended recipient of this message. The receiver MUST ignore this
+  -- message if this id differs from its own.
+  recipient     PraefNodeId,
+  -- The last consecutive serial number that the sender has seen attached to
+  -- any CR or UR message from the recipient.
+  max           PraefAdvSerNo
+}
+
 -- Sends an application-defined unicast message to the receiving node.
 --
 -- This is an RPC-type message.
@@ -775,6 +803,7 @@ PraefMsg ::= CHOICE {
   jointree      PraefMsgJoinTree,
   jtentry       PraefMsgJoinTreeEntry,
   received      PraefMsgReceived,
+  ack           PraefMsgAck,
   appuni        PraefMsgAppUnicast,
   route         PraefMsgRoute
 }

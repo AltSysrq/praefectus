@@ -68,6 +68,7 @@ libpraefectus/messages/PraefHtdirEntry.c \
 libpraefectus/messages/PraefInstant.c \
 libpraefectus/messages/PraefIpAddress.c \
 libpraefectus/messages/PraefMsg.c \
+libpraefectus/messages/PraefMsgAck.c \
 libpraefectus/messages/PraefMsgAppEvent.c \
 libpraefectus/messages/PraefMsgAppUnicast.c \
 libpraefectus/messages/PraefMsgChmod.c \
