@@ -101,7 +101,8 @@ void praef_node_mod_update(praef_node* node) {
        * information yet and could construct an invalid one.
        */
       praef_sjs_connected == node->sys->join_state) {
-    praef_instant vote_to_deny_at = node->sys->clock.systime
+    praef_instant vote_to_deny_at =
+      praef_outbox_get_now(node->sys->router.cr_out)
       / node->sys->mod.vote_deny_interval * node->sys->mod.vote_deny_interval
       + node->sys->mod.vote_chmod_offset;
 
