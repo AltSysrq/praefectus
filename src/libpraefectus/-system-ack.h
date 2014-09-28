@@ -32,12 +32,28 @@
 #include "ack-table.h"
 #include "messages/PraefMsg.h"
 
+typedef struct praef_node_ack_discont_s {
+  praef_advisory_serial_number serno;
+  RB_ENTRY(praef_node_ack_discont_s) tree;
+} praef_node_ack_discont;
+
+int praef_compare_node_ack_discont(
+  const praef_node_ack_discont*, const praef_node_ack_discont*);
+RB_HEAD(praef_node_ack_discont_queue, praef_node_ack_discont_s);
+RB_PROTOTYPE(praef_node_ack_discont_queue, praef_node_ack_discont_s,
+             tree, praef_compare_node_ack_discont)
+
 typedef struct {
   unsigned direct_ack_interval;
   unsigned indirect_ack_interval;
+  unsigned linear_ack_interval;
+  unsigned linear_ack_max_xmit;
 
   praef_instant last_direct_ack;
   praef_instant last_indirect_ack;
+  /* ~0u == unused */
+  unsigned* ack_sids;
+  unsigned ack_sids_cap;
 } praef_system_ack;
 
 typedef struct {
@@ -50,6 +66,13 @@ typedef struct {
    */
   praef_ack_local al_direct, al_indirect;
   praef_ack_remote ack_remote;
+  unsigned max_ack_in, max_ack_out;
+  praef_instant last_linear_ack;
+
+  /* A sorted queue of discontiguous advisory serial numbers that are still
+   * discontiguous from max_ack_out.
+   */
+  struct praef_node_ack_discont_queue discont_queue;
 } praef_node_ack;
 
 int praef_system_ack_init(praef_system*);

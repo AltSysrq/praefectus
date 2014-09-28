@@ -263,11 +263,11 @@ static void praef_system_state_process_message(
 ) {
   if (sys->debug_receive) {
     fprintf(sys->debug_receive,
-            "%08X:%d: Received message from node %08X, time %d\n",
+            "%08X:%d: Received message from node %08X, time %d, serno %d\n",
             sys->local_node? sys->local_node->id : 0,
             sys->clock.monotime,
             sender? sender->id : 0,
-            instant);
+            instant, praef_hlmsg_serno(envelope));
     xer_fprint(sys->debug_receive, &asn_DEF_PraefMsg, msg);
   }
 

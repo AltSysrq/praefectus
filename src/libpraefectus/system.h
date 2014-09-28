@@ -1164,6 +1164,28 @@ void praef_system_conf_direct_ack_interval(praef_system*, unsigned);
  */
 void praef_system_conf_indirect_ack_interval(praef_system*, unsigned);
 /**
+ * Configures the interval at which "linear acknowledgement" packets are sent
+ * to nodes.
+ *
+ * Smaller values will marginally improve packet recovery from cooperating
+ * nodes at the cost of some bandwidth.
+ *
+ * The default is 2*std_latency.
+ */
+void praef_system_conf_linear_ack_interval(praef_system*, unsigned);
+/**
+ * Configures the maximum number of packets that will be retransmitted in
+ * response to a linear ack message suggestive of packet loss.
+ *
+ * There is a direct correlation between wasted bandwidth and this value. This
+ * is only a secondary packet-recovery mechanism, so it typically should be
+ * fairly small, generally about the number of messages the application expects
+ * to produce in two round-trips.
+ *
+ * The default is 4.
+ */
+void praef_system_conf_linear_ack_max_xmit(praef_system*, unsigned);
+/**
  * Configures the maximum number of ticks that the system will advance the
  * application layer (via praef_app_advance_t()) per frame.
  *
