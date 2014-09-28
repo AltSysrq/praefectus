@@ -143,6 +143,12 @@ void praef_node_mod_recv_msg_chmod(praef_node* node,
   target = praef_system_get_node(node->sys, msg->node);
   assert(target);
 
+  /* If a node is voting to DENY itself, immediately begin agreeing to it,
+   * since it is presumably trying to do a graceful disconnect.
+   */
+  if (target == node && PraefMsgChmod__bit_deny == msg->bit)
+    praef_node_negative(node, "Requested by node");
+
   /* OK. Pass on to the lower system. If we agree with the vote, echo it if we
    * haven't already done so.
    */
@@ -187,4 +193,9 @@ void praef_node_mod_recv_msg_chmod(praef_node* node,
       }
     }
   }
+}
+
+void praef_system_disconnect(praef_system* sys) {
+  if (sys->local_node)
+    sys->local_node->disposition = praef_nd_negative;
 }

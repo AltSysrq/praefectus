@@ -440,3 +440,31 @@ deftest(can_kick_nodes) {
   ck_assert(!praef_node_is_alive(praef_system_get_node(
                                    sys[3], sys[1]->local_node->id)));
 }
+
+deftest(can_disconnect_gracefully) {
+  unsigned i;
+
+  set_up(10, 0, 0, praef_sp_lax);
+
+  /* Use 3 nodes so that one vote is not enough */
+  praef_system_bootstrap(sys[0]);
+  activity[0] = ts_idle;
+  praef_system_connect(sys[1], net_id[0]);
+  activity[1] = ts_idle;
+  praef_system_connect(sys[2], net_id[0]);
+  activity[2] = ts_idle;
+
+  advance(512);
+  for (i = 0; i < 3; ++i)
+    ck_assert_int_eq(praef_ss_ok, status[i]);
+
+  printf("Expect %08X to become negative", 1);
+  praef_system_disconnect(sys[0]);
+  advance(256);
+
+  ck_assert_int_eq(praef_ss_kicked, status[0]);
+  ck_assert_int_eq(praef_ss_ok, status[1]);
+  ck_assert(!praef_node_is_alive(praef_system_get_node(sys[1], 1)));
+  ck_assert_int_eq(praef_ss_ok, status[2]);
+  ck_assert(!praef_node_is_alive(praef_system_get_node(sys[2], 1)));
+}
