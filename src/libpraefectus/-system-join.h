@@ -63,7 +63,7 @@ typedef struct {
    * same actual node (the connect target), but are just regarding different
    * nodes known to exist.) We advance beyond the walking_join_tree connection
    * status when an end-of-branch PraefMsgJoinTreeEntry is received for that
-   * node. The index for each query is stored in next_join_tree_query; this is
+   * node. The index for each query is stored in curr_join_tree_query; this is
    * also used to determine whether an incomming response is obsolete. The next
    * query is sent immediately upon each response which introduces a new entry
    * to the tree, and is resent every join_tree_query_interval instants in the
@@ -84,7 +84,7 @@ typedef struct {
 
 typedef struct {
   praef_join_tree_entry join_tree;
-  unsigned next_join_tree_query;
+  unsigned curr_join_tree_query;
 } praef_node_join;
 
 int praef_system_join_init(praef_system*);

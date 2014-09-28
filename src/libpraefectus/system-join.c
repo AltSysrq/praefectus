@@ -162,7 +162,7 @@ void praef_system_join_update(praef_system* sys) {
     /* See if there are any pending join tree queries against any node. */
     has_pending_join_tree_queries = 0;
     RB_FOREACH(node, praef_node_map, &sys->nodes) {
-      if (~0u != node->join.next_join_tree_query) {
+      if (~0u != node->join.curr_join_tree_query) {
         has_pending_join_tree_queries = 1;
         break;
       }
@@ -210,7 +210,7 @@ void praef_system_join_update(praef_system* sys) {
         sys->join.last_join_tree_query = sys->clock.ticks;
 
         RB_FOREACH(node, praef_node_map, &sys->nodes)
-          if (~0u != node->join.next_join_tree_query)
+          if (~0u != node->join.curr_join_tree_query)
             praef_system_join_query_next_join_tree(sys, node);
       }
     }
@@ -298,11 +298,13 @@ void praef_system_join_recv_msg_join_tree_entry(
    * "end of list" and corresponds to our last query, mark traversal for that
    * node complete.
    */
-  if (msg->offset == against->join.next_join_tree_query - 1) {
-    if (msg->data)
+  if (msg->offset == against->join.curr_join_tree_query) {
+    if (msg->data) {
+      ++against->join.curr_join_tree_query;
       praef_system_join_query_next_join_tree(sys, against);
-    else
-      against->join.next_join_tree_query = ~0;
+    } else {
+      against->join.curr_join_tree_query = ~0;
+    }
   }
 }
 
@@ -314,7 +316,7 @@ static void praef_system_join_query_next_join_tree(
   memset(&msg, 0, sizeof(msg));
   msg.present = PraefMsg_PR_jointree;
   msg.choice.jointree.node = against->id;
-  msg.choice.jointree.offset = against->join.next_join_tree_query++;
+  msg.choice.jointree.offset = against->join.curr_join_tree_query;
   if (sys->join.connect_out)
     PRAEF_OOM_IF_NOT(sys, praef_outbox_append(sys->join.connect_out, &msg));
 }
