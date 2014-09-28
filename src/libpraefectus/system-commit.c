@@ -200,6 +200,9 @@ void praef_system_commit_update(praef_system* sys) {
   PraefMsg_t msg;
   unsigned char hash[PRAEF_HASH_SIZE];
 
+  /* Can't do anything until we have an id */
+  if (!sys->local_node) return;
+
   praef_mq_update(sys->commit.cr_intercept);
 
   if (sys->commit.last_commit < sys->clock.monotime &&
