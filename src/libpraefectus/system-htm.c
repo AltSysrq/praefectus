@@ -60,6 +60,11 @@ static PraefDword_t praef_system_htm_dirhash(
   praef_hash_tree_sid sid,
   const unsigned char pubkey[PRAEF_PUBKEY_SIZE],
   praef_instant);
+static void praef_system_htm_bloom(
+  unsigned char bloom[PRAEF_BLOOM_SIZE],
+  praef_node* node,
+  const praef_hash_tree_objref* objects,
+  unsigned nobj, int show_everything);
 
 int praef_system_htm_init(praef_system* sys) {
   if (!praef_system_conf_ht_num_snapshots(sys, 64)) return 0;
@@ -459,11 +464,35 @@ void praef_node_htm_recv_msg_htread(praef_node* node,
                             object.data, object.size);
 }
 
+static void praef_system_htm_bloom(
+  unsigned char bloom[PRAEF_BLOOM_SIZE],
+  praef_node* node,
+  const praef_hash_tree_objref* objects,
+  unsigned n, int everything
+) {
+  const unsigned char* hash;
+  unsigned i, j, h;
+
+  memset(bloom, 0, PRAEF_BLOOM_SIZE);
+  for (i = 0; i < n; ++i) {
+    if (!everything &&
+        !praef_node_htm_is_visible(node, objects[i].instant))
+      continue;
+    hash = praef_hash_tree_get_hash_of(objects+i);
+    for (j = 0; j < 11; ++j) {
+      h = hash[PRAEF_HASH_SIZE - j*2 - 1];
+      h |= hash[PRAEF_HASH_SIZE - j*2 - 2] << 8;
+      h &= 0x3FF;
+      bloom[h/8] |= 1 << h%8;
+    }
+  }
+}
+
 void praef_node_htm_recv_msg_htrange(praef_node* node,
                                      const PraefMsgHtRange_t* msg) {
   PraefMsg_t response;
   OCTET_STRING_t rhash;
-  unsigned char hash[PRAEF_HASH_SIZE];
+  unsigned char hash[PRAEF_HASH_SIZE], bloom[PRAEF_BLOOM_SIZE];
   praef_hash_tree_objref objects[node->sys->htm.range_max];
   unsigned i, n;
 
@@ -500,6 +529,9 @@ void praef_node_htm_recv_msg_htrange(praef_node* node,
                     node->sys->state.hash_tree, rhash.buf) + 1)/2;
     response.choice.htrangenext.hash = &rhash;
   }
+  praef_system_htm_bloom(bloom, node, objects, n, 0);
+  response.choice.htrangenext.bloom.buf = bloom;
+  response.choice.htrangenext.bloom.size = sizeof(bloom);
 
   PRAEF_OOM_IF_NOT(node->sys,
                    praef_outbox_append(node->router.rpc_out,
@@ -508,6 +540,10 @@ void praef_node_htm_recv_msg_htrange(praef_node* node,
 
 void praef_node_htm_recv_msg_htrangenext(praef_node* node,
                                          const PraefMsgHtRangeNext_t* msg) {
+  praef_hash_tree_objref objects[node->sys->htm.range_max*2];
+  unsigned i, n;
+  unsigned char bloom[PRAEF_BLOOM_SIZE];
+
   /* Only pay attention to the response if it corresponds to the most recent
    * query and if it either indicates end-of-tree or a later hash than the
    * current query.
@@ -516,6 +552,50 @@ void praef_node_htm_recv_msg_htrangenext(praef_node* node,
       node->htm.is_running_scan_process &&
       (!msg->hash || memcmp(msg->hash->buf, node->htm.current_range_query,
                             msg->hash->size) > 0)) {
+    /* See whether we've actually received all the messages we should have.
+     * If not, don't actually process the message, but save it for later and
+     * look at it again on the next frame.
+     */
+    n = praef_hash_tree_get_range(objects, node->sys->htm.range_max*2,
+                                  node->sys->state.hash_tree,
+                                  node->htm.current_range_query,
+                                  node->htm.range_query_offset,
+                                  PRAEF_SYSTEM_HTM_RANGE_QUERY_MASK);
+    /* If there is an upper-bound on the response, trim the range accordingly */
+    if (msg->hash) {
+      while (n && memcmp(msg->hash->buf,
+                         praef_hash_tree_get_hash_of(objects+n-1),
+                         msg->hash->size) >= 0)
+        --n;
+    }
+
+    praef_system_htm_bloom(bloom, node->sys->local_node, objects, n, 1);
+
+    for (i = 0; i < PRAEF_BLOOM_SIZE; ++i) {
+      if (msg->bloom.buf[i] !=
+          (msg->bloom.buf[i] & bloom[i])) {
+        /* Still missing something; save away for later, if this isn't already
+         * the saved copy.
+         */
+        if (msg != &node->htm.current_htrn) {
+          memcpy(&node->htm.current_htrn, msg, sizeof(PraefMsgHtRangeNext_t));
+          if (msg->hash) {
+            memcpy(node->htm.current_htrn_hash,
+                   msg->hash->buf, msg->hash->size);
+            node->htm.current_htrn.hash = &node->htm.current_htrn_hash_os;
+            node->htm.current_htrn.hash->buf = node->htm.current_htrn_hash;
+            node->htm.current_htrn.hash->size = msg->hash->size;
+          }
+          memcpy(node->htm.current_htrn_bloom, msg->bloom.buf,
+                 PRAEF_BLOOM_SIZE);
+          node->htm.current_htrn.bloom.buf = node->htm.current_htrn_bloom;
+        }
+        node->htm.has_current_htrn = 1;
+        return;
+      }
+    }
+
+    node->htm.has_current_htrn = 0;
     ++node->htm.current_range_query_id;
 
     if (msg->hash) {
@@ -663,6 +743,11 @@ void praef_node_htm_update(praef_node* node) {
 
   if (praef_sjs_scanning_hash_tree == node->sys->join_state) {
     if (node->htm.is_running_scan_process) {
+      /* If we're holding on to an as-yet unfulfilled HtRangeNext response,
+       * check whether it's ben fulfilled meanwhile.
+       */
+      if (node->htm.has_current_htrn)
+        praef_node_htm_recv_msg_htrangenext(node, &node->htm.current_htrn);
       /* Retransmit the last range query if it's been too long without a
        * response.
        */

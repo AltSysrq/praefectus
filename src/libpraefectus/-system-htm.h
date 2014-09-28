@@ -36,6 +36,7 @@
 
 struct praef_node_s;
 
+#define PRAEF_BLOOM_SIZE 128
 #define PRAEF_SYSTEM_HTM_NUM_SCAN_PROCESSES 8
 #define PRAEF_SYSTEM_HTM_RANGE_QUERY_MASK \
   (PRAEF_SYSTEM_HTM_NUM_SCAN_PROCESSES-1)
@@ -97,6 +98,15 @@ typedef struct {
    * current scan process.
    */
   unsigned char current_range_query[PRAEF_HASH_SIZE];
+  /**
+   * The most recent HtRangeNext message received for the current range query,
+   * if any.
+   */
+  PraefMsgHtRangeNext_t current_htrn;
+  int has_current_htrn;
+  OCTET_STRING_t current_htrn_hash_os;
+  unsigned char current_htrn_hash[PRAEF_HASH_SIZE];
+  unsigned char current_htrn_bloom[PRAEF_BLOOM_SIZE];
   /**
    * The sequential id on the currently in-flight range query as part of the
    * current scan process.

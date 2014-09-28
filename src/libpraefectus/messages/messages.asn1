@@ -621,6 +621,10 @@ PraefMsgHtRange ::= SEQUENCE {
 -- particular, it informs the receiver about what range was satisfied by the
 -- original HtRange query and whether any further queries would be useful.
 --
+-- It also provides the recipient with sufficient information to determine with
+-- high confidence whether all messages produced by the HtRange query were
+-- received.
+--
 -- This is an RPC-type message.
 PraefMsgHtRangeNext ::= SEQUENCE {
   -- The suggested hash prefix for the next HtRange query to be performed by
@@ -634,7 +638,29 @@ PraefMsgHtRangeNext ::= SEQUENCE {
   -- first message it chose not to send.
   hash          PraefHashPrefix OPTIONAL,
   -- The id of the corresponding HtRange request.
-  id            PraefByte
+  id            PraefByte,
+  -- Specifies a bloom filter which can be used by the recipient to determine
+  -- whether it has learned of all the messages that the sender thinks it
+  -- should have.
+  --
+  -- Bit zero is the lowest bit of the zeroth octet. Each message is assigned
+  -- eleven hashes. Each hash takes its 8 lowest bits from a byte in the
+  -- message's SHA-3 hash and its 2 upper bits from the lowest 2 bits in the
+  -- next byte in the SHA-3 hash to the left. All hashes draw from the 22
+  -- right-most octets of the SHA-3 hash.
+  --
+  -- In order to test whether all messages have been received, the recipient
+  -- runs the range query that this message answers against its own hash tree
+  -- and builds a bloom filter with the same properties, truncating the
+  -- messages to the range terminated by the hash field, if present. If any
+  -- bits in this value are set which are not set in the recipient's bloom
+  -- filter, it has definitely lost messages and should retry the HtRange.
+  --
+  -- If HtRanges are answered with a maximum of 64 messages per query, and all
+  -- nodes which answer HtRanges are relatively in-sync, a lost message has a
+  -- 0.04% chance of being undetected by this message. If 32 messages are sent
+  -- per query, this reduces to 0.00015%.
+  bloom         OCTET STRING SIZE(128)
 }
 
 -- Informs the receiver that the sender is not currently in a good position to
