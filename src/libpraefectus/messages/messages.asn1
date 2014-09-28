@@ -238,7 +238,7 @@ PraefMsgJoinRequest ::= SEQUENCE {
   -- the following structure within this field:
   --
   -- SEQUENCE {
-  --   hmac     OCTET STRING SIZE(32)
+  --   hmac     OCTET STRING SIZE(26)
   -- }
   --
   -- Where hmac is the HMAC of the node's public key and the secret password.
@@ -246,7 +246,7 @@ PraefMsgJoinRequest ::= SEQUENCE {
   -- If the application-defined semantics reject this value, the node SHALL NOT
   -- be accepted into the system, and the node that received this request MUST
   -- NOT send a JoinAccept message to any peer.
-  auth          OCTET STRING SIZE(1..64) OPTIONAL
+  auth          OCTET STRING SIZE(1..26) OPTIONAL
 }
 
 -- Joins a new node to the system.
@@ -260,7 +260,7 @@ PraefMsgJoinRequest ::= SEQUENCE {
 -- reserved by the application, the next id in sequence is used.
 --
 -- This SHOULD be the only message within the containing high-level message,
--- and the containing high-level message MUST NOT exceed 224 bytes in length.
+-- and the containing high-level message MUST NOT exceed 240 bytes in length.
 --
 -- This is an uncommitted redistributable message.
 PraefMsgJoinAccept ::= SEQUENCE {
@@ -317,7 +317,7 @@ PraefMsgJoinTreeEntry ::= SEQUENCE {
   --
   -- The absence of this field indicates that offset is beyond the end of the
   -- list.
-  data          OCTET STRING SIZE(1..224) OPTIONAL
+  data          OCTET STRING SIZE(44..240) OPTIONAL
 }
 
 -- Votes to set a a status bit on a node.

@@ -571,3 +571,51 @@ deftest(shared_serial_number_increments_shared_value_per_hlmsg) {
   ck_assert_int_eq(43, serno);
   ck_assert_int_eq(42, praef_hlmsg_serno(&msg));
 }
+
+deftest(maximal_join_accept_fits_into_join_tree_entry) {
+  PraefMsg_t ja, jte;
+  unsigned char data[PRAEF_HLMSG_MTU_MIN+1], garbage[64];
+  unsigned char data2[PRAEF_HLMSG_MTU_MIN+1];
+  OCTET_STRING_t auth = { .buf = garbage, .size = 26 };
+  OCTET_STRING_t jtd;
+  praef_hlmsg msg = { .data = data, .size = sizeof(data) };
+  praef_hlmsg msg2 = { .data = data2, .size = sizeof(data2) };
+
+  encoder = praef_hlmsg_encoder_new(
+    praef_htf_uncommitted_redistributable,
+    NULL, NULL, PRAEF_HLMSG_MTU_MIN, 0);
+  memset(&ja, 0, sizeof(ja));
+  ja.present = PraefMsg_PR_accept;
+  ja.choice.accept.request.publickey.buf = garbage;
+  ja.choice.accept.request.publickey.size = PRAEF_PUBKEY_SIZE;
+  ja.choice.accept.request.identifier.intranet.port = 0x8000;
+  ja.choice.accept.request.identifier.intranet.address.present =
+    PraefIpAddress_PR_ipv6;
+  ja.choice.accept.request.identifier.intranet.address.choice.ipv6.buf =
+    garbage;
+  ja.choice.accept.request.identifier.intranet.address.choice.ipv6.size = 32;
+  ja.choice.accept.request.identifier.internet =
+    &ja.choice.accept.request.identifier.intranet;
+  ja.choice.accept.request.auth = &auth;
+  ja.choice.accept.instant = 0x80000000;
+  ja.choice.accept.signature.buf = garbage;
+  ja.choice.accept.signature.size = PRAEF_SIGNATURE_SIZE;
+
+  praef_hlmsg_encoder_singleton(&msg, encoder, &ja);
+  ck_assert_int_le(msg.size-1, PRAEF_HLMSG_JOINACCEPT_MAX);
+
+  praef_hlmsg_encoder_delete(encoder);
+  encoder = praef_hlmsg_encoder_new(
+    praef_htf_rpc_type,
+    NULL, NULL, PRAEF_HLMSG_MTU_MIN, 0);
+  memset(&jte, 0, sizeof(jte));
+  jte.present = PraefMsg_PR_jtentry;
+  jte.choice.jtentry.node = 0x80000000;
+  jte.choice.jtentry.offset = 0x80000000;
+  jte.choice.jtentry.nkeys = 0x80000000;
+  jte.choice.jtentry.data = &jtd;
+  jtd.buf = data;
+  jtd.size = msg.size-1;
+  /* This call will abort if the resulting encoded form is > 255 bytes */
+  praef_hlmsg_encoder_singleton(&msg2, encoder, &jte);
+}
