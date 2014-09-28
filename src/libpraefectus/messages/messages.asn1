@@ -270,10 +270,8 @@ PraefMsgJoinAccept ::= SEQUENCE {
   instant       PraefInstant,
   -- The signature of the high-level message envelope containing the original
   -- JoinRequest message, calculated by composing the most compact such
-  -- high-level message possible with instan 0. (That is, the signature signs 4
-  -- zero bytes, a byte containing the encoded size of request, followed by
-  -- the encoded form of request itself, padded to an octet boundary with
-  -- zeroes.) The signature MUST be valid.
+  -- high-level message possible with instant and advisory serial number 0. The
+  -- signature MUST be valid.
   signature     PraefSignature
 }
 
