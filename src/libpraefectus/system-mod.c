@@ -115,6 +115,15 @@ void praef_node_mod_update(praef_node* node) {
                          node->sys->router.cr_out, &msg));
       node->mod.last_deny_vote = vote_to_deny_at;
     }
+  /* If the node is currently believed to hold the DENY status and we believe
+   * that we have nearly-complete information, change our disposition to
+   * negative, which will reduce the possibility of the node coming back to
+   * life.
+   */
+  } else if (praef_nd_negative != node->disposition &&
+             praef_sjs_connected == node->sys->join_state &&
+             praef_node_has_deny(node)) {
+    praef_node_negative(node, "Agreeing with majority");
   }
 }
 

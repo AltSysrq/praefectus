@@ -423,10 +423,10 @@ deftest(can_kick_nodes) {
   /* Nodes 2 and 3 spontaneously decide node 1 needs to go */
   printf("Forcing %08X to become negative\n",
          sys[1]->local_node->id);
-  praef_system_get_node(sys[2], sys[1]->local_node->id)->disposition =
-    praef_nd_negative;
-  praef_system_get_node(sys[3], sys[1]->local_node->id)->disposition =
-    praef_nd_negative;
+  praef_node_negative(praef_system_get_node(sys[2], sys[1]->local_node->id),
+                      "Forced by test");
+  praef_node_negative(praef_system_get_node(sys[3], sys[1]->local_node->id),
+                      "Forced by test");
 
   advance(256);
   ck_assert_int_eq(praef_ss_ok, status[0]);
@@ -458,7 +458,7 @@ deftest(can_disconnect_gracefully) {
   for (i = 0; i < 3; ++i)
     ck_assert_int_eq(praef_ss_ok, status[i]);
 
-  printf("Expect %08X to become negative", 1);
+  printf("Expect %08X to become negative\n", 1);
   praef_system_disconnect(sys[0]);
   advance(256);
 
