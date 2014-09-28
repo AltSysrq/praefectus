@@ -126,11 +126,12 @@ void praef_node_ack_update(praef_node* node) {
 
     if (node->sys->clock.ticks - node->ack.last_linear_ack >=
         node->sys->ack.linear_ack_interval &&
-        praef_nd_positive == node->disposition) {
+        praef_nd_positive == node->disposition &&
+        node->ack.max_ack_out) {
       memset(&msg, 0, sizeof(PraefMsg_t));
       msg.present = PraefMsg_PR_ack;
       msg.choice.ack.recipient = node->id;
-      msg.choice.ack.max = node->ack.max_ack_out;
+      msg.choice.ack.max = node->ack.max_ack_out-1;
       PRAEF_OOM_IF_NOT(node->sys, praef_outbox_append(
                          node->router.rpc_out, &msg));
       node->ack.last_linear_ack = node->sys->clock.ticks;
