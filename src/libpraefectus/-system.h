@@ -79,6 +79,7 @@ typedef enum {
   praef_sjs_request_cxn,
   praef_sjs_walking_join_tree,
   praef_sjs_scanning_hash_tree,
+  praef_sjs_awaiting_stability,
   praef_sjs_syncing_clock,
   praef_sjs_requesting_grant,
   praef_sjs_connected

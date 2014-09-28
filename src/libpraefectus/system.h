@@ -401,6 +401,14 @@ typedef void (*praef_app_ht_scan_progress_t)(
   praef_app*, unsigned numerator, unsigned denominator);
 
 /**
+ * Notifies the application that the local node now believes it has all
+ * information necessary to interoperate with other live nodes.
+ *
+ * This will only be called after a call to praef_system_connect().
+ */
+typedef void (*praef_app_information_complete_t)(praef_app*);
+
+/**
  * Notifies the application that the local node's clock is believed to be
  * reasonably synchronised with the rest of the system, and that the
  * application's state has been advanced up to that point.
@@ -480,6 +488,7 @@ struct praef_app_s {
   praef_app_remove_node_t remove_node_opt;
   praef_app_join_tree_traversed_t join_tree_traversed_opt;
   praef_app_ht_scan_progress_t ht_scan_progress_opt;
+  praef_app_information_complete_t information_complete_opt;
   praef_app_clock_synced_t clock_synced_opt;
   praef_app_gained_grant_t gained_grant_opt;
   praef_app_log_t log_opt;
@@ -851,6 +860,18 @@ void praef_system_conf_self_commit_lag_compensation(
  */
 void praef_system_conf_public_visibility_lag(
   praef_system*, unsigned lag);
+/**
+ * Configures the number of instants in which all live nodes are maintaining
+ * their commitments that the local node will wait before requesting GRANT
+ * permissions.
+ *
+ * This value directly adds to the total connection time. Larger values reduce
+ * the probability that a new node will fumble around and incorrectly deem
+ * another node dead immediately after it gains GRANT.
+ *
+ * The default is 4 * std_latency.
+ */
+void praef_system_conf_stability_wait(praef_system*, unsigned);
 /**
  * Configures the interval upon which queries to the node join tree are
  * retried.

@@ -65,6 +65,10 @@ void praef_system_conf_public_visibility_lag(praef_system* sys, unsigned i) {
   sys->commit.public_visibility_lag = i;
 }
 
+void praef_system_conf_stability_wait(praef_system* sys, unsigned i) {
+  sys->commit.stability_wait = i;
+}
+
 int praef_system_commit_init(praef_system* sys) {
   sys->commit.commit_interval = sys->std_latency/2?
     sys->std_latency/2 : 1;
@@ -77,6 +81,7 @@ int praef_system_commit_init(praef_system* sys) {
     praef_sp_strict == sys->profile?
     0 : 65536; /* 0/1 : 1/1 */
   sys->commit.public_visibility_lag = 8 * sys->std_latency;
+  sys->commit.stability_wait = 4 * sys->std_latency;
 
   sys->commit.cr_loopback.broadcast =
     praef_system_commit_cr_loopback_broadcast;
@@ -234,6 +239,18 @@ void praef_system_commit_update(praef_system* sys) {
 
     sys->commit.last_commit = sys->clock.monotime;
   }
+
+  if (!sys->commit.currently_stable)
+    sys->commit.last_unstable_frame = sys->clock.ticks;
+  sys->commit.currently_stable = 1;
+
+  if (praef_sjs_awaiting_stability == sys->join_state &&
+      sys->clock.ticks - sys->commit.last_unstable_frame >=
+      sys->commit.stability_wait) {
+    if (PRAEF_APP_HAS(sys->app, information_complete_opt))
+      (*sys->app->information_complete_opt)(sys->app);
+    ++sys->join_state;
+  }
 }
 
 void praef_node_commit_update(praef_node* node) {
@@ -258,6 +275,10 @@ void praef_node_commit_update(praef_node* node) {
        node->sys->commit.max_commit_lag) ||
       (validated < systime && systime - validated >
        node->sys->commit.max_validated_lag)) {
+    if (praef_node_is_alive(node) &&
+        praef_nd_positive == node->disposition)
+      node->sys->commit.currently_stable = 0;
+
     /* Don't enforce these if the node doesn't have GRANT or the local node is
      * still joining --- we might just be missing a lot of
      * information. Additionally give the grace period after getting GRANT

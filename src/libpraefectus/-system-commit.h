@@ -41,11 +41,15 @@ typedef struct {
   unsigned commit_lag_laxness;
   unsigned self_commit_lag_compensation_16;
   unsigned public_visibility_lag;
+  unsigned stability_wait;
 
   praef_comchain* commit_builder;
   praef_mq* cr_intercept;
   praef_message_bus cr_loopback;
   praef_instant last_commit;
+
+  praef_instant last_unstable_frame;
+  int currently_stable;
 } praef_system_commit;
 
 typedef struct {

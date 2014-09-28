@@ -254,11 +254,6 @@ void praef_node_ack_recv_msg_ack(praef_node* node,
         praef_hash_tree_get_id(&obj, node->sys->state.hash_tree,
                                node->sys->ack.ack_sids[serno+off]) &&
         praef_system_ack_is_public(node->sys, obj.instant)) {
-      praef_system_log(node->sys,
-                       "%08X: Retransmitting serno %d to %08X\n",
-                       node->sys->local_node->id,
-                       serno+off,
-                       node->id);
       (*node->bus->unicast)(node->bus, &node->net_id, obj.data, obj.size);
     }
   }
