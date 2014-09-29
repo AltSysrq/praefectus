@@ -765,10 +765,14 @@ void praef_system_conf_commit_interval(praef_system*, unsigned);
  * The local node will begin voting to DENY nodes with GRANT whose commit
  * threshold lags behind the current time by more than this number of
  * instants. Since commits are simply single messages, fairly low latencies can
- * usually be expected. Larger values are more forgiving of high-latency nodes,
- * but increase the possible latency effects proportionally.
+ * usually be expected; however, this does need to be at least
+ * praef_system_conf_public_visibility_lag() +
+ * praef_system_conf_linear_ack_interval() +
+ * praef_system_conf_commit_interval() in order to correctly recover from
+ * packet loss. Larger values are more forgiving of high-latency nodes and
+ * packet loss, but increase the possible latency effects proportionally.
  *
- * The default is std_latency*8.
+ * The default is std_latency*32.
  */
 void praef_system_conf_max_commit_lag(praef_system*, unsigned);
 /**
@@ -781,7 +785,10 @@ void praef_system_conf_max_commit_lag(praef_system*, unsigned);
  * high-latency nodes, but increase the possible latency effects
  * proportionally.
  *
- * The default is std_latency*16.
+ * It does not make sense for this to be less than
+ * praef_system_conf_max_commit_lag().
+ *
+ * The default is std_latency*64.
  */
 void praef_system_conf_max_validated_lag(praef_system*, unsigned);
 /**

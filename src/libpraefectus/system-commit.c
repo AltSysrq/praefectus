@@ -72,8 +72,8 @@ void praef_system_conf_stability_wait(praef_system* sys, unsigned i) {
 int praef_system_commit_init(praef_system* sys) {
   sys->commit.commit_interval = sys->std_latency/2?
     sys->std_latency/2 : 1;
-  sys->commit.max_commit_lag = 8 * sys->std_latency;
-  sys->commit.max_validated_lag = 16 * sys->std_latency;
+  sys->commit.max_commit_lag = 32 * sys->std_latency;
+  sys->commit.max_validated_lag = 64 * sys->std_latency;
   sys->commit.commit_lag_laxness =
     praef_sp_strict == sys->profile?
     0 : sys->std_latency;
