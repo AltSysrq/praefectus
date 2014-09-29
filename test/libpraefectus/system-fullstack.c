@@ -53,19 +53,21 @@
  * These tests only touch non-public APIs in order to perturb nodes into
  * particular invalid states.
  *
- * At any given moment, a system can be in one of three states. Inactive
+ * At any given moment, a system can be in one of four states. Inactive
  * systems are not advanced at all. Idle systems are advanced, but produce no
- * application events. Active systems advance and produce one event per frame.
+ * application events. Active systems advance and produce one event per
+ * frame. Semiactive systems advance and produce one event per 10 frames.
  */
 
 defsuite(libpraefectus_system_fullstack);
 
 #define NUM_NODES 8
-#define NUM_INST 2048
+#define NUM_INST 4096
 
 static enum {
   ts_inactive = 0,
   ts_idle,
+  ts_semiactive,
   ts_active
 } activity[NUM_NODES];
 static praef_system_status status[NUM_NODES];
@@ -242,7 +244,9 @@ static void advance_one(void) {
     if (ts_inactive != activity[i])
       status[i] = praef_system_advance(sys[i], 1);
 
-    if (ts_active == activity[i]) {
+    if (ts_active == activity[i] ||
+        (ts_semiactive == activity[i] &&
+         0 == sys[i]->clock.ticks % 10)) {
       byte = rand();
       ck_assert(praef_system_add_event(sys[i], &byte, 1));
     }
@@ -257,7 +261,7 @@ static void advance(unsigned n) {
 }
 
 deftest(can_run_alone) {
-  set_up(10, 0, 0, praef_sp_lax);
+  set_up(5, 0, 0, praef_sp_lax);
 
   praef_system_bootstrap(sys[0]);
   activity[0] = ts_active;
@@ -271,7 +275,7 @@ deftest(can_run_alone) {
 }
 
 deftest(can_join_system_with_populated_events) {
-  set_up(10, 0, 0, praef_sp_lax);
+  set_up(5, 0, 0, praef_sp_lax);
 
   praef_system_bootstrap(sys[0]);
   activity[0] = ts_active;
@@ -293,7 +297,7 @@ deftest(can_join_system_with_populated_events) {
 }
 
 deftest(can_join_system_via_non_bootstrap_node) {
-  set_up(10, 0, 0, praef_sp_lax);
+  set_up(5, 0, 0, praef_sp_lax);
 
   praef_system_bootstrap(sys[0]);
   activity[0] = ts_active;
@@ -322,7 +326,7 @@ deftest(two_node_partition_results_in_netsplit) {
    * functioning in the case where a two-node system loses one of the nodes.
    */
 
-  set_up(10, 0, 0, praef_sp_lax);
+  set_up(5, 0, 0, praef_sp_lax);
 
   praef_system_bootstrap(sys[0]);
   activity[0] = ts_idle;
@@ -336,7 +340,7 @@ deftest(two_node_partition_results_in_netsplit) {
          1, sys[1]->local_node->id);
   link_from_to[0][1]->reliability = 0;
   link_from_to[1][0]->reliability = 0;
-  advance(256);
+  advance(512);
   ck_assert_int_eq(praef_ss_ok, status[0]);
   ck_assert(!praef_node_is_alive(praef_system_get_node(
                                    sys[0], sys[1]->local_node->id)));
@@ -344,7 +348,7 @@ deftest(two_node_partition_results_in_netsplit) {
 }
 
 deftest(vanising_node_gets_kicked) {
-  set_up(10, 0, 0, praef_sp_lax);
+  set_up(5, 0, 0, praef_sp_lax);
 
   praef_system_bootstrap(sys[0]);
   activity[0] = ts_idle;
@@ -359,7 +363,7 @@ deftest(vanising_node_gets_kicked) {
 
   printf("Expect node %08X to become negative\n", 1);
   activity[0] = ts_inactive;
-  advance(256);
+  advance(512);
   ck_assert_int_eq(praef_ss_ok, status[1]);
   ck_assert_int_eq(praef_ss_ok, status[2]);
   ck_assert(!praef_node_is_alive(praef_system_get_node(sys[1], 1)));
@@ -369,7 +373,7 @@ deftest(vanising_node_gets_kicked) {
 deftest(network_partition_detected_5_nodes) {
   unsigned i, j, is, js;
 
-  set_up(10, 0, 0, praef_sp_lax);
+  set_up(5, 0, 0, praef_sp_lax);
 
   praef_system_bootstrap(sys[0]);
   activity[0] = ts_idle;
@@ -392,7 +396,7 @@ deftest(network_partition_detected_5_nodes) {
   }
 
   printf("Expect all nodes to become negative to someone\n");
-  advance(256);
+  advance(512);
   ck_assert_int_eq(praef_ss_partitioned, status[0]);
   ck_assert_int_eq(praef_ss_partitioned, status[1]);
   for (i = 2; i < 5; ++i) {
@@ -408,7 +412,7 @@ deftest(network_partition_detected_5_nodes) {
 deftest(can_kick_nodes) {
   unsigned i;
 
-  set_up(10, 0, 0, praef_sp_lax);
+  set_up(5, 0, 0, praef_sp_lax);
 
   praef_system_bootstrap(sys[0]);
   activity[0] = ts_idle;
@@ -444,7 +448,7 @@ deftest(can_kick_nodes) {
 deftest(can_disconnect_gracefully) {
   unsigned i;
 
-  set_up(10, 0, 0, praef_sp_lax);
+  set_up(5, 0, 0, praef_sp_lax);
 
   /* Use 3 nodes so that one vote is not enough */
   praef_system_bootstrap(sys[0]);
@@ -467,4 +471,36 @@ deftest(can_disconnect_gracefully) {
   ck_assert(!praef_node_is_alive(praef_system_get_node(sys[1], 1)));
   ck_assert_int_eq(praef_ss_ok, status[2]);
   ck_assert(!praef_node_is_alive(praef_system_get_node(sys[2], 1)));
+}
+
+deftest(can_connect_on_lossy_network) {
+  set_up(10, 5, 15, praef_sp_lax);
+  /* 12% packet loss, 6.25% packet duplication */
+  link_from_to[0][1]->reliability = 57344;
+  link_from_to[0][1]->duplicity = 4096;
+  link_from_to[1][0]->reliability = 57344;
+  link_from_to[1][0]->duplicity = 4096;
+
+  /* Two round trips = 40 instants = 8 messages */
+  praef_system_conf_linear_ack_max_xmit(sys[0], 8);
+  praef_system_conf_linear_ack_max_xmit(sys[1], 8);
+
+  praef_system_bootstrap(sys[0]);
+  activity[0] = ts_active;
+  advance(100);
+  praef_system_connect(sys[1], net_id[0]);
+  activity[0] = ts_semiactive;
+  activity[1] = ts_idle;
+  advance(3000);
+  ck_assert_int_eq(praef_ss_ok, status[0]);
+  ck_assert_int_eq(praef_ss_ok, status[1]);
+  activity[1] = ts_active;
+  advance(100);
+  activity[0] = activity[1] = ts_idle;
+  advance(256);
+
+  ck_assert_int_eq(praef_ss_ok, status[0]);
+  ck_assert_int_eq(praef_ss_ok, status[1]);
+  ck_assert_int_eq(object_at(0,0)->state[750], object_at(1,0)->state[750]);
+  ck_assert_int_eq(object_at(0,1)->state[750], object_at(1,1)->state[750]);
 }
