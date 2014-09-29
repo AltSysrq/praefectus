@@ -207,7 +207,7 @@ void praef_system_state_recv_message(
       sender != sys->local_node &&
       praef_node_is_alive(sender))
     praef_clock_source_sample(&sender->state.clock_source, &sys->clock,
-                              instant, sender->routemgr.latency);
+                              instant, sender->routemgr.latency/2);
 
   if (sender && praef_htf_rpc_type != praef_hlmsg_type(msg)) {
     ht_objref.size = msg->size - 1;
