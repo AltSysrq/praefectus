@@ -412,6 +412,7 @@ static void praef_system_state_process_appevt(
     wrapped = (praef_system_state_wrapped_event*)already_existing;
     (*sys->app->neutralise_event_bridge)(sys->app, wrapped->actual);
     (*evt->free)(evt);
+    return;
   }
 
   (*sys->app->insert_event_bridge)(sys->app, evt);

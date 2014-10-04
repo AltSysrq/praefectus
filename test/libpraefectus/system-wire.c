@@ -106,14 +106,14 @@ static void create_node_object(praef_app* app, praef_object_id id) {
 static void test_event_apply(test_object* target, const test_event* this,
                              praef_userdata _) {
   ck_assert_int_eq(0, target->evts[this->which]);
-  target->evts[this->which] = 1;
+  target->evts[this->which] = this->self.instant;
 }
 
 static praef_event* decode_event(praef_app* app, praef_instant instant,
                                  praef_object_id object,
                                  praef_event_serial_number sn,
                                  const void* data, size_t sz) {
-  ck_assert_int_eq(sizeof(signed), sz);
+  ck_assert_int_eq(1, sz);
 
   test_event* evt = malloc(sizeof(test_event));
   evt->self.free = free;
@@ -121,7 +121,7 @@ static praef_event* decode_event(praef_app* app, praef_instant instant,
   evt->self.object = object;
   evt->self.instant = instant;
   evt->self.serial_number = sn;
-  evt->which = *(const unsigned*)data;
+  evt->which = *(const unsigned char*)data;
   return (praef_event*)evt;
 }
 
@@ -979,4 +979,82 @@ deftest(htdir_changing_object_to_subdir_results_in_htls) {
         });
 
   ck_assert(has_seen_htls);
+}
+
+static void gain_grant(unsigned n) {
+  SEND(cr, 0, {
+      .present = PraefMsg_PR_chmod,
+      .choice = {
+        .chmod = {
+          .node = n + 100,
+          .effective = current_instant+5,
+          .bit = PraefMsgChmod__bit_grant
+        }
+      }
+    });
+  EXPECT(
+    5,
+    EXCHANGE(
+      NO_ACTION,
+      MATCHERS(
+        MATCHER(
+          n,
+          SUB(present, IS(PraefMsg_PR_chmod));
+          CSUB(chmod,
+               SUB(node, IS(n+100));
+               SUB(bit, IS(PraefMsgChmod__bit_grant)))))));
+  advance(5);
+}
+
+deftest(neutralises_duplicated_event) {
+  praef_node* node;
+  unsigned char evtbuf[1];
+  praef_instant instant;
+
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  gain_grant(0);
+
+  evtbuf[0] = 5;
+  instant = current_instant;
+  SEND(cr, 0, {
+      .present = PraefMsg_PR_appevt,
+      .choice = {
+        .appevt = {
+          .serialnumber = 42,
+          .data.buf = evtbuf,
+          .data.size = 1
+        }
+      }
+    });
+  EXPECT(
+    6,
+    EXCHANGE(
+      NO_ACTION,
+      MATCHERS(
+        MATCHER(
+          0,
+          SUB(present, IS(PraefMsg_PR_vote))))));
+  advance(2);
+
+  ck_assert_int_eq(praef_nd_positive, node->disposition);
+  ck_assert(objects[1].evts[5]);
+
+  current_instant = instant;
+  evtbuf[0] = 6;
+  SEND(cr, 0, {
+      .present = PraefMsg_PR_appevt,
+      .choice = {
+        .appevt = {
+          .serialnumber = 42,
+          .data.buf = evtbuf,
+          .data.size = 1
+        }
+      }
+    });
+  advance(7);
+
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+  ck_assert(!objects[1].evts[5]);
+  ck_assert(!objects[1].evts[6]);
 }
