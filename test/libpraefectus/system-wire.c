@@ -48,6 +48,7 @@ static int debug_receive;
 static praef_std_state state;
 static praef_app* app;
 static praef_system* sys;
+static praef_system_status sys_status;
 static praef_virtual_network* vnet;
 static praef_virtual_bus* sysbus;
 static praef_virtual_bus* bus[NUM_VNODES];
@@ -234,7 +235,7 @@ typedef struct {
 static void advance(unsigned n) {
   while (n--) {
     praef_virtual_network_advance(vnet, 1);
-    praef_system_advance(sys, 1);
+    sys_status = praef_system_advance(sys, 1);
     ++current_instant;
   }
 }
@@ -1057,4 +1058,41 @@ deftest(neutralises_duplicated_event) {
   ck_assert_int_eq(praef_nd_negative, node->disposition);
   ck_assert(!objects[1].evts[5]);
   ck_assert(!objects[1].evts[6]);
+}
+
+deftest(discards_hlmsg_with_invalid_chmod) {
+  PraefMsg_t msg;
+  praef_node* node;
+  unsigned char data[PRAEF_HLMSG_MTU_MIN+1];
+  praef_hlmsg encoded = { .data = data, .size = sizeof(data) };
+  praef_message_bus* mb = praef_virtual_bus_mb(bus[0]);
+
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  gain_grant(0);
+
+  praef_hlmsg_encoder_set_now(cr_enc[0], current_instant);
+
+  /* Encode a valid chmod killing the bootstrap node and a chmod with an
+   * unknown node id. This should cause the entire packet to be ignored, such
+   * that the bootstrap node does not get kicked.
+   */
+  memset(&msg, 0, sizeof(msg));
+  msg.present = PraefMsg_PR_chmod;
+  msg.choice.chmod.node = 1;
+  msg.choice.chmod.bit = PraefMsgChmod__bit_deny;
+  msg.choice.chmod.effective = current_instant + 5;
+  praef_hlmsg_encoder_append(&encoded, cr_enc[0], &msg);
+  msg.choice.chmod.node = 42;
+  praef_hlmsg_encoder_append(&encoded, cr_enc[0], &msg);
+  praef_hlmsg_encoder_flush(&encoded, cr_enc[0]);
+  (*mb->triangular_unicast)(mb, sys_id, encoded.data, encoded.size-1);
+
+  advance(6);
+  ck_assert_int_eq(praef_ss_ok, sys_status);
+  /* Ensure disposition of the fake node did not become negative, which would
+   * indicate that the test broke, "passing" by virtue of manufacturing an
+   * invalid chmod.
+   */
+  ck_assert_int_eq(praef_nd_positive, node->disposition);
 }
