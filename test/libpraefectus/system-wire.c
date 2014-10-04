@@ -1235,3 +1235,70 @@ deftest(disposition_becomes_negative_on_overlapping_commits) {
   advance(2);
   ck_assert_int_eq(praef_nd_negative, node->disposition);
 }
+
+deftest(disposition_becomes_negative_on_chmod_in_past) {
+  praef_node* node;
+
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  gain_grant(0);
+
+  current_instant = 2;
+  SEND(cr, 0, {
+      .present = PraefMsg_PR_chmod,
+      .choice = {
+        .chmod = {
+          .node = 1,
+          .effective = 1,
+          .bit = PraefMsgChmod__bit_deny
+        }
+      }
+    });
+  advance(2);
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+}
+
+deftest(disposition_becomes_negative_on_chmod_too_far_in_future) {
+  praef_node* node;
+
+  praef_system_conf_vote_chmod_offset(sys, 5);
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  gain_grant(0);
+
+  current_instant = 2;
+  SEND(cr, 0, {
+      .present = PraefMsg_PR_chmod,
+      .choice = {
+        .chmod = {
+          .node = 1,
+          .effective = 8,
+          .bit = PraefMsgChmod__bit_deny
+        }
+      }
+    });
+  advance(2);
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+}
+
+deftest(disposition_becomes_negative_on_deny_chmod_for_self) {
+  praef_node* node;
+
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  gain_grant(0);
+
+  current_instant = 2;
+  SEND(cr, 0, {
+      .present = PraefMsg_PR_chmod,
+      .choice = {
+        .chmod = {
+          .node = 100,
+          .effective = 4,
+          .bit = PraefMsgChmod__bit_deny
+        }
+      }
+    });
+  advance(2);
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+}
