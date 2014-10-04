@@ -353,8 +353,15 @@ void praef_node_htm_recv_msg_htdir(praef_node* node,
       if (praef_htet_object != curr_dir->types[i] &&
           praef_htet_object != sn_dir->types[i]) {
         any_differences_found = 1;
-        praef_node_htm_request_htread(
-          node, msg->entries.list.array[i]->choice.objectid);
+        /* If we have a subdirectory here, it's likely we already have this
+         * object. At the very least, we have more than one message with this
+         * hash prefix, so wait until the other node has discovered the
+         * colliding message(s) before doing anything with this prefix.
+         */
+        if (praef_htet_directory != curr_dir->types[i] &&
+            praef_htet_directory != sn_dir->types[i])
+          praef_node_htm_request_htread(
+            node, msg->entries.list.array[i]->choice.objectid);
       }
       break;
 

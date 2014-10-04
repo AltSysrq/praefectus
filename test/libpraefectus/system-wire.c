@@ -235,6 +235,7 @@ static void advance(unsigned n) {
   while (n--) {
     praef_virtual_network_advance(vnet, 1);
     praef_system_advance(sys, 1);
+    ++current_instant;
   }
 }
 
@@ -259,7 +260,6 @@ static void do_expectation(
 
     if (complete) return;
 
-    ++current_instant;
     advance(1);
 
     for (n = 0; n < NUM_VNODES; ++n) {
@@ -311,6 +311,45 @@ static void do_expectation(
   abort();
 }
 
+static void watch(unsigned max_steps, void (*f)(PraefMsg_t*)) {
+  unsigned n;
+  unsigned char buff[1024];
+  praef_hlmsg hlmsg = { .data = buff };
+  const praef_hlmsg_segment* seg;
+  PraefMsg_t* decoded;
+
+  while (max_steps--) {
+    advance(1);
+
+    for (n = 0; n < NUM_VNODES; ++n) {
+      while ((hlmsg.size = (*BUS(n)->recv)(
+                buff, sizeof(buff)-1, BUS(n)))) {
+        buff[hlmsg.size++] = 0;
+
+        ck_assert(praef_hlmsg_is_valid(&hlmsg));
+
+        for (seg = praef_hlmsg_first(&hlmsg);
+             seg; seg = praef_hlmsg_snext(seg)) {
+          decoded = praef_hlmsg_sdec(seg);
+
+          if (debug_receive) {
+            printf("\nReceived message by %d "
+                   "(instant = %d)\n",
+                   n, praef_hlmsg_instant(&hlmsg));
+            xer_fprint(stdout, &asn_DEF_PraefMsg, decoded);
+          }
+
+          (*f)(decoded);
+          (*asn_DEF_PraefMsg.free_struct)(&asn_DEF_PraefMsg, decoded, 0);
+        }
+      }
+    }
+  }
+}
+
+#define WATCH(n, msg, body)                             \
+  watch((n), lambdav((PraefMsg_t* msg), body))
+
 #include "system-wire-expect-macro.h"
 
 #define EXCHANGE(...) { __VA_ARGS__ }
@@ -346,7 +385,7 @@ static void no_action(void) { }
 #define CONSTANTLY(value)                       \
   ({ typeof(value) ANONYMOUS() { return (value); }; ANONYMOUS; })
 
-static void incarnate(unsigned n) {
+static praef_node* incarnate(unsigned n) {
   praef_node* node;
   unsigned char pubkey[PRAEF_PUBKEY_SIZE];
 
@@ -357,6 +396,8 @@ static void incarnate(unsigned n) {
   ck_assert(praef_system_register_node(sys, node));
 
   (*BUS(n)->create_route)(BUS(n), sys_id);
+
+  return node;
 }
 
 deftest(get_network_info) {
@@ -564,7 +605,6 @@ deftest(broadcasts_accept_to_all_nodes) {
 }
 
 deftest(agrees_to_grant_positive_node) {
-  debug_receive = 1;
   praef_system_bootstrap(sys);
   incarnate(0);
   advance(2);
@@ -593,4 +633,350 @@ deftest(agrees_to_grant_positive_node) {
               SUB(bit, IS(PraefMsgChmod__bit_grant)))))));
   advance(5);
   ck_assert(praef_node_is_alive(praef_system_get_node(sys, 100)));
+}
+
+static void prepare_populated_htdir(
+  PraefMsg_t* dst,
+  PraefHtdirEntry_t entries[PRAEF_HTDIR_SIZE],
+  PraefHtdirEntry_t* ep[PRAEF_HTDIR_SIZE]
+) {
+  praef_node* node;
+  praef_hash_tree_objref htobj;
+  unsigned i;
+
+  for (i = 0; i < PRAEF_HTDIR_SIZE; ++i)
+    ep[i] = entries+i;
+
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+
+  /* Change the binary version of the public key of the node we control to be
+   * the same as the real node, so that we can just bounce the htdir back at
+   * it.
+   *
+   * This doesn't affect signing or verification since the public key has
+   * already been converted to integers at this point.
+   */
+  memcpy(node->pubkey, praef_system_get_node(sys, 1)->pubkey,
+         PRAEF_PUBKEY_SIZE);
+
+  /* Manually populate the system's hash tree to guarantee it has at least one
+   * subdirectory but that there are also still top-level objects.
+   */
+  for (i = 0; i < PRAEF_HTDIR_SIZE+1; ++i) {
+    htobj.size = sizeof(i);
+    htobj.data = &i;
+    htobj.instant = 0;
+    ck_assert_int_eq(praef_htar_added,
+                     praef_hash_tree_add(
+                       sys->state.hash_tree, &htobj));
+  }
+
+  /* Ensure that the system doesn't spontaneously add more things to the hash
+   * tree or send new HtLs messages.
+   */
+  praef_system_conf_commit_interval(sys, 65536);
+  praef_system_conf_ht_root_query_interval(sys, 65536);
+
+  SEND(rpc, 0, {
+      .present = PraefMsg_PR_htls,
+      .choice = {
+        .htls = {
+          .snapshot = 0,
+          .hash = {
+            .buf = (void*)&i,
+            .size = 0
+          },
+          .lownybble = 0
+        }
+      }
+    });
+  EXPECT(
+    6,
+    EXCHANGE(
+      NO_ACTION,
+      MATCHERS(
+        MATCHER(
+          0,
+          SUB(present, IS(PraefMsg_PR_htdir));
+          memcpy(dst, &VALUE, sizeof(PraefMsg_t));
+          for (i =  0; i < PRAEF_HTDIR_SIZE; ++i)
+            memcpy(entries+i, dst->choice.htdir.entries.list.array[i],
+                   sizeof(PraefHtdirEntry_t));
+          dst->choice.htdir.entries.list.array = ep))));
+}
+
+deftest(htdir_matching_self_results_in_no_queries) {
+  PraefMsg_t htdir;
+  PraefHtdirEntry_t entries[PRAEF_HTDIR_SIZE], * ep[PRAEF_HTDIR_SIZE];
+
+  prepare_populated_htdir(&htdir, entries, ep);
+  SEND(rpc, 0, htdir);
+  WATCH(
+    6, msg,
+    ck_assert_int_ne(PraefMsg_PR_htls, msg->present);
+    ck_assert_int_ne(PraefMsg_PR_htread, msg->present));
+}
+
+deftest(htdir_with_extra_object_produces_one_htread) {
+  PraefMsg_t htdir;
+  PraefHtdirEntry_t entries[PRAEF_HTDIR_SIZE], * ep[PRAEF_HTDIR_SIZE];
+  unsigned i;
+  int has_seen_htread = 0;
+
+  prepare_populated_htdir(&htdir, entries, ep);
+
+  for (i = 0; i < PRAEF_HTDIR_SIZE; ++i) {
+    if (PraefHtdirEntry_PR_empty ==
+        htdir.choice.htdir.entries.list.array[i]->present) {
+      htdir.choice.htdir.entries.list.array[i]->present =
+        PraefHtdirEntry_PR_objectid;
+      htdir.choice.htdir.entries.list.array[i]->choice.objectid = 65536;
+      htdir.choice.htdir.objhash ^= ~0u;
+      goto ready;
+    }
+  }
+
+  ck_abort_msg("Couldn't find an empty htdir slot");
+
+  ready:
+  SEND(rpc, 0, htdir);
+  WATCH(6, msg,
+        ck_assert_int_ne(PraefMsg_PR_htls, msg->present);
+        if (PraefMsg_PR_htread == msg->present) {
+          ck_assert(!has_seen_htread);
+          ck_assert_int_eq(65536, msg->choice.htread.objectid);
+          has_seen_htread = 1;
+        });
+
+  ck_assert(has_seen_htread);
+}
+
+deftest(htdir_with_different_oids_but_same_objhash_produces_no_htread) {
+  PraefMsg_t htdir;
+  PraefHtdirEntry_t entries[PRAEF_HTDIR_SIZE], * ep[PRAEF_HTDIR_SIZE];
+  unsigned i;
+
+  prepare_populated_htdir(&htdir, entries, ep);
+  for (i = 0; i < PRAEF_HTDIR_SIZE; ++i)
+    if (PraefHtdirEntry_PR_objectid ==
+        htdir.choice.htdir.entries.list.array[i]->present)
+      htdir.choice.htdir.entries.list.array[i]->choice.objectid =
+        i + 65536;
+
+  SEND(rpc, 0, htdir);
+  WATCH(6, msg,
+        ck_assert_int_ne(PraefMsg_PR_htls, msg->present);
+        ck_assert_int_ne(PraefMsg_PR_htread, msg->present));
+}
+
+deftest(htdir_with_different_subdir_produces_one_htls) {
+  PraefMsg_t htdir;
+  PraefHtdirEntry_t entries[PRAEF_HTDIR_SIZE], * ep[PRAEF_HTDIR_SIZE];
+  unsigned i;
+  int has_seen_htls = 0;
+
+  prepare_populated_htdir(&htdir, entries, ep);
+
+  for (i = 0; i < PRAEF_HTDIR_SIZE; ++i) {
+    if (PraefHtdirEntry_PR_subdirsid ==
+        htdir.choice.htdir.entries.list.array[i]->present) {
+      htdir.choice.htdir.entries.list.array[i]->choice.subdirsid ^= ~0u;
+      goto ready;
+    }
+  }
+
+  ck_abort_msg("Couldn't find an empty htdir slot");
+
+  ready:
+  SEND(rpc, 0, htdir);
+  WATCH(6, msg,
+        ck_assert_int_ne(PraefMsg_PR_htread, msg->present);
+        if (PraefMsg_PR_htls == msg->present) {
+          ck_assert(!has_seen_htls);
+          ck_assert_int_eq(1, msg->choice.htls.hash.size);
+          ck_assert_int_eq(i << 4,
+                           (unsigned char)msg->choice.htls.hash.buf[0]);
+          ck_assert(!msg->choice.htls.lownybble);
+          has_seen_htls = 1;
+        });
+
+  ck_assert(has_seen_htls);
+}
+
+deftest(htdir_with_extra_subdir_produces_one_htls) {
+  PraefMsg_t htdir;
+  PraefHtdirEntry_t entries[PRAEF_HTDIR_SIZE], * ep[PRAEF_HTDIR_SIZE];
+  unsigned i;
+  int has_seen_htls = 0;
+
+  prepare_populated_htdir(&htdir, entries, ep);
+
+  for (i = 0; i < PRAEF_HTDIR_SIZE; ++i) {
+    if (PraefHtdirEntry_PR_empty ==
+        htdir.choice.htdir.entries.list.array[i]->present) {
+      htdir.choice.htdir.entries.list.array[i]->present =
+        PraefHtdirEntry_PR_subdirsid;
+      htdir.choice.htdir.entries.list.array[i]->choice.subdirsid = 65536;
+      goto ready;
+    }
+  }
+
+  ck_abort_msg("Couldn't find an empty htdir slot");
+
+  ready:
+  SEND(rpc, 0, htdir);
+  WATCH(6, msg,
+        ck_assert_int_ne(PraefMsg_PR_htread, msg->present);
+        if (PraefMsg_PR_htls == msg->present) {
+          ck_assert(!has_seen_htls);
+          ck_assert_int_eq(1, msg->choice.htls.hash.size);
+          ck_assert_int_eq(i << 4,
+                           (unsigned char)msg->choice.htls.hash.buf[0]);
+          ck_assert(!msg->choice.htls.lownybble);
+          has_seen_htls = 1;
+        });
+
+  ck_assert(has_seen_htls);
+}
+
+deftest(htdir_with_different_objhash_produces_htread_for_each_object) {
+  PraefMsg_t htdir;
+  PraefHtdirEntry_t entries[PRAEF_HTDIR_SIZE], * ep[PRAEF_HTDIR_SIZE];
+  unsigned i;
+
+  prepare_populated_htdir(&htdir, entries, ep);
+  htdir.choice.htdir.objhash ^= ~0u;
+
+  SEND(rpc, 0, htdir);
+  WATCH(6, msg,
+        unsigned i;
+        ck_assert_int_ne(PraefMsg_PR_htls, msg->present);
+        if (PraefMsg_PR_htread == msg->present) {
+          for (i = 0; i < PRAEF_HTDIR_SIZE; ++i) {
+            if (PraefHtdirEntry_PR_objectid ==
+                htdir.choice.htdir.entries.list.array[i]->present &&
+                msg->choice.htread.objectid ==
+                htdir.choice.htdir.entries.list.array[i]->choice.objectid) {
+              htdir.choice.htdir.entries.list.array[i]->present =
+                PraefHtdirEntry_PR_empty;
+              return;
+            }
+          }
+
+          ck_abort_msg("Unexpected htread");
+        });
+
+  for (i = 0; i < PRAEF_HTDIR_SIZE; ++i)
+    ck_assert_int_ne(PraefHtdirEntry_PR_objectid,
+                     htdir.choice.htdir.entries.list.array[i]->present);
+}
+
+deftest(htdir_removing_object_results_in_no_requests) {
+  PraefMsg_t htdir;
+  PraefHtdirEntry_t entries[PRAEF_HTDIR_SIZE], * ep[PRAEF_HTDIR_SIZE];
+  unsigned i;
+
+  prepare_populated_htdir(&htdir, entries, ep);
+  htdir.choice.htdir.objhash ^= ~0u;
+  for (i = 0; i < PRAEF_HTDIR_SIZE; ++i) {
+    if (PraefHtdirEntry_PR_objectid ==
+        htdir.choice.htdir.entries.list.array[i]->present) {
+      htdir.choice.htdir.entries.list.array[i]->present =
+        PraefHtdirEntry_PR_empty;
+      goto ready;
+    }
+  }
+
+  ck_abort_msg("Couldn't find an empty htdir slot");
+
+  ready:
+  SEND(rpc, 0, htdir);
+  WATCH(6, msg,
+        ck_assert_int_ne(PraefMsg_PR_htls, msg->present);
+        ck_assert_int_ne(PraefMsg_PR_htread, msg->present));
+}
+
+deftest(htdir_removing_subdir_results_in_no_requests) {
+  PraefMsg_t htdir;
+  PraefHtdirEntry_t entries[PRAEF_HTDIR_SIZE], * ep[PRAEF_HTDIR_SIZE];
+  unsigned i;
+
+  prepare_populated_htdir(&htdir, entries, ep);
+  for (i = 0; i < PRAEF_HTDIR_SIZE; ++i) {
+    if (PraefHtdirEntry_PR_subdirsid ==
+        htdir.choice.htdir.entries.list.array[i]->present) {
+      htdir.choice.htdir.entries.list.array[i]->present =
+        PraefHtdirEntry_PR_empty;
+      goto ready;
+    }
+  }
+
+  ck_abort_msg("Couldn't find an empty htdir slot");
+
+  ready:
+  SEND(rpc, 0, htdir);
+  WATCH(6, msg,
+        ck_assert_int_ne(PraefMsg_PR_htls, msg->present);
+        ck_assert_int_ne(PraefMsg_PR_htread, msg->present));
+}
+
+deftest(htdir_changing_subdir_to_object_results_in_no_requests) {
+  PraefMsg_t htdir;
+  PraefHtdirEntry_t entries[PRAEF_HTDIR_SIZE], * ep[PRAEF_HTDIR_SIZE];
+  unsigned i;
+
+  prepare_populated_htdir(&htdir, entries, ep);
+  htdir.choice.htdir.objhash ^= ~0u;
+  for (i = 0; i < PRAEF_HTDIR_SIZE; ++i) {
+    if (PraefHtdirEntry_PR_subdirsid ==
+        htdir.choice.htdir.entries.list.array[i]->present) {
+      htdir.choice.htdir.entries.list.array[i]->present =
+        PraefHtdirEntry_PR_objectid;
+      goto ready;
+    }
+  }
+
+  ck_abort_msg("Couldn't find an empty htdir slot");
+
+  ready:
+  SEND(rpc, 0, htdir);
+  WATCH(6, msg,
+        ck_assert_int_ne(PraefMsg_PR_htls, msg->present);
+        ck_assert_int_ne(PraefMsg_PR_htread, msg->present));
+}
+
+deftest(htdir_changing_object_to_subdir_results_in_htls) {
+  PraefMsg_t htdir;
+  PraefHtdirEntry_t entries[PRAEF_HTDIR_SIZE], * ep[PRAEF_HTDIR_SIZE];
+  unsigned i;
+  int has_seen_htls = 0;
+
+  prepare_populated_htdir(&htdir, entries, ep);
+  htdir.choice.htdir.objhash ^= ~0u;
+  for (i = 0; i < PRAEF_HTDIR_SIZE; ++i) {
+    if (PraefHtdirEntry_PR_objectid ==
+        htdir.choice.htdir.entries.list.array[i]->present) {
+      htdir.choice.htdir.entries.list.array[i]->present =
+        PraefHtdirEntry_PR_subdirsid;
+      goto ready;
+    }
+  }
+
+  ck_abort_msg("Couldn't find an empty htdir slot");
+
+  ready:
+  SEND(rpc, 0, htdir);
+  WATCH(6, msg,
+        ck_assert_int_ne(PraefMsg_PR_htread, msg->present);
+        if (PraefMsg_PR_htls == msg->present) {
+          ck_assert(!has_seen_htls);
+          ck_assert_int_eq(1, msg->choice.htls.hash.size);
+          ck_assert_int_eq(i << 4,
+                           (unsigned char)msg->choice.htls.hash.buf[0]);
+          ck_assert(!msg->choice.htls.lownybble);
+          has_seen_htls = 1;
+        });
+
+  ck_assert(has_seen_htls);
 }
