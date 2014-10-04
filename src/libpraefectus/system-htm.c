@@ -36,6 +36,8 @@
 #include "-system.h"
 #include "defs.h"
 
+#define DW(x) ((x) & 0xFFFFFFFF)
+
 static int praef_node_htm_is_visible(praef_node*, praef_instant);
 static const praef_hash_tree* praef_system_htm_get_snapshot(
   praef_system*, praef_instant);
@@ -365,15 +367,15 @@ void praef_node_htm_recv_msg_htdir(praef_node* node,
        * entry.
        */
       if ((praef_htet_directory != sn_dir->types[i] ||
-           msg->entries.list.array[i]->choice.subdirsid !=
-           praef_system_htm_dirhash(
-             sn_dir->sids[i], node->sys->local_node->pubkey,
-             msg->request.snapshot)) &&
+           DW(msg->entries.list.array[i]->choice.subdirsid) !=
+           DW(praef_system_htm_dirhash(
+                sn_dir->sids[i], node->sys->local_node->pubkey,
+                msg->request.snapshot))) &&
           (praef_htet_directory != curr_dir->types[i] ||
-           msg->entries.list.array[i]->choice.subdirsid !=
-           praef_system_htm_dirhash(
-             curr_dir->sids[i], node->sys->local_node->pubkey,
-             msg->request.snapshot)))
+           DW(msg->entries.list.array[i]->choice.subdirsid) !=
+           DW(praef_system_htm_dirhash(
+                curr_dir->sids[i], node->sys->local_node->pubkey,
+                msg->request.snapshot))))
         praef_node_htm_request_htls(node, msg->request.hash.buf,
                                     msg->request.hash.size,
                                     msg->request.lownybble, i);
@@ -385,13 +387,15 @@ void praef_node_htm_recv_msg_htdir(praef_node* node,
     /* No differences found between the object slots. Check whether the object
      * contents are actually the same. If not, request all the objects.
      */
-    if (msg->objhash != praef_system_htm_objhash(node->sys->state.hash_tree,
-                                                 curr_dir,
-                                                 node->sys->local_node->pubkey,
-                                                 msg->request.snapshot) &&
-        msg->objhash != praef_system_htm_objhash(sn_tree, sn_dir,
-                                                 node->sys->local_node->pubkey,
-                                                 msg->request.snapshot)) {
+    if (DW(msg->objhash) !=
+        DW(praef_system_htm_objhash(node->sys->state.hash_tree,
+                                    curr_dir,
+                                    node->sys->local_node->pubkey,
+                                    msg->request.snapshot)) &&
+        DW(msg->objhash) !=
+        DW(praef_system_htm_objhash(sn_tree, sn_dir,
+                                    node->sys->local_node->pubkey,
+                                    msg->request.snapshot))) {
       for (i = 0; i < PRAEF_HTDIR_SIZE; ++i)
         if (PraefHtdirEntry_PR_objectid ==
             msg->entries.list.array[i]->present)
