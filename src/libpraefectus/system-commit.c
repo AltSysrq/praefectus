@@ -261,12 +261,12 @@ void praef_node_commit_update(praef_node* node) {
     praef_mq_set_threshold(node->router.cr_mq,
                            praef_node_visibility_threshold(node));
 
-  if (praef_node_is_in_grace_period(node)) return;
-
   if (praef_comchain_is_dead(node->commit.comchain)) {
     praef_node_negative(node, "Comchain is broken");
     return;
   }
+
+  if (praef_node_is_in_grace_period(node)) return;
 
   committed = praef_comchain_committed(node->commit.comchain);
   validated = praef_comchain_validated(node->commit.comchain);

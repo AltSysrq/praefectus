@@ -1176,3 +1176,62 @@ deftest(disposition_becomes_negative_on_duplicate_vote) {
   advance(1);
   ck_assert_int_eq(praef_nd_negative, node->disposition);
 }
+
+deftest(disposition_becomes_negative_on_commit_with_invalid_bounds) {
+  praef_node* node;
+
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+
+  current_instant = 2;
+  SEND(ur, 0, {
+      .present = PraefMsg_PR_commit,
+      .choice = {
+        .commit = {
+          .start = 3,
+          .hash = {
+            .buf = /* arbitrary memory */ (void*)node,
+            .size = PRAEF_HASH_SIZE
+          }
+        }
+      }
+    });
+  advance(1);
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+}
+
+deftest(disposition_becomes_negative_on_overlapping_commits) {
+  praef_node* node;
+
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+
+  current_instant = 2;
+  SEND(ur, 0, {
+      .present = PraefMsg_PR_commit,
+      .choice = {
+        .commit = {
+          .start = 0,
+          .hash = {
+            .buf = /* arbitrary memory */ (void*)node,
+            .size = PRAEF_HASH_SIZE
+          }
+        }
+      }
+    });
+  current_instant = 3;
+  SEND(ur, 0, {
+      .present = PraefMsg_PR_commit,
+      .choice = {
+        .commit = {
+          .start = 2,
+          .hash = {
+            .buf = /* arbitrary memory */ (void*)node,
+            .size = PRAEF_HASH_SIZE
+          }
+        }
+      }
+    });
+  advance(2);
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+}
