@@ -1096,3 +1096,83 @@ deftest(discards_hlmsg_with_invalid_chmod) {
    */
   ck_assert_int_eq(praef_nd_positive, node->disposition);
 }
+
+deftest(disposition_becomes_negative_on_vote_too_far_into_future) {
+  praef_node* node;
+
+  praef_system_conf_max_event_vote_offset(sys, 5);
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  gain_grant(0);
+
+  current_instant = 5;
+  SEND(cr, 0, {
+      .present = PraefMsg_PR_vote,
+      .choice = {
+        .vote = {
+          .node = 1,
+          .instant = 11,
+          .serialnumber = 0
+        }
+      }
+    });
+  advance(1);
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+}
+
+deftest(disposition_becomes_negative_on_vote_too_far_into_past) {
+  praef_node* node;
+
+  praef_system_conf_max_event_vote_offset(sys, 5);
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  gain_grant(0);
+
+  current_instant = 11;
+  SEND(cr, 0, {
+      .present = PraefMsg_PR_vote,
+      .choice = {
+        .vote = {
+          .node = 1,
+          .instant = 5,
+          .serialnumber = 0
+        }
+      }
+    });
+  advance(1);
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+}
+
+deftest(disposition_becomes_negative_on_duplicate_vote) {
+  praef_node* node;
+
+  praef_system_conf_max_event_vote_offset(sys, 5);
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  gain_grant(0);
+
+  current_instant = 5;
+  SEND(cr, 0, {
+      .present = PraefMsg_PR_vote,
+      .choice = {
+        .vote = {
+          .node = 1,
+          .instant = 5,
+          .serialnumber = 0
+        }
+      }
+    });
+  current_instant = 6;
+  SEND(cr, 0, {
+      .present = PraefMsg_PR_vote,
+      .choice = {
+        .vote = {
+          .node = 1,
+          .instant = 5,
+          .serialnumber = 0
+        }
+      }
+    });
+  advance(1);
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+}
