@@ -520,7 +520,7 @@ static void praef_transactor_deadline_unapply(
     tx, evt->evt_object, evt->evt_time, evt->evt_sn);
   assert(target);
 
-  target->optimistic = 0;
+  target->optimistic = 1;
   praef_transactor_accept_reject_event(
     tx, target, praef_transactor_get_node_count(tx, target->self.instant));
 }

@@ -224,6 +224,22 @@ deftest(event_redacted_after_retroactive_node_count_increase) {
   ck_assert_int_eq(0, object.states[2]);
 }
 
+deftest(event_resurrected_if_gains_votes_after_deadline) {
+  evtpair evt;
+
+  nodecount(0, 3);
+  evt = put_opt_evt(1, 3, lambdav((), object.states[object.now+1] = 1));
+  step(2);
+  ck_assert_int_eq(1, object.states[2]);
+  step(2);
+  ck_assert_int_eq(0, object.states[2]);
+  votefor(evt);
+  votefor(evt);
+  step(1);
+  ck_assert_int_eq(1, object.states[2]);
+}
+
+
 deftest(event_redacted_after_vote_redaction) {
   evtpair evt, votea, voteb;
 
