@@ -1344,3 +1344,101 @@ deftest(all_functions_are_present) {
   praef_system_conf_max_advance_per_frame(sys, 5);
   praef_system_conf_max_event_vote_offset(sys, 5);
 }
+
+deftest(disposition_becomes_negative_on_invalid_join_accept) {
+  praef_node* node;
+
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  gain_grant(0);
+
+  SEND(ur, 0, {
+      .present = PraefMsg_PR_accept,
+      .choice = {
+        .accept = {
+          .instant = 42,
+          .signature = {
+            .buf = /* arbitrary */ (void*)node,
+            .size = PRAEF_SIGNATURE_SIZE
+          },
+          .request = {
+            .publickey = {
+              .buf = /* arbitrary */ (void*)node,
+              .size = PRAEF_PUBKEY_SIZE
+            },
+            .identifier = {
+              .internet = NULL,
+              .intranet = {
+                .port = 1234,
+                .address = {
+                  .present = PraefIpAddress_PR_ipv4,
+                  .choice = {
+                    .ipv4 = {
+                      .buf = /* arbitrary */ (void*)node,
+                      .size = 4
+                    }
+                  }
+                }
+              }
+            },
+            .auth = NULL
+          }
+        }
+      }
+    });
+  advance(2);
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+}
+
+static void create_valid_join_accept(
+  PraefMsg_t* dst,
+  unsigned char signature[PRAEF_SIGNATURE_SIZE],
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE],
+  unsigned for_node
+) {
+  unsigned char data[PRAEF_HLMSG_MTU_MIN+1];
+  praef_hlmsg jrm = { .data = data, .size = sizeof(data) };
+  PraefMsg_t jr;
+
+  praef_signator_pubkey(pubkey, signator[for_node]);
+
+  memset(&jr, 0, sizeof(jr));
+  jr.present = PraefMsg_PR_joinreq;
+  jr.choice.joinreq.publickey.buf = pubkey;
+  jr.choice.joinreq.publickey.size = PRAEF_PUBKEY_SIZE;
+  jr.choice.joinreq.identifier = *net_id[for_node];
+  praef_hlmsg_encoder_singleton(&jrm, rpc_enc[for_node], &jr);
+
+  memcpy(signature, praef_hlmsg_signature(&jrm),
+         PRAEF_SIGNATURE_SIZE);
+
+  memset(dst, 0, sizeof(PraefMsg_t));
+  dst->present = PraefMsg_PR_accept;
+  dst->choice.accept.request = jr.choice.joinreq;
+  dst->choice.accept.instant = praef_hlmsg_instant(&jrm);
+  dst->choice.accept.signature.buf = signature;
+  dst->choice.accept.signature.size = PRAEF_SIGNATURE_SIZE;
+}
+
+deftest(correctly_handles_duplicate_accepts) {
+  praef_node* na, * nb, * node;
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE], signature[PRAEF_SIGNATURE_SIZE];
+  PraefMsg_t accept;
+  unsigned count;
+
+  create_valid_join_accept(&accept, signature, pubkey, 2);
+  praef_system_bootstrap(sys);
+  na = incarnate(0);
+  nb = incarnate(1);
+
+  SEND(ur, 0, accept);
+  SEND(ur, 1, accept);
+  advance(2);
+
+  ck_assert_int_ne(praef_nd_negative, na->disposition);
+  ck_assert_int_ne(praef_nd_negative, nb->disposition);
+
+  count = 0;
+  RB_FOREACH(node, praef_node_map, &sys->nodes) ++count;
+  ck_assert_int_eq(4, count);
+}
