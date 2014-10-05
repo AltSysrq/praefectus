@@ -1442,3 +1442,29 @@ deftest(correctly_handles_duplicate_accepts) {
   RB_FOREACH(node, praef_node_map, &sys->nodes) ++count;
   ck_assert_int_eq(4, count);
 }
+
+deftest(disposition_becomes_negative_if_pong_silence_exceeded) {
+  praef_node* node;
+
+  praef_system_conf_max_pong_silence(sys, 2);
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  advance(3);
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+}
+
+deftest(route_to_node_destroyed_after_route_kill_delay) {
+  praef_node* node;
+
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  gain_grant(0);
+
+  praef_system_conf_route_kill_delay(sys, 2);
+  praef_system_conf_vote_deny_interval(sys, 1);
+  praef_system_conf_vote_chmod_offset(sys, 2);
+  praef_node_negative(node, "Forced by test");
+  advance(7);
+
+  ck_assert_ptr_eq(NULL, node->router.cr_mq);
+}
