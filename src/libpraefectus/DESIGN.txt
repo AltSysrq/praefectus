@@ -127,17 +127,20 @@ corresponding to the (r,s) result pair of DSA. The signature is derived from
 the SHA-3 of all bytes following the signature, including the flags and instant
 fields.
 
-Bit 0 of the flags byte indicates whether the message is fully-public. A
-fully-public (bit is set) message may be redistributed immediately; semi-public
-messages (if the bit is clear) should only be redistributed according to the
-commit-validate rules. Semi-public messages are also passed into the
-commit-validate system.
+Bits zero and one of the flags byte are a two-bit integer indicating the type
+of the message:
 
-Bit 1 of the flags indicates whether the message is an asynchronous RPC. If
-set, bit 0 is meaningless and must be 0, and the message will be discarded
-after processing. Every semantic message type is either RPC-like or
-distributable, and must be sent in a high-level message of the appropriate
-type.
+- 0: The message is committed-redistributable. That is, it plays into the
+  commit system and may (and should) be redistributed by the receiver to other
+  nodes.
+
+- 1: The message is uncommitted-redistributable. Like
+  committed-redistributable, but it does not count towards commit hashing.
+
+- 2: The message is an RPC. RPCs are not meaningfuly redistributable, and are
+  simply discarded after processing.
+
+- 3: Reserved.
 
 Other flags bits are currently reserved and must be zero.
 
@@ -177,12 +180,13 @@ the insertion of the new node, but is vulnerable to producing chimeras via
 random (or potentially deliberate) collisions.
 
 Every network topology has a random 256-bit salt. In order to join a topology,
-a prospective node first queries an existing node for this salt and the current
-instant. The node then hashes this identifier and its own public key (encoded
-as a little-endian 512-bit integer), and populates the 32 bits of the id with
-the first 32 bits of output from SHA-3; bit 0 is clear. If this produces an id
-of 0, 2 is used instead. The node then gets its information signed by an
-existing member of the network and can proceed with the joining process.
+a prospective node first queries an existing node for this salt and other
+bootstrap information. The node then hashes this identifier and its own public
+key (encoded as a little-endian 512-bit integer), and populates the 32 bits of
+the id with the first 32 bits of output from SHA-3 clear. If this produces an
+id of 0, 1, or an application-reserved id, the subsequent id is tried
+instead. The node then gets its information signed by an existing member of the
+network and can proceed with the joining process.
 
 This system is capable of producing two nodes with the same id, though this is
 extremely difficult due to the use of the system salt. If it does occur, the
@@ -227,47 +231,55 @@ includes the network address of at least one existing node in the system as
 well as any authentication details needed.
 
 The node then chooses one of the existing system members and sends a
-GetNetworkInfo message to it (possibly with assistance of triangular routing to
+GetNetwmorkInfo message to it (possibly with assistance of triangular routing to
 overcome NATs if need be). The node which receives this request will respond
 with a NetworkInfo message which provides the final pieces of information that
 the node will need (ie, the public key of the bootstrap node and the
 system-specific salt). This part of the process is vulnerable to a
 Brain-in-a-Jar attack since the node that services the GetNetworkInfo call can
 create a different public key and salt for the node, putting it into its own
-isolated world. Applications wishing to be secure against this attack should
-distribute the NetworkInfo along with the other application-specific
-information, bypassing this exchange. (This assumes, of course, that that
-"other information" is also secure.)
+isolated world. This could be solved by some form of mutual authentication, but
+is not currently addressed.
 
 To begin the joining process proper, the node sends a JoinRequest message to
 the same node it got the NetworkInfo from (or any node if the application does
 not use that step). The JoinRequest contains sufficient information to prove
 the node has authorisation to enter the system (if the application defines any)
-and provides the network and key information for the node. The node awaits a
-JoinAccept, which provides the node with a probably unique id within the
-system.
+and provides the network and key information for the node. The node then awaits
+the JoinAccept message granting it access to the network.
 
-Once the node has an id, it connects to other nodes both by Route messages and
-optionally by a side-channel from the application (eg, via the same method it
-discovered the initial node).
+The node is said to have gained its id upon receiving the JoinAccept, though
+strictly speaking it can already predict what the id will be given solely the
+NetworkInfo message.
 
-The new node first begins using the JoinTree message to quickly learn the
+At this point, the new node still does not know anything about any of the nodes
+in the system other than the bootstrap node, and does not even know how to
+recognise messages from the node to which it connected, unless that happens to
+be the bootstrap node.
+
+The new node then begins using the JoinTree message to quickly learn the
 public keys of all nodes that have ever been in the system (which it needs in
 order to be able to retain other existing messages), starting from the
-bootstrap node, whose public key it got from the NetworkInfo message. To
-improve margin of safety, nodes will also traverse the JoinTree of any new
-nodes to whom the establish a route before they gain the GRANT status.
+bootstrap node, whose public key it got from the NetworkInfo message. Once this
+stage completes, any Route messages the node receives can be meaningfully used
+to connect to other live nodes.
 
-Once the join trees have been walked, the node will begin walking the hash
-trees of the other nodes beginning with distributed random range queries
-followed by a direct tree walk.
+The node will then begin walking the hash trees of the other nodes with
+distributed range queries, typically covering the whole range twice as long as
+that can be accomplished without hitting the same node with the same range
+twice. This stage will allow the node to quickly obtain the vast majority ---
+but not all --- messages in the system.
+
+Due to the probabilistic nature of the packet-loss discovery system in the
+range queries, and the way the range queries render the packet-recovery systems
+mostly ineffective, the node then waits until it believes it has caught up with
+all live nodes, by comparing the concensus of the liveness of a node with what
+the local node perceives. it can determine when it has obtained all but the
+most recent messages with very high certainty.
 
 At this point, the new node will have a fairly good idea of what the current
-system time is. Once no new messages too far in the past have been received,
-the node decides it is ready to fully participate, and begins voting to give
-itself the GRANT status. (Though this vote carries no weight itself,
-cooperating nodes will agree to it anyway.) Once the GRANT status is obtained,
-it sends a commit containing the vote messages it sent so far, extending up to
-its belief of the current system time. The node is now a fully functional
-member of the system.
+system time is, the node decides it is ready to fully participate, and begins
+voting to give itself the GRANT status. (Though this vote carries no weight
+itself, cooperating nodes will agree to it anyway.) Once the GRANT status is
+obtained. The node is now a fully functional member of the system.
 
