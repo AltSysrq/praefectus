@@ -1468,3 +1468,29 @@ deftest(route_to_node_destroyed_after_route_kill_delay) {
 
   ck_assert_ptr_eq(NULL, node->router.cr_mq);
 }
+
+deftest(disposition_becomes_negative_on_invalid_event) {
+  praef_node* node;
+
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  gain_grant(0);
+
+  app->decode_event = (praef_app_decode_event_t)
+    lambda((a), int a, 0*a);
+
+  SEND(cr, 0, {
+      .present = PraefMsg_PR_appevt,
+      .choice = {
+        .appevt = {
+          .serialnumber = 42,
+          .data = {
+            .buf = /* arbitrary */ (void*)node,
+            .size = 42
+          }
+        }
+      }
+    });
+  advance(2);
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+}
