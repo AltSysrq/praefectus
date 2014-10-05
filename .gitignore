@@ -33,3 +33,6 @@ gen-dsa-parms
 *.t
 test/libpraefectus/clock-sim
 src/praef
+*.gcda
+*.gcno
+*.gcov
