@@ -1390,6 +1390,20 @@ deftest(disposition_becomes_negative_on_invalid_join_accept) {
   ck_assert_int_eq(praef_nd_negative, node->disposition);
 }
 
+deftest(get_netinfos_with_unacceptable_net_ids_are_ignored) {
+  sys->ip_version = praef_siv_6only;
+
+  SEND(rpc, 0, {
+      .present = PraefMsg_PR_getnetinfo,
+      .choice = {
+        .getnetinfo = {
+          .retaddr = *net_id[0]
+        }
+      }
+    });
+  WATCH(4, _, ck_abort_msg("Unexpected message received"));
+}
+
 static void create_valid_join_accept(
   PraefMsg_t* dst,
   unsigned char signature[PRAEF_SIGNATURE_SIZE],
@@ -1441,6 +1455,110 @@ deftest(correctly_handles_duplicate_accepts) {
   count = 0;
   RB_FOREACH(node, praef_node_map, &sys->nodes) ++count;
   ck_assert_int_eq(4, count);
+}
+
+deftest(join_accept_with_ipv4_addr_on_6only_is_invalid) {
+  praef_node* node;
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE], signature[PRAEF_SIGNATURE_SIZE];
+  PraefMsg_t accept;
+
+  create_valid_join_accept(&accept, signature, pubkey, 1);
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  sys->ip_version = praef_siv_6only;
+
+  SEND(ur, 0, accept);
+  advance(2);
+
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+}
+
+deftest(join_accept_with_ipv6_addr_on_4only_is_invalid) {
+  praef_node* node;
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE], signature[PRAEF_SIGNATURE_SIZE];
+  PraefMsg_t accept;
+  PraefNetworkIdentifierPair_t net_id6 = {
+    .internet = NULL,
+    .intranet = {
+      .port = 1234,
+      .address = {
+        .present = PraefIpAddress_PR_ipv6,
+        .choice = {
+          .ipv6 = {
+            .buf = /* arbitrary */ (void*)&net_id6,
+            .size = 32
+          }
+        }
+      }
+    }
+  };
+
+  net_id[1] = &net_id6;
+  create_valid_join_accept(&accept, signature, pubkey, 1);
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  sys->ip_version = praef_siv_4only;
+
+  SEND(ur, 0, accept);
+  advance(2);
+
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+}
+
+deftest(join_accept_with_local_addr_on_global_is_invalid) {
+  praef_node* node;
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE], signature[PRAEF_SIGNATURE_SIZE];
+  PraefMsg_t accept;
+
+  create_valid_join_accept(&accept, signature, pubkey, 1);
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  sys->net_locality = praef_snl_global;
+
+  SEND(ur, 0, accept);
+  advance(2);
+
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+}
+
+deftest(join_accept_with_global_addr_on_local_is_invalid) {
+  praef_node* node;
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE], signature[PRAEF_SIGNATURE_SIZE];
+  PraefMsg_t accept;
+  PraefNetworkIdentifierPair_t global = *net_id[1];
+
+  global.internet = &global.intranet;
+  net_id[1] = &global;
+
+  create_valid_join_accept(&accept, signature, pubkey, 1);
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  sys->net_locality = praef_snl_local;
+
+  SEND(ur, 0, accept);
+  advance(2);
+
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
+}
+
+deftest(join_accept_with_bootstrap_pubkey_is_invalid) {
+  praef_node* node;
+  unsigned char pubkey[PRAEF_PUBKEY_SIZE], signature[PRAEF_SIGNATURE_SIZE];
+  PraefMsg_t accept;
+
+  create_valid_join_accept(&accept, signature, pubkey, 1);
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+  /* Change the system's memory of the bootstrap public key to what we're about
+   * to send.
+   */
+  memcpy(praef_system_get_node(sys, 1)->pubkey,
+         pubkey, PRAEF_PUBKEY_SIZE);
+
+  SEND(ur, 0, accept);
+  advance(2);
+
+  ck_assert_int_eq(praef_nd_negative, node->disposition);
 }
 
 deftest(disposition_becomes_negative_if_pong_silence_exceeded) {
