@@ -1494,3 +1494,59 @@ deftest(disposition_becomes_negative_on_invalid_event) {
   advance(2);
   ck_assert_int_eq(praef_nd_negative, node->disposition);
 }
+
+deftest(appuni_sent_only_to_live_nodes) {
+  praef_node* node;
+  PraefMsg_t msg = {
+    .present = PraefMsg_PR_appuni,
+    .choice = {
+      .appuni = {
+        .data = {
+          .buf = (void*)"hello world",
+          .size = 12
+        }
+      }
+    }
+  };
+  int has_seen_appuni = 0;
+
+  void expect_no_appuni() {
+    ck_abort_msg("Unexpected appuni");
+  }
+
+  void expect_one_appuni(
+    praef_app* app, praef_object_id node_id,
+    praef_instant instant,
+    const void* data,
+    size_t sz
+  ) {
+    ck_assert(!has_seen_appuni);
+    ck_assert_int_eq(12, sz);
+    ck_assert(!strcmp(data, "hello world"));
+    ck_assert_int_eq(100, node_id);
+    has_seen_appuni = 1;
+  }
+
+  praef_system_bootstrap(sys);
+  node = incarnate(0);
+
+  app->recv_unicast_opt = (praef_app_recv_unicast_t)expect_no_appuni;
+  SEND(rpc, 0, msg);
+  advance(2);
+
+  gain_grant(0);
+  app->recv_unicast_opt = expect_one_appuni;
+  SEND(rpc, 0, msg);
+  advance(2);
+  ck_assert(has_seen_appuni);
+
+  praef_system_conf_vote_deny_interval(sys, 1);
+  praef_system_conf_vote_chmod_offset(sys, 2);
+  node->disposition = praef_nd_negative;
+  advance(4);
+  ck_assert(!praef_node_is_alive(node));
+
+  app->recv_unicast_opt = (praef_app_recv_unicast_t)expect_no_appuni;
+  SEND(rpc, 0, msg);
+  advance(2);
+}
