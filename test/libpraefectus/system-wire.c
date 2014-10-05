@@ -1302,3 +1302,45 @@ deftest(disposition_becomes_negative_on_deny_chmod_for_self) {
   advance(2);
   ck_assert_int_eq(praef_nd_negative, node->disposition);
 }
+
+deftest(all_functions_are_present) {
+  /* This isn't really a "unit test" per se. It just ensures that all the
+   * functions defined to exist in system.h actually do exist.
+   */
+  praef_system_get_clock(sys);
+  praef_system_conf_clock_obsolescence_interval(sys, 5);
+  praef_system_conf_clock_tolerance(sys, 5);
+  praef_system_conf_commit_interval(sys, 5);
+  praef_system_conf_max_commit_lag(sys, 5);
+  praef_system_conf_max_validated_lag(sys, 5);
+  praef_system_conf_commit_lag_laxness(sys, 5);
+  praef_system_conf_self_commit_lag_compensation(sys, 2, 4);
+  praef_system_conf_public_visibility_lag(sys, 5);
+  praef_system_conf_stability_wait(sys, 5);
+  praef_system_conf_join_tree_query_interval(sys, 5);
+  praef_system_conf_accept_interval(sys, 5);
+  praef_system_conf_max_live_nodes(sys, 5);
+  praef_system_conf_ht_range_max(sys, 5);
+  praef_system_conf_ht_range_query_interval(sys, 5);
+  praef_system_conf_ht_scan_redundancy(sys, 5);
+  praef_system_conf_ht_scan_concurrency(sys, 5);
+  praef_system_conf_ht_snapshot_interval(sys, 5);
+  praef_system_conf_ht_num_snapshots(sys, 5);
+  praef_system_conf_ht_root_query_interval(sys, 5);
+  praef_system_conf_ht_root_query_offset(sys, 5);
+  praef_system_conf_ungranted_route_interval(sys, 5);
+  praef_system_conf_granted_route_interval(sys, 5);
+  praef_system_conf_ping_interval(sys, 5);
+  praef_system_conf_max_pong_silence(sys, 5);
+  praef_system_conf_route_kill_delay(sys, 5);
+  praef_system_conf_propose_grant_interval(sys, 5);
+  praef_system_conf_vote_deny_interval(sys, 5);
+  praef_system_conf_vote_chmod_offset(sys, 5);
+  praef_system_conf_grace_period(sys, 5);
+  praef_system_conf_direct_ack_interval(sys, 5);
+  praef_system_conf_indirect_ack_interval(sys, 5);
+  praef_system_conf_linear_ack_interval(sys, 5);
+  praef_system_conf_linear_ack_max_xmit(sys, 5);
+  praef_system_conf_max_advance_per_frame(sys, 5);
+  praef_system_conf_max_event_vote_offset(sys, 5);
+}
