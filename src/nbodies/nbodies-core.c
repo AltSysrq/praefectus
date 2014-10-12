@@ -72,7 +72,7 @@ typedef signed velocity;
  * Note that distances are always rounded down to a "pixel" boundary, and that
  * a distance of 0 has no effect.
  */
-#define FORCE (65536*32)
+#define FORCE (65536*4)
 
 typedef struct body_state_at_instant_s {
   coord x, y;
@@ -396,8 +396,8 @@ static void update_velocity(nbodies_instance* nbodies) {
     if (obj == self) continue;
     if (!body_current_state(&obj_state, obj)) continue;
 
-    dx = self_state.x - obj_state.x;
-    dy = self_state.y - obj_state.y;
+    dx = obj_state.x - self_state.x;
+    dy = obj_state.y - self_state.y;
     dx /= 65536;
     dy /= 65536;
     dist = isqrt(dx*dx + dy*dy);
@@ -408,7 +408,7 @@ static void update_velocity(nbodies_instance* nbodies) {
     }
   }
 
-  create_velocity_event(evt, self_state.vx + ax, self_state.vy + ay);
+  create_velocity_event(evt, self_state.vx*15/16 + ax, self_state.vy*15/16 + ay);
   AVER(praef_system_add_event(nbodies->sys, evt, EVENT_ENC_SIZE));
 }
 

@@ -12,7 +12,7 @@ AM_CFLAGS=-Iasn1-support -D_BSD_SOURCE \
 AM_LDFLAGS=$(SDL_LIBS) $(SDLIMG_LIBS)
 
 bin_PROGRAMS = praef
-noinst_PROGRAMS = nbodies/nbodies-vnet-4-ideal
+noinst_PROGRAMS = nbodies/nbodies-vnet-4-ideal nbodies/nbodies-vis
 noinst_LTLIBRARIES = libpraefectus.la libasn1-support.la \
 libpraefectus-messages.la nbodies/libnbodies-core.la
 
@@ -138,3 +138,5 @@ nbodies_libnbodies_core_la_SOURCES = nbodies/nbodies-core.c
 nbodies_nbodies_vnet_4_ideal_SOURCES = nbodies/nbodies-vnet-4-ideal.c
 nbodies_nbodies_vnet_4_ideal_LDADD = \
   nbodies/libnbodies-core.la libpraefectus.la
+
+nbodies_nbodies_vis_SOURCES = nbodies/nbodies-vis.c

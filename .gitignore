@@ -37,3 +37,4 @@ src/praef
 *.gcno
 *.gcov
 nbodies-vnet-4-ideal
+src/nbodies/nbodies-vis
