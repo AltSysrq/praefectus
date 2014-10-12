@@ -12,6 +12,9 @@ AM_CFLAGS=-Iasn1-support -D_BSD_SOURCE \
 AM_LDFLAGS=$(SDL_LIBS) $(SDLIMG_LIBS)
 
 bin_PROGRAMS = praef
+noinst_PROGRAMS = nbodies/nbodies-vnet-4-ideal
+noinst_LTLIBRARIES = libpraefectus.la libasn1-support.la \
+libpraefectus-messages.la nbodies/libnbodies-core.la
 
 praef_LDADD = libpraefectus.la
 praef_SOURCES = \
@@ -21,9 +24,6 @@ praefectus/graphics/canvas.c \
 praefectus/graphics/crt.c \
 praefectus/graphics/font.c \
 praefectus/graphics/fraktur.c
-
-noinst_LTLIBRARIES = libpraefectus.la libasn1-support.la \
-libpraefectus-messages.la
 
 libpraefectus_la_SOURCES = \
 libpraefectus/keccak/KeccakF-1600-opt64.c \
@@ -133,3 +133,8 @@ asn1-support/xer_encoder.c \
 asn1-support/xer_support.c
 
 libasn1_support_la_CFLAGS = -w -Iasn1-support
+
+nbodies_libnbodies_core_la_SOURCES = nbodies/nbodies-core.c
+nbodies_nbodies_vnet_4_ideal_SOURCES = nbodies/nbodies-vnet-4-ideal.c
+nbodies_nbodies_vnet_4_ideal_LDADD = \
+  nbodies/libnbodies-core.la libpraefectus.la

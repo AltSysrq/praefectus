@@ -1,0 +1,23 @@
+This directory contains a simple demonstrational program, as well as front-ends
+to visualise and analyse its output.
+
+The main program is a distributed "N-bodies" simulation, where each node
+controls one body. Each body naturally moves in a straight line, and only
+undergoes velocity changes as a result of events. This is not meant to be a
+useful way to distribute the N-bodies problem; rather, it is a model with a
+well-understood behaviour which is also easy to visualise and reason about.
+
+For the sake of simplicity, the configuration gits compiled into each variant
+of the main program. Each process can control any number of logical nodes.
+
+The output from a process is a CSV containing the following fields:
+
+- Instant, decimal
+- Self node id, unsigned hexadecimal
+- Other node id, unsigned hexadecimal
+- X coordinate of other node, unsigned hexadecimal
+- Y coordinate of other node, unsigned hexadecimal
+- X velocity of other node, signed decimal
+- Y velocity of other node, signed decimal
+- Latency to other node, unsigned decimal
+

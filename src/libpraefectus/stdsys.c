@@ -38,7 +38,7 @@ typedef struct {
   praef_std_state* stack;
   praef_system* system;
   praef_userdata userdata;
-  unsigned (*classify_event)(const praef_event*);
+  unsigned (*classify_event)(praef_app*,const praef_event*);
   praef_stdsys_event_vote_t event_vote;
 } praef_stdsys;
 
@@ -67,7 +67,7 @@ static void praef_stdsys_advance(
 static void praef_stdsys_noop_apply(
   praef_object*, const praef_event*, praef_userdata);
 static unsigned praef_stdsys_all_events_are_pessimistic(
-  const praef_event* evt
+  praef_app* app, const praef_event* evt
 ) {
   return 0;
 }
@@ -107,7 +107,8 @@ praef_userdata praef_stdsys_userdata(const praef_app* this) {
 }
 
 void praef_stdsys_optimistic_events(praef_app* this,
-                                    unsigned (*f)(const praef_event*)) {
+                                    unsigned (*f)(praef_app*,
+                                                  const praef_event*)) {
   ((praef_stdsys*)this)->classify_event = f;
 }
 
@@ -146,7 +147,7 @@ static praef_instant praef_stdsys_get_node_deny(
 
 static void praef_stdsys_insert_event(praef_app* this, praef_event* evt) {
   praef_stdsys* stdsys = (praef_stdsys*)this;
-  unsigned optimism = (*stdsys->classify_event)(evt);
+  unsigned optimism = (*stdsys->classify_event)(this, evt);
   praef_event* txevt = praef_transactor_put_event(STACK->tx, evt, !!optimism);
   praef_event* dlevt;
   if (!txevt) {
@@ -234,7 +235,7 @@ static int praef_stdsys_event_vote_default(
   const praef_clock* clock = praef_system_get_clock(this->system);
   unsigned optimistic;
 
-  optimistic = (*this->classify_event)(evt);
+  optimistic = (*this->classify_event)(vthis, evt);
 
   return !optimistic ||
     evt->instant > clock->systime ||

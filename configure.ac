@@ -43,7 +43,8 @@ AC_SEARCH_LIBS([CryptAcquireContextW], [advapi32])
 
 # Headers
 AC_CHECK_HEADERS([sys/queue.h bsd/sys/queue.h sys/tree.h bsd/sys/tree.h dnl
-                  err.h bsd/err.h sysexits.h bsd/sysexits.h bsd/string.h])
+                  err.h bsd/err.h sysexits.h bsd/sysexits.h bsd/string.h dnl
+                  sys/endian.h bsd/sys/endian.h])
 AC_CHECK_HEADERS([gmp.h mpir.h])
 AC_CHECK_HEADERS([dlfcn.h])
 # For Windows-specific crypto functions, since that platform doesn't have

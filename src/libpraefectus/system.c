@@ -451,6 +451,23 @@ const praef_clock* praef_system_get_clock(praef_system* this) {
   return &this->clock;
 }
 
+praef_object_id praef_system_get_local_id(praef_system* this) {
+  if (this->local_node)
+    return this->local_node->id;
+  else
+    return 0;
+}
+
+unsigned praef_system_get_latency_to(praef_system* this,
+                                     praef_object_id node_id) {
+  praef_node* node = praef_system_get_node(this, node_id);
+
+  if (node)
+    return node->routemgr.latency;
+  else
+    return ~0u;
+}
+
 void praef_system_oom(praef_system* this) {
   this->abnormal_status = praef_ss_oom;
 }

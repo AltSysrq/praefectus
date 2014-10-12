@@ -102,7 +102,8 @@ praef_userdata praef_stdsys_userdata(const praef_app*);
  * praef_stdsys_new().
  */
 void praef_stdsys_optimistic_events(praef_app*,
-                                    unsigned (*)(const praef_event*));
+                                    unsigned (*)(praef_app* bridge,
+                                                 const praef_event*));
 /**
  * Function type to determine whether the local node should vote in agreement
  * with a given event.

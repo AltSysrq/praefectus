@@ -729,6 +729,17 @@ int praef_system_send_unicast(praef_system*, praef_object_id target,
 const praef_clock* praef_system_get_clock(praef_system*);
 
 /**
+ * Returns the id of the local node, or 0 if the local id is not yet known.
+ */
+praef_object_id praef_system_get_local_id(praef_system*);
+
+/**
+ * Returns the latency to the node with the given id, in instants, or ~0u if no
+ * node with that id is known.
+ */
+unsigned praef_system_get_latency_to(praef_system*, praef_object_id);
+
+/**
  * Sets the Out-of-Memory flag on the given praef_system. All further calls to
  * praef_system_advance() will return praef_ss_oom.
  */

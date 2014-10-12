@@ -67,6 +67,14 @@
 #error "No BSD sysexits.h could be found on your system. (See libbsd-dev on GNU.)"
 #endif
 
+#if HAVE_BSD_SYS_ENDIAN_H
+#include <bsd/sys/endian.h>
+#elif HAVE_SYS_ENDIAN_H
+#include <sys/endian.h>
+#else
+#error "No BSD sys/endian.h could be found on your system. (See libbsd-dev on GNU.)"
+#endif
+
 /* In an older libbsd on Debian, we have the following comment in cdefs.h:
  *
  * * Linux headers define a struct with a member names __unused.
