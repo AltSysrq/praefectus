@@ -75,6 +75,7 @@ int praef_system_htm_init(praef_system* sys) {
   sys->htm.range_query_interval = sys->std_latency*4;
   sys->htm.scan_redundancy = 2;
   sys->htm.scan_concurrency = 3;
+  sys->htm.max_scan_tries = 5;
   sys->htm.snapshot_interval = sys->std_latency;
   sys->htm.root_query_interval = sys->std_latency*16;
   sys->htm.root_query_offset = sys->std_latency*4;
@@ -116,6 +117,11 @@ void praef_system_conf_ht_scan_redundancy(praef_system* sys, unsigned r) {
 void praef_system_conf_ht_scan_concurrency(praef_system* sys,
                                            unsigned char c) {
   sys->htm.scan_concurrency = c;
+}
+
+void praef_system_conf_ht_max_scan_tries(praef_system* sys,
+                                         unsigned i) {
+  sys->htm.max_scan_tries = i;
 }
 
 void praef_system_conf_ht_snapshot_interval(praef_system* sys,
@@ -606,6 +612,7 @@ void praef_node_htm_recv_msg_htrangenext(praef_node* node,
       }
     }
 
+    node->htm.current_range_query_xmit_count = 0;
     node->htm.has_current_htrn = 0;
     ++node->htm.current_range_query_id;
 
@@ -645,6 +652,7 @@ static void praef_node_htm_request_htrange(praef_node* node) {
       request.choice.htrange.hash.size = i+1;
 
   node->htm.last_range_query = node->sys->clock.ticks;
+  ++node->htm.current_range_query_xmit_count;
 
   PRAEF_OOM_IF_NOT(node->sys, praef_outbox_append(
                      node->router.rpc_out, &request));
@@ -763,8 +771,17 @@ void praef_node_htm_update(praef_node* node) {
        * response.
        */
       if (node->sys->clock.ticks - node->htm.last_range_query >=
-          node->sys->htm.range_query_interval)
-        praef_node_htm_request_htrange(node);
+          node->sys->htm.range_query_interval) {
+        if (node->htm.current_range_query_xmit_count >=
+            node->sys->htm.max_scan_tries) {
+          /* Give up on this node */
+          praef_system_log(node->sys, "Giving up on range scanning %08X",
+                           node->id);
+          node->htm.can_run_scan_process = 0;
+        } else {
+          praef_node_htm_request_htrange(node);
+        }
+      }
     } else {
       /* Try to assign this node a new range query process. First ensure doing
        * so would not violate the concurrency constraints and that there is an

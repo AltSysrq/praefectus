@@ -401,6 +401,19 @@ typedef void (*praef_app_ht_scan_progress_t)(
   praef_app*, unsigned numerator, unsigned denominator);
 
 /**
+ * Notifies the application that the local node is still awaiting the stability
+ * of the given other node. This may be called multiple times per frame.
+ *
+ * @param node The node being awaited.
+ * @param systime The current system time as perceived by the local node.
+ * @param committed The committed threshold of the referenced node.
+ * @param validated The validated threshold of the referenced node.
+ */
+typedef void (*praef_app_awaiting_stability_t)(
+  praef_app*, praef_object_id node, praef_instant systime,
+  praef_instant committed, praef_instant validated);
+
+/**
  * Notifies the application that the local node now believes it has all
  * information necessary to interoperate with other live nodes.
  *
@@ -488,6 +501,7 @@ struct praef_app_s {
   praef_app_remove_node_t remove_node_opt;
   praef_app_join_tree_traversed_t join_tree_traversed_opt;
   praef_app_ht_scan_progress_t ht_scan_progress_opt;
+  praef_app_awaiting_stability_t awaiting_stability_opt;
   praef_app_information_complete_t information_complete_opt;
   praef_app_clock_synced_t clock_synced_opt;
   praef_app_gained_grant_t gained_grant_opt;
@@ -994,6 +1008,14 @@ void praef_system_conf_ht_scan_redundancy(praef_system*, unsigned);
  * The default is 3.
  */
 void praef_system_conf_ht_scan_concurrency(praef_system*, unsigned char);
+/**
+ * Controls the maximum number of consecutive failed attempts at a hash tree
+ * range query that the local node will perform against another node before
+ * deeming the node unusable for range queries.
+ *
+ * The default is 5.
+ */
+void praef_system_conf_ht_max_scan_tries(praef_system*, unsigned);
 /**
  * Controls the intervals at which hash tree snapshots are taken.
  *

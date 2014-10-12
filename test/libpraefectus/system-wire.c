@@ -1324,6 +1324,7 @@ deftest(all_functions_are_present) {
   praef_system_conf_ht_range_query_interval(sys, 5);
   praef_system_conf_ht_scan_redundancy(sys, 5);
   praef_system_conf_ht_scan_concurrency(sys, 5);
+  praef_system_conf_ht_max_scan_tries(sys, 5);
   praef_system_conf_ht_snapshot_interval(sys, 5);
   praef_system_conf_ht_num_snapshots(sys, 5);
   praef_system_conf_ht_root_query_interval(sys, 5);

@@ -276,8 +276,13 @@ void praef_node_commit_update(praef_node* node) {
       (validated < systime && systime - validated >
        node->sys->commit.max_validated_lag)) {
     if (praef_node_is_alive(node) &&
-        praef_nd_positive == node->disposition)
+        praef_nd_positive == node->disposition) {
       node->sys->commit.currently_stable = 0;
+      if (PRAEF_APP_HAS(node->sys->app, awaiting_stability_opt))
+        (*node->sys->app->awaiting_stability_opt)(
+          node->sys->app, node->id, systime,
+          committed, validated);
+    }
 
     /* Don't enforce these if the node doesn't have GRANT or the local node is
      * still joining --- we might just be missing a lot of

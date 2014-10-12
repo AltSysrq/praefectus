@@ -72,7 +72,9 @@ typedef signed velocity;
  * Note that distances are always rounded down to a "pixel" boundary, and that
  * a distance of 0 has no effect.
  */
-#define FORCE (65536*4)
+#define FORCE (65536)
+
+unsigned global_clock = 0;
 
 typedef struct body_state_at_instant_s {
   coord x, y;
@@ -148,6 +150,62 @@ static void body_position_event_apply(
 static void body_velocity_event_apply(
   body_state*, const body_velocity_event*, nbodies_instance*);
 static unsigned optimistic_event_test(praef_app*, const praef_event*);
+
+static void log_prefix(praef_app* app) {
+  nbodies_instance* nbodies = praef_stdsys_userdata(app);
+  praef_object_id id = 0;
+
+  if (nbodies->sys)
+    id = praef_system_get_local_id(nbodies->sys);
+
+  if (id)
+    fprintf(stderr, "%d: %08X: ", global_clock, id);
+  else
+    fprintf(stderr, "%d: [%p]: ", global_clock, app);
+}
+
+static void app_acquire_id(praef_app* app, praef_object_id id) {
+  log_prefix(app);
+  fprintf(stderr, "Acquired id %08X\n", id);
+}
+static void app_discover_node(praef_app* app,
+                              const PraefNetworkIdentifierPair_t* net,
+                              praef_object_id id) {
+  log_prefix(app);
+  fprintf(stderr, "Discovered node %08X\n", id);
+}
+static void app_join_tree_traversed(praef_app* app) {
+  log_prefix(app);
+  fprintf(stderr, "Join tree traversed\n");
+}
+static void app_ht_scan_progress(praef_app* app, unsigned n, unsigned d) {
+  log_prefix(app);
+  fprintf(stderr, "HT scan progress: %d/%d\n", n, d);
+}
+static void app_awaiting_stability(praef_app* app, praef_object_id node,
+                                   praef_instant systime,
+                                   praef_instant committed,
+                                   praef_instant validated) {
+  log_prefix(app);
+  fprintf(stderr, "Awaiting stability on %08X: s=%d, c=%d, v=%d\n",
+          node, systime, committed, validated);
+}
+static void app_information_complete(praef_app* app) {
+  log_prefix(app);
+  fprintf(stderr, "Information complete\n");
+}
+static void app_clock_synced(praef_app* app) {
+  log_prefix(app);
+  fprintf(stderr, "Clock synced\n");
+}
+static void app_gained_grant(praef_app* app) {
+  log_prefix(app);
+  fprintf(stderr, "Gained grant\n");
+}
+static void app_log(praef_app* app, const char* str) {
+  log_prefix(app);
+  fprintf(stderr, "%s\n", str);
+}
 
 static void cycle(void);
 static void spawn_next(void);
@@ -320,10 +378,13 @@ static void cycle(void) {
 
   SLIST_FOREACH(instance, &instances, next)
     cycle_one(instance);
+
+  ++global_clock;
 }
 
 static void spawn_next(void) {
   nbodies_instance* this = xmalloc(sizeof(nbodies_instance));
+  memset(this, 0, sizeof(nbodies_instance));
 
   AVER(praef_std_state_init(&this->state));
   AVER(this->app = praef_stdsys_new(&this->state));
@@ -331,6 +392,15 @@ static void spawn_next(void) {
   praef_stdsys_optimistic_events(this->app, optimistic_event_test);
   this->app->create_node_object = create_node_object;
   this->app->decode_event = decode_event;
+  this->app->acquire_id_opt = app_acquire_id;
+  this->app->discover_node_opt = app_discover_node;
+  this->app->join_tree_traversed_opt = app_join_tree_traversed;
+  this->app->ht_scan_progress_opt = app_ht_scan_progress;
+  this->app->awaiting_stability_opt = app_awaiting_stability;
+  this->app->information_complete_opt = app_information_complete;
+  this->app->clock_synced_opt = app_clock_synced;
+  this->app->gained_grant_opt = app_gained_grant;
+  this->app->log_opt = app_log;
   this->sys = nbodies_config_create_system(this->app);
   praef_stdsys_set_system(this->app, this->sys);
   this->is_alive = 0;

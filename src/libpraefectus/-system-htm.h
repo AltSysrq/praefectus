@@ -51,6 +51,7 @@ typedef struct {
   unsigned range_query_interval;
   unsigned scan_redundancy;
   unsigned scan_concurrency;
+  unsigned max_scan_tries;
   unsigned snapshot_interval;
   unsigned num_snapshots;
   unsigned root_query_interval;
@@ -118,6 +119,10 @@ typedef struct {
    * HtRangeNext message.
    */
   praef_instant last_range_query;
+  /**
+   * The number of times the current range query has been transmitted.
+   */
+  unsigned current_range_query_xmit_count;
   /**
    * A bitmap of scan processes which this node has already serviced.
    */

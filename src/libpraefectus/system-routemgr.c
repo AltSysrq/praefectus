@@ -86,6 +86,7 @@ void praef_system_routemgr_recv_msg_route(
   praef_system* sys, const PraefMsgRoute_t* msg
 ) {
   praef_node* other = praef_system_get_node(sys, msg->node);
+
   if (other && praef_nd_neutral == other->disposition)
     other->disposition = praef_nd_positive;
 
@@ -148,6 +149,7 @@ void praef_node_routemgr_update(praef_node* node) {
    */
   if (node != node->sys->local_node) {
     if (praef_nd_positive == node->disposition && !node->router.cr_mq) {
+      praef_system_log(node->sys, "Creating route to %08X", node->id);
       (*node->bus->create_route)(node->bus, &node->net_id);
       node->router.cr_mq = praef_mq_new(node->sys->router.cr_out,
                                         node->bus,
@@ -160,6 +162,7 @@ void praef_node_routemgr_update(praef_node* node) {
     } else if (praef_nd_negative == node->disposition &&
                node->router.cr_mq &&
                praef_node_routemgr_should_kill(node)) {
+      praef_system_log(node->sys, "Destroying route to %08X", node->id);
       (*node->bus->delete_route)(node->bus, &node->net_id);
       praef_mq_delete(node->router.cr_mq);
       node->router.cr_mq = NULL;
