@@ -69,6 +69,8 @@ struct praef_virtual_bus_s {
   PraefNetworkIdentifierPair_t network_identifier_pair;
   unsigned char ip_address[4];
 
+  unsigned long long bandwidth_in, bandwidth_out;
+
   TAILQ_HEAD(,praef_virtual_bus_message_s) inbox;
   TAILQ_HEAD(,praef_virtual_bus_message_s) in_flight;
   SLIST_HEAD(,praef_virtual_link_s) outbound_links;
@@ -182,6 +184,14 @@ const PraefNetworkIdentifierPair_t* praef_virtual_bus_address(
   return &this->network_identifier_pair;
 }
 
+unsigned long long praef_virtual_bus_bw_in(const praef_virtual_bus* this) {
+  return this->bandwidth_in;
+}
+
+unsigned long long praef_virtual_bus_bw_out(const praef_virtual_bus* this) {
+  return this->bandwidth_out;
+}
+
 int praef_virtual_network_advance(praef_virtual_network* this, unsigned delta) {
   praef_virtual_bus* bus;
   int oom = this->oom;
@@ -264,6 +274,7 @@ static praef_virtual_bus* praef_virtual_bus_new(praef_virtual_network* network) 
   this->network_identifier_pair.intranet.address.choice.ipv4.buf =
     this->ip_address;
   this->network_identifier_pair.intranet.address.choice.ipv4.size = 4;
+  this->bandwidth_in = this->bandwidth_out = 0;
 
   TAILQ_INIT(&this->inbox);
   TAILQ_INIT(&this->in_flight);
@@ -404,6 +415,8 @@ static void praef_virtual_bus_send_packet(
     any_xmit = 0;
   }
 
+  link->destination->bandwidth_in += sz;
+
   if (!bypass_firewall &&
       (!link->reverse || !link->reverse->is_route_open) &&
       (reverse_xmit + link->parms.firewall_grace_period <= this->network->now ||
@@ -434,6 +447,8 @@ static void praef_virtual_bus_send_packet(
     link->parms.base_latency + (rand() % (link->parms.variable_latency+1));
 
   TAILQ_INSERT_TAIL(&link->destination->in_flight, message, next);
+  if (link->reverse)
+    link->reverse->destination->bandwidth_out += sz;
 }
 
 static size_t praef_virtual_bus_recv(void* dst, size_t max,

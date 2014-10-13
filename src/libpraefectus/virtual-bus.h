@@ -147,6 +147,19 @@ const PraefNetworkIdentifierPair_t* praef_virtual_bus_address(
   const praef_virtual_bus*);
 
 /**
+ * Returns the number of bytes that have been received by the given bus (after
+ * packet duplication/dropping/etc).
+ */
+unsigned long long praef_virtual_bus_bw_in(
+  const praef_virtual_bus*);
+/**
+ * Returns the number of bytes that have been sent by the given bus (before
+ * packet duplication/dropping/etc).
+ */
+unsigned long long praef_virtual_bus_bw_out(
+  const praef_virtual_bus*);
+
+/**
  * Advances the given virtual network the given amount of time forward.
  *
  * @return Whether all operations since the last call to advance()

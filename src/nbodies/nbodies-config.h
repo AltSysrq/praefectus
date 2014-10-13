@@ -78,4 +78,11 @@ unsigned nbodies_config_num_steps(void);
  */
 unsigned nbodies_config_optimism(void);
 
+/**
+ * Returns the outbound or inbound bandwidth in kB of the node created at the
+ * given index.
+ */
+unsigned nbodies_config_bwkb_in(unsigned);
+unsigned nbodies_config_bwkb_out(unsigned);
+
 #endif /* NBODIES_NBODIES_CONFIG_H_ */

@@ -95,3 +95,11 @@ unsigned nbodies_config_num_steps(void) {
 unsigned nbodies_config_optimism(void) {
   return 5;
 }
+
+unsigned nbodies_config_bwkb_in(unsigned ix) {
+  return praef_virtual_bus_bw_in(bus[ix]) / 1024;
+}
+
+unsigned nbodies_config_bwkb_out(unsigned ix) {
+  return praef_virtual_bus_bw_out(bus[ix]) / 1024;
+}

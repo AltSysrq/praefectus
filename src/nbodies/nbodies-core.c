@@ -219,14 +219,25 @@ static unsigned isqrt(unsigned);
 #pragma GCC diagnostic ignored "-Wmain"
 #endif
 int main(unsigned argc, const char*const* argv) {
-  unsigned i;
+  unsigned i, n;
+  nbodies_instance* nbodies;
 
   nbodies_config_init(argv, argc);
 
   for (i = 0; i < nbodies_config_num_steps(); ++i)
     cycle();
 
-  /* TODO: Free memory for checking by valgrind */
+  n = 0;
+  SLIST_FOREACH(nbodies, &instances, next) ++n;
+
+  for (i = 0; i < n; ++i)
+    fprintf(stderr,
+            "Bandwidth for %d: %d kB (%d kB/sec) in, %d kB (%d kB/sec) out\n",
+            i,
+            nbodies_config_bwkb_in(i),
+            nbodies_config_bwkb_in(i) * 50 / global_clock,
+            nbodies_config_bwkb_out(i),
+            nbodies_config_bwkb_out(i) * 50 / global_clock);
 
   return 0;
 }
