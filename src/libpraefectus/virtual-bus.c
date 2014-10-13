@@ -47,7 +47,7 @@ struct praef_virtual_link_s {
    * packet transmitted through it. This is only of interest to the reverse
    * link.
    */
-  praef_instant last_xmit, last_xmit_exttime;
+  praef_instant last_xmit;
   int any_xmit;
   int is_route_open;
 
@@ -79,7 +79,6 @@ struct praef_virtual_bus_s {
 struct praef_virtual_network_s {
   SLIST_HEAD(,praef_virtual_bus_s) busses;
   praef_instant now;
-  praef_instant exttime;
   unsigned num_busses;
   int oom;
 };
@@ -124,7 +123,6 @@ praef_virtual_network* praef_virtual_network_new(void) {
 
   SLIST_INIT(&this->busses);
   this->now = 0;
-  this->exttime = 0;
   this->oom = 0;
   this->num_busses = 0;
 
@@ -195,11 +193,6 @@ int praef_virtual_network_advance(praef_virtual_network* this, unsigned delta) {
 
   this->oom = 0;
   return !oom;
-}
-
-void praef_virtual_network_set_exttime(praef_virtual_network* this,
-                                       praef_instant t) {
-  this->exttime = t;
 }
 
 static praef_virtual_link* praef_virtual_link_new(void) {
@@ -331,7 +324,6 @@ static int praef_virtual_bus_delete_route(
 
       link->is_route_open = 0;
       link->last_xmit = this->network->now;
-      link->last_xmit_exttime = this->network->exttime;
       link->any_xmit = 1;
       return 1;
     }
@@ -373,7 +365,6 @@ static void praef_virtual_bus_do_unicast(
    * will reset the grace period.
    */
   link->last_xmit = this->network->now;
-  link->last_xmit_exttime = this->network->exttime;
   link->any_xmit = 1;
 
   praef_virtual_bus_send_packet(this, link, is_triangular, data, sz);
