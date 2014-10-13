@@ -34,6 +34,7 @@
 #include "messages/PraefMsgGetNetworkInfo.h"
 #include "messages/PraefMsgJoinRequest.h"
 #include "messages/PraefMsgJoinAccept.h"
+#include "messages/PraefMsgWhoIs.h"
 
 typedef struct praef_join_tree_entry_s {
   unsigned char data[PRAEF_HLMSG_JOINACCEPT_MAX];
@@ -95,6 +96,8 @@ void praef_node_join_destroy(struct praef_node_s*);
 
 void praef_system_join_recv_msg_join_tree(
   struct praef_node_s*, const PraefMsgJoinTree_t*);
+void praef_node_join_recv_msg_whois(
+  struct praef_node_s*, const PraefMsgWhoIs_t*);
 void praef_system_join_recv_msg_join_tree_entry(
   praef_system*, const PraefMsgJoinTreeEntry_t*);
 void praef_system_join_recv_msg_get_network_info(

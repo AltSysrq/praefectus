@@ -428,6 +428,7 @@ static praef_hlmsg_type_flag praef_hlmsg_type_flag_for(PraefMsg_PR present) {
   case PraefMsg_PR_jointree:
   case PraefMsg_PR_jtentry:
   case PraefMsg_PR_route:
+  case PraefMsg_PR_whois:
     return praef_htf_rpc_type;
 
   case PraefMsg_PR_accept:

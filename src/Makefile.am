@@ -91,6 +91,7 @@ libpraefectus/messages/PraefMsgPong.c \
 libpraefectus/messages/PraefMsgReceived.c \
 libpraefectus/messages/PraefMsgRoute.c \
 libpraefectus/messages/PraefMsgVote.c \
+libpraefectus/messages/PraefMsgWhoIs.c \
 libpraefectus/messages/PraefNetworkIdentifier.c \
 libpraefectus/messages/PraefNetworkIdentifierPair.c \
 libpraefectus/messages/PraefNetworkSalt.c \

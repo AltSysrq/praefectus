@@ -176,7 +176,8 @@ void praef_system_htm_observe_new_htobj(
 
 static int praef_node_htm_is_visible(praef_node* node,
                                      praef_instant instant) {
-  return instant < praef_node_visibility_threshold(node);
+  return instant < praef_node_visibility_threshold(node) ||
+    node == node->sys->local_node;
 }
 
 static const praef_hash_tree* praef_system_htm_get_snapshot(
@@ -569,6 +570,9 @@ void praef_node_htm_recv_msg_htrangenext(praef_node* node,
       node->htm.is_running_scan_process &&
       (!msg->hash || memcmp(msg->hash->buf, node->htm.current_range_query,
                             msg->hash->size) > 0)) {
+    /* Got a response, so not a total failure */
+    node->htm.current_range_query_xmit_count = 0;
+
     /* See whether we've actually received all the messages we should have.
      * If not, don't actually process the message, but save it for later and
      * look at it again on the next frame.
@@ -586,33 +590,38 @@ void praef_node_htm_recv_msg_htrangenext(praef_node* node,
         --n;
     }
 
-    praef_system_htm_bloom(bloom, node->sys->local_node, objects, n, 1);
+    /* If, even after trimming, the range is still the maximum we requested,
+     * the bloom filter probably won't be meaningful, since some messages we
+     * *have* received may be excluded, so skip the test in that case.
+     */
+    if (n < node->sys->htm.range_max*2) {
+      praef_system_htm_bloom(bloom, node->sys->local_node, objects, n, 1);
 
-    for (i = 0; i < PRAEF_BLOOM_SIZE; ++i) {
-      if (msg->bloom.buf[i] !=
-          (msg->bloom.buf[i] & bloom[i])) {
-        /* Still missing something; save away for later, if this isn't already
-         * the saved copy.
-         */
-        if (msg != &node->htm.current_htrn) {
-          memcpy(&node->htm.current_htrn, msg, sizeof(PraefMsgHtRangeNext_t));
-          if (msg->hash) {
-            memcpy(node->htm.current_htrn_hash,
-                   msg->hash->buf, msg->hash->size);
-            node->htm.current_htrn.hash = &node->htm.current_htrn_hash_os;
-            node->htm.current_htrn.hash->buf = node->htm.current_htrn_hash;
-            node->htm.current_htrn.hash->size = msg->hash->size;
+      for (i = 0; i < PRAEF_BLOOM_SIZE; ++i) {
+        if (msg->bloom.buf[i] !=
+            (msg->bloom.buf[i] & bloom[i])) {
+          /* Still missing something; save away for later, if this isn't already
+           * the saved copy.
+           */
+          if (msg != &node->htm.current_htrn) {
+            memcpy(&node->htm.current_htrn, msg, sizeof(PraefMsgHtRangeNext_t));
+            if (msg->hash) {
+              memcpy(node->htm.current_htrn_hash,
+                     msg->hash->buf, msg->hash->size);
+              node->htm.current_htrn.hash = &node->htm.current_htrn_hash_os;
+              node->htm.current_htrn.hash->buf = node->htm.current_htrn_hash;
+              node->htm.current_htrn.hash->size = msg->hash->size;
+            }
+            memcpy(node->htm.current_htrn_bloom, msg->bloom.buf,
+                   PRAEF_BLOOM_SIZE);
+            node->htm.current_htrn.bloom.buf = node->htm.current_htrn_bloom;
           }
-          memcpy(node->htm.current_htrn_bloom, msg->bloom.buf,
-                 PRAEF_BLOOM_SIZE);
-          node->htm.current_htrn.bloom.buf = node->htm.current_htrn_bloom;
+          node->htm.has_current_htrn = 1;
+          return;
         }
-        node->htm.has_current_htrn = 1;
-        return;
       }
     }
 
-    node->htm.current_range_query_xmit_count = 0;
     node->htm.has_current_htrn = 0;
     ++node->htm.current_range_query_id;
 
@@ -775,8 +784,6 @@ void praef_node_htm_update(praef_node* node) {
         if (node->htm.current_range_query_xmit_count >=
             node->sys->htm.max_scan_tries) {
           /* Give up on this node */
-          praef_system_log(node->sys, "Giving up on range scanning %08X",
-                           node->id);
           node->htm.can_run_scan_process = 0;
         } else {
           praef_node_htm_request_htrange(node);
@@ -793,7 +800,8 @@ void praef_node_htm_update(praef_node* node) {
 
       RB_FOREACH(other, praef_node_map, &node->sys->nodes) {
         if (praef_nd_positive == other->disposition &&
-            other->htm.is_running_scan_process) {
+            other->htm.is_running_scan_process &&
+            other->htm.can_run_scan_process) {
           ++rq_concurrency;
           ++processes_in_progress[other->htm.range_query_offset];
         }

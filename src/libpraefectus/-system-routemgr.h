@@ -63,7 +63,7 @@ void praef_node_routemgr_destroy(struct praef_node_s*);
 void praef_node_routemgr_update(struct praef_node_s*);
 
 void praef_system_routemgr_recv_msg_route(
-  praef_system*, const PraefMsgRoute_t*);
+  praef_system*, struct praef_node_s*, const PraefMsgRoute_t*);
 void praef_node_routemgr_recv_msg_ping(
   struct praef_node_s*, const PraefMsgPing_t*);
 void praef_node_routemgr_recv_msg_pong(

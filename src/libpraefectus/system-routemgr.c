@@ -83,9 +83,19 @@ int praef_node_routemgr_init(praef_node* node) {
 void praef_node_routemgr_destroy(praef_node* node) { }
 
 void praef_system_routemgr_recv_msg_route(
-  praef_system* sys, const PraefMsgRoute_t* msg
+  praef_system* sys, praef_node* sender, const PraefMsgRoute_t* msg
 ) {
   praef_node* other = praef_system_get_node(sys, msg->node);
+  PraefMsg_t req;
+
+  if (!other && sender) {
+    /* Try to find out who the sender is talking about */
+    memset(&req, 0, sizeof(req));
+    req.present = PraefMsg_PR_whois;
+    req.choice.whois.node = msg->node;
+    PRAEF_OOM_IF_NOT(
+      sys, praef_outbox_append(sender->router.rpc_out, &req));
+  }
 
   if (other && praef_nd_neutral == other->disposition)
     other->disposition = praef_nd_positive;

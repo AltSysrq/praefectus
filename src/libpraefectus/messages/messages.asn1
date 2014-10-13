@@ -775,12 +775,28 @@ PraefMsgAppUnicast ::= SEQUENCE {
 -- This is an RPC-type message.
 PraefMsgRoute ::= SEQUENCE {
   -- The id of a node with which the sender is holding a connection. The
-  -- receiver MUST take no special action if it does not know about the given
-  -- node id, even if it knows the id is not permitted.
+  -- receiver MUST take no special action against the sender if it does not
+  -- know about the given node id, even if it knows the id is not permitted.
+  --
+  -- The receiver SHOULD reply with a WhoIs message if it does not recognise
+  -- the node id.
   node          PraefNodeId,
   -- The estimated latency between the source node and the destination of this
   -- route, in instants. This is purely advisory.
   latency       PraefByte
+}
+
+-- Indicates that the sender has reason to believe that a node with the given
+-- id may exist, but does not itself know about it.
+--
+-- If the receiver has the Accept message corresponding to the named node, it
+-- SHOULD retransimit it to the sender. If the receiver does not know about the
+-- node either, it MUST NOT take any special action.
+--
+-- This is an RPC-type message.
+PraefMsgWhoIs ::= SEQUENCE {
+  -- The id of the node being queried.
+  node          PraefNodeId
 }
 
 PraefMsg ::= CHOICE {
@@ -805,7 +821,8 @@ PraefMsg ::= CHOICE {
   received      PraefMsgReceived,
   ack           PraefMsgAck,
   appuni        PraefMsgAppUnicast,
-  route         PraefMsgRoute
+  route         PraefMsgRoute,
+  whois         PraefMsgWhoIs
 }
 
 

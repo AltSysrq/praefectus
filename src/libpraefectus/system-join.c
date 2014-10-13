@@ -257,6 +257,23 @@ void praef_system_join_recv_msg_join_tree(
       from->router.rpc_out, &response));
 }
 
+void praef_node_join_recv_msg_whois(
+  praef_node* node, const PraefMsgWhoIs_t* msg
+) {
+  praef_node* target;
+
+  target = praef_system_get_node(node->sys, msg->node);
+  if (!target || PRAEF_BOOTSTRAP_NODE == target->id)
+    return;
+
+  praef_system_log(node->sys, "Received whois(%08X) from %08X",
+                   msg->node, node->id);
+
+  (*node->bus->unicast)(
+    node->bus, &node->net_id, target->join.join_tree.data,
+    target->join.join_tree.data_size);
+}
+
 /* Note in particular here that join tree query responses are accepted from
  * *unknown* nodes. This is necessary since we won't actually be able to
  * identify the node we initially connected to until we get the message that
@@ -597,13 +614,10 @@ void praef_system_join_recv_msg_join_accept(
 
   while (praef_system_join_is_reserved_id(sys, id)) ++id;
 
-  if (!sys->local_node) {
-    praef_signator_pubkey(local_pubkey, sys->signator);
-    if (0 != memcmp(local_pubkey, msg->request.publickey.buf,
-                    PRAEF_PUBKEY_SIZE))
-      /* Unrelated accept message */
-      return;
-
+  praef_signator_pubkey(local_pubkey, sys->signator);
+  if (!sys->local_node &&
+      0 == memcmp(local_pubkey, msg->request.publickey.buf,
+                  PRAEF_PUBKEY_SIZE)) {
     /* This is us. Create local node object and notify application of our new
      * id.
      */

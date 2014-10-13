@@ -315,6 +315,11 @@ static void praef_system_state_process_message(
     praef_system_join_recv_msg_join_tree_entry(sys, &msg->choice.jtentry);
     break;
 
+  case PraefMsg_PR_whois:
+    if (sender)
+      praef_node_join_recv_msg_whois(sender, &msg->choice.whois);
+    break;
+
   case PraefMsg_PR_htls:
     if (sender)
       praef_node_htm_recv_msg_htls(sender, &msg->choice.htls);
@@ -357,7 +362,7 @@ static void praef_system_state_process_message(
 
   case PraefMsg_PR_route:
     if (sender)
-      praef_system_routemgr_recv_msg_route(sys, &msg->choice.route);
+      praef_system_routemgr_recv_msg_route(sys, sender, &msg->choice.route);
     break;
 
   case PraefMsg_PR_commit:
