@@ -72,7 +72,7 @@ typedef signed velocity;
  * Note that distances are always rounded down to a "pixel" boundary, and that
  * a distance of 0 has no effect.
  */
-#define FORCE (65536)
+#define FORCE (65536/4)
 
 unsigned global_clock = 0;
 
@@ -478,7 +478,7 @@ static void update_velocity(nbodies_instance* nbodies) {
     }
   }
 
-  create_velocity_event(evt, self_state.vx*15/16 + ax, self_state.vy*15/16 + ay);
+  create_velocity_event(evt, self_state.vx*31/32 + ax, self_state.vy*31/32 + ay);
   AVER(praef_system_add_event(nbodies->sys, evt, EVENT_ENC_SIZE));
 }
 
