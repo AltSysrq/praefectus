@@ -384,7 +384,7 @@ static void praef_virtual_bus_broadcast(
 }
 
 /* Work around C libraries producing 15-bit random numbers. */
-#if RAND_MAX < 65535
+#if RAND_MAX <= 65535
 #define rand() (rand() | (rand() << 15))
 #endif
 
