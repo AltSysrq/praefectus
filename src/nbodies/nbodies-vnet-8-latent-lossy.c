@@ -32,7 +32,10 @@
 #include <libpraefectus/system.h>
 #include <libpraefectus/virtual-bus.h>
 
-#define NUM_NODES 5
+#define NUM_NODES 8
+/* The visualiser uses 50fps, so this is effectively 40..100 ms one-way, or
+ * 80..200 ms two-way.
+ */
 #define MIN_LATENCY 2
 #define MAX_LATENCY 5
 
@@ -54,7 +57,7 @@ static void link(praef_virtual_bus* a, praef_virtual_bus* b) {
   praef_virtual_network_link* link =
     praef_virtual_bus_link(a, b);
   link->firewall_grace_period = 200;
-  link->reliability = 65000;
+  link->reliability = 62259; /* 5% packet loss */
   link->duplicity = 512;
   link->base_latency = MIN_LATENCY;
   link->variable_latency = MAX_LATENCY - MIN_LATENCY;
