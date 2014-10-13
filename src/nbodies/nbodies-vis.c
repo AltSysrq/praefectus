@@ -210,7 +210,9 @@ static void draw_instant(SDL_Renderer* renderer,
 
     for (n1 = 0; n1 < num_nodes; ++n1) {
       if ((p0[n0][n1].x || p0[n0][n1].y) &&
-          (p1[n0][n1].x || p1[n0][n1].y))
+          (p1[n0][n1].x || p1[n0][n1].y) &&
+          abs(p0[n0][n1].x - p1[n0][n1].x) < 700 &&
+          abs(p0[n0][n1].y - p1[n0][n1].y) < 700)
         SDL_RenderDrawLine(renderer, p0[n0][n1].x, p0[n0][n1].y,
                            p1[n0][n1].x, p1[n0][n1].y);
     }
