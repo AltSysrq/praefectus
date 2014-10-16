@@ -93,7 +93,7 @@ unsigned nbodies_config_num_steps(void) {
 }
 
 unsigned nbodies_config_optimism(void) {
-  return 5;
+  return MAX_LATENCY*4;
 }
 
 unsigned nbodies_config_bwkb_in(unsigned ix) {
