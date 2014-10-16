@@ -224,7 +224,7 @@ static void run(SDL_Renderer* renderer,
                 unsigned num_nodes,
                 const position data[num_instants][num_nodes][num_nodes]) {
   int alive = 1, auto_advance = 0;
-  unsigned last_instant = 1, tail_length = 8;
+  unsigned last_instant = 1, tail_length = 32;
   unsigned i;
   SDL_Event evt;
 
