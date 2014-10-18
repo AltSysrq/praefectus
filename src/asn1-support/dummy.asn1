@@ -10,6 +10,7 @@ PraefDummyChoice ::= CHOICE {
   other ENUMERATED { foo, bar },
   bool BOOLEAN,
   null NULL,
-  chars VisibleString
+  chars VisibleString,
+  mchars PrintableString
 }
 END

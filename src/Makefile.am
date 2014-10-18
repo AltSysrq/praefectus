@@ -5,7 +5,7 @@ AUTOMAKE_OPTIONS = subdir-objects
 # Recursing into asn1-support first has the nice effect of forcing everything
 # there to be built first, so we don't need to go through the headache of
 # getting Automake to comprehend that a task produces multiple header files.
-SUBDIRS = asn1-support libpraefectus/messages .
+SUBDIRS = asn1-support libpraefectus/messages udp-common .
 
 AM_CFLAGS=-Iasn1-support -D_BSD_SOURCE \
           $(SDL_CFLAGS) $(SDLIMG_CFLAGS)
@@ -15,7 +15,8 @@ bin_PROGRAMS = praef
 noinst_PROGRAMS = nbodies/nbodies-vnet-4-ideal nbodies/nbodies-vis \
   nbodies/nbodies-vnet-8-latent-lossy
 noinst_LTLIBRARIES = libpraefectus.la libasn1-support.la \
-libpraefectus-messages.la nbodies/libnbodies-core.la
+libpraefectus-messages.la nbodies/libnbodies-core.la \
+libudp-common.la
 
 praef_LDADD = libpraefectus.la
 praef_SOURCES = \
@@ -59,6 +60,7 @@ libpraefectus/stdsys.c
 libpraefectus_la_LIBADD = \
   libpraefectus-messages.la libasn1-support.la
 
+libpraefectus_messages_la_CFLAGS = -w -Iasn1-support
 libpraefectus_messages_la_SOURCES = \
 libpraefectus/messages/PraefAdvSerNo.c \
 libpraefectus/messages/PraefByte.c \
@@ -102,8 +104,7 @@ libpraefectus/messages/PraefSerialNumber.c \
 libpraefectus/messages/PraefShort.c \
 libpraefectus/messages/PraefSignature.c
 
-libpraefectus_messages_la_CFLAGS = -w -Iasn1-support
-
+libasn1_support_la_CFLAGS = -w -Iasn1-support
 libasn1_support_la_SOURCES = \
 asn1-support/BIT_STRING.c \
 asn1-support/BOOLEAN.c \
@@ -112,6 +113,7 @@ asn1-support/NULL.c \
 asn1-support/NativeEnumerated.c \
 asn1-support/NativeInteger.c \
 asn1-support/OCTET_STRING.c \
+asn1-support/PrintableString.c \
 asn1-support/VisibleString.c \
 asn1-support/asn_SEQUENCE_OF.c \
 asn1-support/asn_SET_OF.c \
@@ -134,7 +136,15 @@ asn1-support/xer_decoder.c \
 asn1-support/xer_encoder.c \
 asn1-support/xer_support.c
 
-libasn1_support_la_CFLAGS = -w -Iasn1-support
+libudp_common_la_CFLAGS = -w -Iasn1-support -Ilibpraefectus/messages
+libudp_common_la_SOURCES = \
+udp-common/PraefUdpMsg.c \
+udp-common/PraefUdpMsgAdvertise.c \
+udp-common/PraefUdpMsgDiscover.c \
+udp-common/PraefUdpMsgEcho.c \
+udp-common/PraefUdpMsgRegister.c \
+udp-common/PraefUdpMsgWhoAmI.c \
+udp-common/PraefUdpMsgYouAre.c
 
 nbodies_libnbodies_core_la_SOURCES = nbodies/nbodies-core.c
 nbodies_nbodies_vnet_4_ideal_SOURCES = nbodies/nbodies-vnet-4-ideal.c
