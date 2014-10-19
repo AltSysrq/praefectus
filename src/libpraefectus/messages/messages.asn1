@@ -140,9 +140,9 @@ PraefNetworkIdentifier ::= SEQUENCE {
 -- because it makes the interface produced by asn1c more tolerable.
 PraefIpAddress ::= CHOICE {
   ipv4          OCTET STRING SIZE(4),
-  -- The ipv6 address is a sequence of 16 16-bit integers, each encoded as
-  -- little-endian.
-  ipv6          OCTET STRING SIZE(32)
+  -- The ipv6 address is a sequence of 8 16-bit integers, each encoded in
+  -- network byte order.
+  ipv6          OCTET STRING SIZE(16)
 }
 
 -- Requests basic information on the system in which the receiver is
@@ -246,7 +246,7 @@ PraefMsgJoinRequest ::= SEQUENCE {
   -- If the application-defined semantics reject this value, the node SHALL NOT
   -- be accepted into the system, and the node that received this request MUST
   -- NOT send a JoinAccept message to any peer.
-  auth          OCTET STRING SIZE(1..26) OPTIONAL
+  auth          OCTET STRING SIZE(1..58) OPTIONAL
 }
 
 -- Joins a new node to the system.

@@ -576,7 +576,7 @@ deftest(maximal_join_accept_fits_into_join_tree_entry) {
   PraefMsg_t ja, jte;
   unsigned char data[PRAEF_HLMSG_MTU_MIN+1], garbage[64];
   unsigned char data2[PRAEF_HLMSG_MTU_MIN+1];
-  OCTET_STRING_t auth = { .buf = garbage, .size = 26 };
+  OCTET_STRING_t auth = { .buf = garbage, .size = 52 };
   OCTET_STRING_t jtd;
   praef_hlmsg msg = { .data = data, .size = sizeof(data) };
   praef_hlmsg msg2 = { .data = data2, .size = sizeof(data2) };
@@ -593,7 +593,7 @@ deftest(maximal_join_accept_fits_into_join_tree_entry) {
     PraefIpAddress_PR_ipv6;
   ja.choice.accept.request.identifier.intranet.address.choice.ipv6.buf =
     garbage;
-  ja.choice.accept.request.identifier.intranet.address.choice.ipv6.size = 32;
+  ja.choice.accept.request.identifier.intranet.address.choice.ipv6.size = 16;
   ja.choice.accept.request.identifier.internet =
     &ja.choice.accept.request.identifier.intranet;
   ja.choice.accept.request.auth = &auth;

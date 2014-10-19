@@ -1487,7 +1487,7 @@ deftest(join_accept_with_ipv6_addr_on_4only_is_invalid) {
         .choice = {
           .ipv6 = {
             .buf = /* arbitrary */ (void*)&net_id6,
-            .size = 32
+            .size = 16
           }
         }
       }
