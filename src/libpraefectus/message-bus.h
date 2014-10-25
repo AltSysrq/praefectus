@@ -51,11 +51,13 @@ typedef struct praef_message_bus_s praef_message_bus;
  * Once a route is created with this call, it remains in the message bus until
  * the bus is destroyed or the delete_route method is used to remove it.
  *
+ * @param id The network id of the route to create. The pointer must remain
+ * valid until the message bus is destroyed or the route is deleted.
  * @return Whether the operation succeeds.
  */
 typedef int (*praef_message_bus_create_route_t)(
   praef_message_bus*,
-  const PraefNetworkIdentifierPair_t*);
+  const PraefNetworkIdentifierPair_t* id);
 /**
  * Removes a route that the message bus was holding open. This call always
  * succeeds. Note that destroying a route does not mean that no communications

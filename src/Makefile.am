@@ -16,7 +16,7 @@ noinst_PROGRAMS = nbodies/nbodies-vnet-4-ideal nbodies/nbodies-vis \
   nbodies/nbodies-vnet-8-latent-lossy
 noinst_LTLIBRARIES = libpraefectus.la libasn1-support.la \
 libpraefectus-messages.la nbodies/libnbodies-core.la \
-libudp-common.la
+libudp-common.la libpraefectus-umb.la
 
 praef_LDADD = libpraefectus.la
 praef_SOURCES = \
@@ -59,6 +59,15 @@ libpraefectus/stdsys.c
 
 libpraefectus_la_LIBADD = \
   libpraefectus-messages.la libasn1-support.la
+
+libpraefectus_umb_la_CFLAGS = $(AM_CFLAGS) -Ilibpraefectus/messages -Iudp-common
+
+libpraefectus_umb_la_SOURCES = \
+  libpraefectus/udp-message-bus/udp-message-bus.c
+
+libpraefectus_umb_la_LIBADD = \
+  libpraefectus.la libpraefectus-messages.la \
+  libudp-common.la libasn1-support.la
 
 libpraefectus_messages_la_CFLAGS = -w -Iasn1-support
 libpraefectus_messages_la_SOURCES = \

@@ -86,7 +86,7 @@ PraefUdpMsgRegister ::= SEQUENCE {
 -- with.
 PraefUdpMsgEcho ::= SEQUENCE {
   -- The Internet address of the host that is to receive the payload.
-  dst           PraefNetworkIdentifier,
+  dst           PraefNetworkIdentifierPair,
   -- The payload to send to the chosen host.
   data          OCTET STRING SIZE(0..511)
 }
