@@ -186,7 +186,7 @@ praef_message_bus* praef_umb_new(const char* application, const char* version,
                                  unsigned num_well_known_ports,
                                  praef_umb_ip_version ip_version) {
   praef_udp_message_bus* this;
-  combined_sockaddr bindaddr, connectaddr;
+  combined_sockaddr bindaddr, connectaddr, actual_bindaddr;
   PraefUdpMsg_t discover;
   unsigned i;
   socklen_t socklen;
@@ -337,24 +337,37 @@ praef_message_bus* praef_umb_new(const char* application, const char* version,
     goto end;
   }
 
-  /* Try to bind to a well known port with the local address */
+  /* Try to bind to a well known port with the local address.
+   * (Actually use INADDR_ANY because otherwise we can't receive broadcasts, it
+   * seems.)
+   */
+  actual_bindaddr = bindaddr;
+  if (praef_uiv_ipv4 == ip_version)
+    actual_bindaddr.ipv4.sin_addr.s_addr = INADDR_ANY;
+  else
+    actual_bindaddr.ipv6.sin6_addr = in6addr_any;
+
   for (i = 0; i < num_well_known_ports; ++i) {
-    *(IPV(ip_version, &bindaddr.ipv4.sin_port, &bindaddr.ipv6.sin6_port)) =
+    *(IPV(ip_version, &actual_bindaddr.ipv4.sin_port,
+          &actual_bindaddr.ipv6.sin6_port)) =
       htons(well_known_ports[i]);
-    if (0 == bind(this->sock, (struct sockaddr*)&bindaddr, SASZ(ip_version)))
+    if (0 == bind(this->sock, (struct sockaddr*)&actual_bindaddr,
+                  SASZ(ip_version)))
       goto socket_bound;
   }
 
   /* Give up using a well-known port, let the OS choose */
-  *(IPV(ip_version, &bindaddr.ipv4.sin_port, &bindaddr.ipv6.sin6_port)) = 0;
-  if (bind(this->sock, (struct sockaddr*)&bindaddr, SASZ(ip_version))) {
+  *(IPV(ip_version, &actual_bindaddr.ipv4.sin_port,
+        &actual_bindaddr.ipv6.sin6_port)) = 0;
+  if (bind(this->sock, (struct sockaddr*)&actual_bindaddr,
+           SASZ(ip_version))) {
     this->error = WSAGetLastError();
     this->error_context = "binding socket";
     goto end;
   }
 
   socklen = SASZ(ip_version);
-  if (getsockname(this->sock, (struct sockaddr*)&bindaddr, &socklen)) {
+  if (getsockname(this->sock, (struct sockaddr*)&actual_bindaddr, &socklen)) {
     this->error = WSAGetLastError();
     this->error_context = "obtaining local address during fallback";
     goto end;
@@ -364,11 +377,11 @@ praef_message_bus* praef_umb_new(const char* application, const char* version,
   /* Populate the local components of the net id, know that we know it */
   if (praef_uiv_ipv4 == ip_version) {
     this->local_netid.intranet.port = this->global_netid.intranet.port =
-      ntohs(bindaddr.ipv4.sin_port);
+      ntohs(actual_bindaddr.ipv4.sin_port);
     memcpy(this->local_ip, &bindaddr.ipv4.sin_addr.s_addr, 4);
   } else {
     this->local_netid.intranet.port = this->global_netid.intranet.port =
-      ntohs(bindaddr.ipv6.sin6_port);
+      ntohs(actual_bindaddr.ipv6.sin6_port);
     memcpy(this->local_ip, bindaddr.ipv6.sin6_addr.s6_addr, 16);
   }
 
