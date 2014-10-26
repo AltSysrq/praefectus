@@ -248,20 +248,16 @@ praef_message_bus* praef_umb_new(const char* application, const char* version,
   memset(&bindaddr, 0, sizeof(bindaddr));
   memset(&connectaddr, 0, sizeof(connectaddr));
   if (praef_uiv_ipv4 == ip_version) {
-    bindaddr.ipv4.sin_len = sizeof(bindaddr.ipv4);
     bindaddr.ipv4.sin_family = AF_INET;
     bindaddr.ipv4.sin_addr.s_addr = INADDR_ANY;
     bindaddr.ipv4.sin_port = 0;
-    connectaddr.ipv4.sin_len = sizeof(connectaddr.ipv4);
     connectaddr.ipv4.sin_family = AF_INET;
     connectaddr.ipv4.sin_addr.s_addr = 0x08080808;
     connectaddr.ipv4.sin_port = htons(80);
   } else {
-    bindaddr.ipv6.sin6_len = sizeof(bindaddr.ipv6);
     bindaddr.ipv6.sin6_family = AF_INET6;
     bindaddr.ipv6.sin6_addr = in6addr_any;
     bindaddr.ipv6.sin6_port = 0;
-    connectaddr.ipv6.sin6_len = sizeof(connectaddr.ipv6);
     connectaddr.ipv6.sin6_family = AF_INET6;
     /* There is an amusing amount of confusion as to what `struct in6_addr`
      * actually looks like.
@@ -533,11 +529,9 @@ static void praef_umb_bcastaddr(combined_sockaddr* dst,
   memset(dst, 0, sizeof(combined_sockaddr));
 
   if (praef_uiv_ipv4 == ipv) {
-    dst->ipv4.sin_len = sizeof(dst->ipv4);
     dst->ipv4.sin_family = AF_INET;
     dst->ipv4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
   } else {
-    dst->ipv6.sin6_len = sizeof(dst->ipv6);
     dst->ipv6.sin6_family = AF_INET6;
     /* All nodes on link */
     dst->ipv6.sin6_addr.s6_addr[ 0] = 0xFF;
@@ -704,13 +698,11 @@ static void praef_umb_single_netid_to_sockaddr(
   combined_sockaddr* dst, const PraefNetworkIdentifier_t* id
 ) {
   if (PraefIpAddress_PR_ipv4 == id->address.present) {
-    dst->ipv4.sin_len = sizeof(dst->ipv4);
     dst->ipv4.sin_family = AF_INET;
     dst->ipv4.sin_port = htons(id->port);
     memcpy(&dst->ipv4.sin_addr.s_addr, id->address.choice.ipv4.buf,
            id->address.choice.ipv4.size);
   } else {
-    dst->ipv6.sin6_len = sizeof(dst->ipv6);
     dst->ipv6.sin6_family = AF_INET6;
     dst->ipv6.sin6_port = htons(id->port);
     memcpy(dst->ipv6.sin6_addr.s6_addr, id->address.choice.ipv6.buf,
