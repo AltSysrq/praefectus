@@ -334,7 +334,7 @@ praef_message_bus* praef_umb_new(const char* application, const char* version,
    */
   closesocket(this->sock);
   this->sock = socket(IPV(ip_version, PF_INET, PF_INET6),
-                      SOCK_DGRAM | SOCK_NONBLOCK, 0);
+                      SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
   if (INVALID_SOCKET == this->sock) {
     this->error = WSAGetLastError();
     this->error_context = "creating socket";
@@ -535,7 +535,7 @@ static void praef_umb_bcastaddr(combined_sockaddr* dst,
   if (praef_uiv_ipv4 == ipv) {
     dst->ipv4.sin_len = sizeof(dst->ipv4);
     dst->ipv4.sin_family = AF_INET;
-    dst->ipv4.sin_addr.s_addr = INADDR_BROADCAST;
+    dst->ipv4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
   } else {
     dst->ipv6.sin6_len = sizeof(dst->ipv6);
     dst->ipv6.sin6_family = AF_INET6;
@@ -554,7 +554,7 @@ static int praef_umb_do_broadcast(praef_udp_message_bus* this,
   praef_umb_bcastaddr(&addr, this->ip_version);
   for (i = 0; i < this->num_well_known_ports; ++i) {
     *IPV(this->ip_version, &addr.ipv4.sin_port, &addr.ipv6.sin6_port) =
-      this->well_known_ports[i];
+      htons(this->well_known_ports[i]);
 
     if (SOCKET_ERROR ==
         sendto(this->sock, data, sz, 0,
@@ -587,17 +587,14 @@ int praef_umb_send_discovery(praef_message_bus* vthis) {
                (struct sockaddr*)&this->vertex_address,
                SASZ(this->ip_version)))
       return WSAGetLastError();
-  } else if (this->use_broadcast) {
+  } else {
+    if ((error = praef_umb_ensure_sock_broadcast(this, 1)))
+      return error;
+
     if ((error = praef_umb_do_broadcast(
            this, this->discovery_packet,
            this->discovery_packet_size)))
       return error;
-  } else {
-#ifdef WSAENOTCONN
-    return WSAENOTCONN;
-#else
-    return ENOTCONN;
-#endif
   }
 
   return 0;
@@ -811,7 +808,8 @@ static size_t praef_umb_recv(void* dst, size_t sz,
                         &return_address_sz);
 
     if (SOCKET_ERROR == received) return 0; /* Socket buffer empty */
-  } while (0 == received); /* Skip empty packets */
+  } while (0 == received ||
+           (size_t)received > sz); /* Skip empty and oversized packets */
 
   praef_umb_handle_internal_packet(this, dst, received, &return_address);
 
@@ -878,6 +876,7 @@ static void praef_umb_handle_internal_packet(
   PraefUdpMsg_t deserialised, * deserialised_ptr = &deserialised;
   asn_dec_rval_t decode_result;
 
+  memset(&deserialised, 0, sizeof(deserialised));
   decode_result = uper_decode_complete(
     NULL, &asn_DEF_PraefUdpMsg, (void**)&deserialised_ptr,
     data, sz);

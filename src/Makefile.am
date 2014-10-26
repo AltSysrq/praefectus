@@ -13,7 +13,7 @@ AM_LDFLAGS=$(SDL_LIBS) $(SDLIMG_LIBS)
 
 bin_PROGRAMS = praef
 noinst_PROGRAMS = nbodies/nbodies-vnet-4-ideal nbodies/nbodies-vis \
-  nbodies/nbodies-vnet-8-latent-lossy
+  nbodies/nbodies-vnet-8-latent-lossy chat-demo/chat-demo
 noinst_LTLIBRARIES = libpraefectus.la libasn1-support.la \
 libpraefectus-messages.la nbodies/libnbodies-core.la \
 libudp-common.la libpraefectus-umb.la
@@ -165,3 +165,6 @@ nbodies_nbodies_vnet_8_latent_lossy_LDADD = \
   nbodies/libnbodies-core.la libpraefectus.la
 
 nbodies_nbodies_vis_SOURCES = nbodies/nbodies-vis.c
+
+chat_demo_chat_demo_SOURCES = chat-demo/chat-demo.c
+chat_demo_chat_demo_LDADD = libpraefectus.la libpraefectus-umb.la

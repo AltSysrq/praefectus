@@ -166,7 +166,8 @@ void praef_umb_set_use_vertex(praef_message_bus*, int is_enabled);
 /**
  * Sets whether the *whole* network supports broadcast. It is generally safe to
  * set this if only broadcast discovery (as with praef_umb_send_discovery()) is
- * used.
+ * used. Note that nodes not connected to a well-known port cannot receive
+ * broadcasts.
  *
  * @param use_broadcast Whether broadcast calls actually broadcast messages. If
  * false, broadcasts are implemented by poor-man's-multicast as a unicast to
@@ -218,7 +219,8 @@ praef_umb_global_address(praef_message_bus*);
 int praef_umb_lookup_vertex(praef_message_bus*, const char* hostname,
                             unsigned short port);
 /**
- * Sends a broadcast discovery via the given message bus.
+ * Sends a broadcast or vertex discovery via the given message bus, depending
+ * on whether vertex is in use.
  *
  * @return Zero if successful, non-zero on error.
  */
