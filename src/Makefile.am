@@ -5,18 +5,18 @@ AUTOMAKE_OPTIONS = subdir-objects
 # Recursing into asn1-support first has the nice effect of forcing everything
 # there to be built first, so we don't need to go through the headache of
 # getting Automake to comprehend that a task produces multiple header files.
-SUBDIRS = asn1-support libpraefectus/messages udp-common .
+SUBDIRS = asn1-support libpraefectus/messages udp-common vertexd/config .
 
 AM_CFLAGS=-Iasn1-support -D_BSD_SOURCE \
           $(SDL_CFLAGS) $(SDLIMG_CFLAGS)
 AM_LDFLAGS=$(SDL_LIBS) $(SDLIMG_LIBS)
 
-bin_PROGRAMS = praef
+bin_PROGRAMS = praef praef-vertexd
 noinst_PROGRAMS = nbodies/nbodies-vnet-4-ideal nbodies/nbodies-vis \
   nbodies/nbodies-vnet-8-latent-lossy chat-demo/chat-demo
 noinst_LTLIBRARIES = libpraefectus.la libasn1-support.la \
 libpraefectus-messages.la nbodies/libnbodies-core.la \
-libudp-common.la libpraefectus-umb.la
+libudp-common.la libpraefectus-umb.la libvertexd-config.la
 
 praef_LDADD = libpraefectus.la
 praef_SOURCES = \
@@ -26,6 +26,10 @@ praefectus/graphics/canvas.c \
 praefectus/graphics/crt.c \
 praefectus/graphics/font.c \
 praefectus/graphics/fraktur.c
+
+praef_vertexd_CFLAGS = $(AM_CFLAGS) -Ilibpraefectus/messages
+praef_vertexd_LDADD = libudp-common.la libvertexd-config.la
+praef_vertexd_SOURCES = vertexd/vertexd.c
 
 libpraefectus_la_SOURCES = \
 libpraefectus/keccak/KeccakF-1600-opt64.c \
@@ -57,8 +61,7 @@ libpraefectus/system-ack.c \
 libpraefectus/system.c \
 libpraefectus/stdsys.c
 
-libpraefectus_la_LIBADD = \
-  libpraefectus-messages.la libasn1-support.la
+libpraefectus_la_LIBADD = libpraefectus-messages.la
 
 libpraefectus_umb_la_CFLAGS = $(AM_CFLAGS) -Ilibpraefectus/messages -Iudp-common
 
@@ -66,10 +69,10 @@ libpraefectus_umb_la_SOURCES = \
   libpraefectus/udp-message-bus/udp-message-bus.c
 
 libpraefectus_umb_la_LIBADD = \
-  libpraefectus.la libpraefectus-messages.la \
-  libudp-common.la libasn1-support.la
+  libpraefectus.la libudp-common.la
 
 libpraefectus_messages_la_CFLAGS = -w -Iasn1-support
+libpraefectus_messages_la_LIBADD = libasn1-support.la
 libpraefectus_messages_la_SOURCES = \
 libpraefectus/messages/PraefAdvSerNo.c \
 libpraefectus/messages/PraefByte.c \
@@ -146,6 +149,7 @@ asn1-support/xer_encoder.c \
 asn1-support/xer_support.c
 
 libudp_common_la_CFLAGS = -w -Iasn1-support -Ilibpraefectus/messages
+libudp_common_la_LIBADD = libpraefectus-messages.la
 libudp_common_la_SOURCES = \
 udp-common/PraefUdpMsg.c \
 udp-common/PraefUdpMsgAdvertise.c \
@@ -154,6 +158,12 @@ udp-common/PraefUdpMsgEcho.c \
 udp-common/PraefUdpMsgRegister.c \
 udp-common/PraefUdpMsgWhoAmI.c \
 udp-common/PraefUdpMsgYouAre.c
+
+libvertexd_config_la_CFLAGS = -w -Iasn1-support
+libvertexd_config_la_LIBADD = libasn1-support.la
+libvertexd_config_la_SOURCES = \
+vertexd/config/VertexdConfiguration.c \
+vertexd/config/Realm.c
 
 nbodies_libnbodies_core_la_SOURCES = nbodies/nbodies-core.c
 nbodies_nbodies_vnet_4_ideal_SOURCES = nbodies/nbodies-vnet-4-ideal.c

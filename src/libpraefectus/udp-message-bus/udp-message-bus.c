@@ -533,6 +533,8 @@ int praef_umb_lookup_vertex(praef_message_bus* vthis,
 
   memcpy(&this->vertex_address, results->ai_addr, results->ai_addrlen);
   this->has_vertex_address = 1;
+  *(IPV(this->ip_version, &this->vertex_address.ipv4.sin_port,
+        &this->vertex_address.ipv6.sin6_port)) = htons(port);
   freeaddrinfo(results);
   return 0;
 }

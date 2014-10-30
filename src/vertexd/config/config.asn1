@@ -1,0 +1,70 @@
+---
+-- Copyright (c) 2014 Jason Lingle
+-- All rights reserved.
+--
+-- Redistribution and use in source and binary forms, with or without
+-- modification, are permitted provided that the following conditions
+-- are met:
+-- 1. Redistributions of source code must retain the above copyright
+--    notice, this list of conditions and the following disclaimer.
+-- 2. Redistributions in binary form must reproduce the above copyright
+--    notice, this list of conditions and the following disclaimer in the
+--    documentation and/or other materials provided with the distribution.
+-- 3. Neither the name of the author nor the names of its contributors
+--    may be used to endorse or promote products derived from this software
+--    without specific prior written permission.
+--
+-- THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+-- IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+-- OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+-- IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT, INDIRECT,
+-- INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+-- NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+-- DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+-- THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+-- (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+-- THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Config DEFINITIONS AUTOMATIC TAGS ::= BEGIN
+
+-- Each vertexd process hosts one or more realms. A realm is an isolated set of
+-- clients communicating with a particular address and port on the server. Each
+-- realm serves exactly one IP version; while IPv4 tunnelling could
+-- hypothetically allow an IPv6 realm to handle IPv4 clients, the IPv4 clients
+-- would not be guaranteed to be able to communicate with all IPv6 in the
+-- realm, so this possibility is expressly prevented.
+VertexdConfiguration ::= SEQUENCE {
+  realms        SEQUENCE SIZE(1..MAX) OF Realm
+}
+
+Realm ::= SEQUENCE {
+  -- The numeric local address to which to bind. This must resolve to a numeric
+  -- IPv4 or IPv6 address.
+  localaddr             PrintableString,
+  -- The port on which to listen.
+  port                  INTEGER (1..65535),
+  -- The maximum number of clients to maintain for this realm. This field
+  -- entirely defines the memory usage by this realm. (Each client slot
+  -- requires a little over 1kB of memory.) A prospective client which attempts
+  -- to communicate when the realm is full will be silently ignored.
+  maxclients            INTEGER (1..4294967295),
+  -- The number of seconds since the last reception of a valid communication
+  -- from a certain client before it ceases to be considered alive.
+  clientlifetimesecs    INTEGER (1..4294967295),
+  -- The minimum number of microseconds which must elapse between triangular
+  -- routing requests from any particular client. Requests violating this
+  -- constraint are silently dropped.
+  echointervalus        INTEGER (0..4294967295),
+  -- The minimum number of microseconds which must elapse between discovery
+  -- requests. Requests violating this constraint are silently ignored.
+  discoverintervalus    INTEGER (0..4294967295),
+  -- The maximum number of Advertisement responses to send in response to a
+  -- single Discover request. If more than this number of responses match, an
+  -- arbitrary subset is chosen in response.
+  maxresponses          INTEGER (1..4294967295),
+  -- The maximum size of any packet to be serviced via triangular routing. Echo
+  -- requests violating this constraint are silently ignored.
+  maxechosize           INTEGER (371..511)
+}
+
+END

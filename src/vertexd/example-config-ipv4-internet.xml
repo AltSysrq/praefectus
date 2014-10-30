@@ -1,0 +1,14 @@
+<VertexdConfiguration>
+  <realms>
+    <Realm>
+      <localaddr>0.0.0.0</localaddr>
+      <port>44444</port>
+      <maxclients>4096</maxclients>
+      <clientlifetimesecs>8</clientlifetimesecs>
+      <echointervalus>512000</echointervalus>
+      <discoverintervalus>1000000</discoverintervalus>
+      <maxresponses>256</maxresponses>
+      <maxechosize>511</maxechosize>
+    </Realm>
+  </realms>
+</VertexdConfiguration>

@@ -586,6 +586,8 @@ static void set_vertex(const char* host, const char* sport) {
   if (praef_umb_lookup_vertex(bus, host, port))
     err(EX_NOHOST, "Failed to lookup vertex at %s:%d", host, (unsigned)port);
 
+  praef_umb_set_use_vertex(bus, 1);
+
   fprintf(stderr, "Waiting for vertex to provide global address...\n");
   for (tries = 0; tries < 100; ++tries) {
     delay();

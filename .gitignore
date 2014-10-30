@@ -41,3 +41,5 @@ src/nbodies/nbodies-vis
 src/nbodies/nbodies-vnet-8-latent-lossy
 udp-common
 src/chat-demo/chat-demo
+praef-vertexd
+src/vertexd/config
