@@ -543,7 +543,7 @@ static void praef_umb_bcastaddr(combined_sockaddr* dst,
 
   if (praef_uiv_ipv4 == ipv) {
     dst->ipv4.sin_family = AF_INET;
-    dst->ipv4.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+    dst->ipv4.sin_addr.s_addr = htonl(0xC0A80AFF);
   } else {
     dst->ipv6.sin6_family = AF_INET6;
     /* All nodes on link */
@@ -886,7 +886,10 @@ static void praef_umb_handle_internal_packet(
     NULL, &asn_DEF_PraefUdpMsg, (void**)&deserialised_ptr,
     data, sz);
 
-  if (RC_OK != decode_result.code) return;
+  if (RC_OK != decode_result.code) goto end;
+  if ((*asn_DEF_PraefUdpMsg.check_constraints)(
+        &asn_DEF_PraefUdpMsg, &deserialised, NULL, NULL))
+    goto end;
 
   if (sz == decode_result.consumed) {
     switch (deserialised.present) {
@@ -913,6 +916,7 @@ static void praef_umb_handle_internal_packet(
     }
   }
 
+  end:
   (*asn_DEF_PraefUdpMsg.free_struct)(&asn_DEF_PraefUdpMsg, &deserialised, 1);
 }
 
