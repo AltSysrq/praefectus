@@ -113,7 +113,7 @@ praef_pubkey_hint praef_pubkey_hint_of(
   praef_keccak_sponge sponge;
 
   praef_sha3_init(&sponge);
-  praef_keccak_sponge_absorb(&sponge, serialised, sizeof(serialised));
+  praef_keccak_sponge_absorb(&sponge, serialised, PRAEF_PUBKEY_SIZE);
   praef_keccak_sponge_squeeze(&sponge, hash, sizeof(hash));
 
   return hash[0] | (((praef_pubkey_hint)hash[1]) << 8);
