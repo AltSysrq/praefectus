@@ -175,7 +175,7 @@ static size_t praef_umb_per_encode(void* dst, size_t size,
   encode_result = uper_encode_to_buffer(
     &asn_DEF_PraefUdpMsg, message, dst, size);
   if (-1 == encode_result.encoded) {
-    fprintf(stderr, error);
+    fprintf(stderr, "%s\n", error);
     abort();
   }
   return (encode_result.encoded + 7) / 8;
@@ -210,7 +210,7 @@ praef_message_bus* praef_umb_new(const char* application, const char* version,
   discover.choice.discover.version.size = strlen(version);
   this->discovery_packet_size = praef_umb_per_encode(
     this->discovery_packet, sizeof(this->discovery_packet),
-    &discover, "praef_umb_new(): Application or version is invalid\n");
+    &discover, "praef_umb_new(): Application or version is invalid");
   this->discovery_struct = discover.choice.discover;
 
   this->error_context = "unknown";
