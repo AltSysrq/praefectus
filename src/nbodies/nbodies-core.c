@@ -214,11 +214,7 @@ static void update_velocity(nbodies_instance*);
 static void nbodies_instance_write_state(nbodies_instance*);
 static unsigned isqrt(unsigned);
 
-#ifdef __GNUC__
-/* Stop GCC complaining about our stricter types on main() */
-#pragma GCC diagnostic ignored "-Wmain"
-#endif
-int main(unsigned argc, const char*const* argv) {
+int main(signed /* required by clang */ argc, const char*const* argv) {
   unsigned i, n;
   nbodies_instance* nbodies;
 

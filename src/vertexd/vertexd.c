@@ -140,10 +140,7 @@ static utime_t to_micros(const struct timespec*);
 SPLAY_PROTOTYPE(pv_client_tree, pv_client_s, tree, pv_compare_client)
 SPLAY_GENERATE(pv_client_tree, pv_client_s, tree, pv_compare_client)
 
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wmain"
-#endif
-int main(unsigned argc, const char*const* argv) {
+int main(signed /* required by clang */ argc, const char*const* argv) {
   VertexdConfiguration_t* config;
   int maxfd;
 

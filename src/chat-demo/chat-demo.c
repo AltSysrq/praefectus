@@ -165,10 +165,7 @@ static void run(void);
 
 static const unsigned short well_known_port = 29708;
 
-#ifdef __GNUC__
-#pragma GCC diagnostic ignored "-Wmain"
-#endif
-int main(unsigned argc, const char*const* argv) {
+int main(signed /* required by clang */ argc, const char*const* argv) {
   unsigned ipv, i;
   chat_object* obj, * objtmp;
   message_instant* m, * mtmp;
@@ -223,7 +220,7 @@ int main(unsigned argc, const char*const* argv) {
   print_single_netid(&netid->intranet);
   fprintf(stderr, "\n");
 
-  for (i = 2; i < argc-2; ++i) {
+  for (i = 2; i < (unsigned)argc-2; ++i) {
     if (!strcmp("broadcast", argv[i]))
       enable_broadcast();
     else if (!strcmp("vertex", argv[i]))
