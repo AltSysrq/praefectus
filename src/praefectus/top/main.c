@@ -56,11 +56,13 @@
 #include "bsd.h"
 #include "../game-state.h"
 #include "../alloc.h"
+#include "../graphics/font.h"
 #include "test-state.h"
 
 /* Move this somewhere else if anything else winds up needing it. */
 SDL_PixelFormat* screen_pixel_format;
 #define SECOND 64
+#define NOMINAL_HEIGHT 480
 
 /* Whether the multi-display configuration might be a Zaphod configuration. If
  * this is true, we need to try to force SDL to respect the environment and
@@ -215,6 +217,10 @@ static Uint32* framebuffer_back;
 static SDL_sem* crt_ready, * framebuffer_ready;
 static int render_crt_background(void*);
 
+static unsigned round_to_multiple(unsigned n, unsigned m) {
+  return (n + m-1) / m * m;
+}
+
 int main(int argc, char** argv) {
   unsigned ww, wh;
   SDL_Window* screen;
@@ -315,7 +321,8 @@ int main(int argc, char** argv) {
     errx(EX_UNAVAILABLE, "Failed to spawn render thread: %s",
          SDL_GetError());
 
-  canv = canvas_new(240 * ww / wh, 240);
+  canv = canvas_new(round_to_multiple(NOMINAL_HEIGHT * ww / wh, FONT_CHARW),
+                    round_to_multiple(NOMINAL_HEIGHT, FONT_CHARH));
   crt = crt_screen_new(canv->w, canv->h, ww, wh, ww);
   framebuffer_both = xmalloc(2 * sizeof(Uint32) * ww * wh);
   framebuffer_back = framebuffer_both;

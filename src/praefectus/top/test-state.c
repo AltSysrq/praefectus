@@ -35,7 +35,6 @@
 #include "../graphics/canvas.h"
 #include "../graphics/crt.h"
 #include "../graphics/font.h"
-#include "../graphics/fraktur.h"
 #include "../game-state.h"
 #include "test-state.h"
 
@@ -48,7 +47,6 @@ typedef struct {
   int has_rendered;
   int is_alive;
   signed time_till_step;
-  compiled_font font;
 } test_state;
 
 static game_state* test_state_update(test_state*, unsigned);
@@ -65,7 +63,6 @@ game_state* test_state_new(void) {
   this->is_alive = 1;
   this->has_rendered = 0;
   this->time_till_step = 0;
-  font_compile(&this->font, &fraktur);
   return (game_state*)this;
 }
 
@@ -115,7 +112,6 @@ static void test_state_draw(test_state* this, canvas* dst,
   unsigned x, y;
   signed ox, oy;
   canvas_pixel curr;
-  canvas_pixel font_palette[4] = { 7, 6, 5, 15 };
 
   memcpy(palette, demon_palette, sizeof(demon_palette));
 
@@ -152,18 +148,14 @@ static void test_state_draw(test_state* this, canvas* dst,
 
   memset(dst->data, 0, dst->pitch * dst->h * sizeof(canvas_pixel));
 
-  font_render(dst, &this->font,
-              "THE QUICK BROWN FOX JUMPS",
-              0, 0, font_palette, 1);
-  font_render(dst, &this->font,
-              "OVER THE LAZY DOG",
-              0, fraktur.em, font_palette, 1);
-  font_render(dst, &this->font,
-              "The quick brown fox jumps",
-              0, 2*fraktur.em, font_palette, 1);
-  font_render(dst, &this->font,
-              "over the lazy dog",
-              0, 3*fraktur.em, font_palette, 1);
+  font_render(dst, 0, 0 * FONT_CHARH,
+              "THE QUICK BROWN FOX JUMPS", 7);
+  font_render(dst, 0, 1 * FONT_CHARH,
+              "OVER THE LAZY DOG", 7);
+  font_render(dst, 0, 2 * FONT_CHARH,
+              "The quick brown fox jumps", 7);
+  font_render(dst, 0, 3 * FONT_CHARH,
+              "over the lazy dog", 7);
 }
 
 static void test_state_key(test_state* this,
