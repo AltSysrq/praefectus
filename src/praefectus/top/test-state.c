@@ -86,17 +86,37 @@ static console* scons;
 static void test_state_draw(test_state* this, console* dst,
                             crt_colour* palette) {
   console_cell cell;
+  unsigned x, y;
+
   scons = dst;
 
   memset(&cell, 0, sizeof(cell));
+  cell.fg = CONS_VGA_BRIGHT_WHITE;
+  console_puts(dst, &cell, 2, 0, "Test");
+  cell.fg = CONS_VGA_BRIGHT_BLACK;
+  console_putc(dst, &cell, 0, 0, CONS_L0110);
+  console_putc(dst, &cell, 1, 0, CONS_L2021);
+  console_putc(dst, &cell, 6, 0, CONS_L2120);
+  for (x = 7; x < 15; ++x)
+    console_putc(dst, &cell, x, 0, CONS_L0101);
+  console_putc(dst, &cell, 15, 0, CONS_L0011);
+  for (y = 1; y < 6; ++y) {
+    console_putc(dst, &cell, 0, y, CONS_L1010);
+    console_putc(dst, &cell, 15, y, CONS_L1010);
+  }
+  console_putc(dst, &cell, 0, 6, CONS_L1100);
+  console_putc(dst, &cell, 15, 6, CONS_L1001);
+  for (x = 1; x < 15; ++x)
+    console_putc(dst, &cell, x, 6, CONS_L0101);
+
   cell.fg = CONS_VGA_WHITE;
-  console_puts(dst, &cell, 0, 0, "Hello world");
+  console_puts(dst, &cell, 1, 1, "Hello world");
   cell.bg = CONS_VGA_YELLOW;
-  console_puts(dst, &cell, 0, 1, "With background");
+  console_puts(dst, &cell, 1, 2, "With background");
   cell.blink = 1;
-  console_puts(dst, &cell, 0, 2, "Blink");
+  console_puts(dst, &cell, 1, 3, "Blink");
   cell.reverse_video = 1;
-  console_puts(dst, &cell, 0, 3, "Reverse video");
+  console_puts(dst, &cell, 1, 4, "Reverse video");
 
   dst->show_cursor = 1;
   dst->cursor_x = 2;

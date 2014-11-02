@@ -86,6 +86,13 @@ void console_puts(console* this, const console_cell* template,
   }
 }
 
+void console_putc(console* this, const console_cell* template,
+                  unsigned x, unsigned y, unsigned char ch) {
+  unsigned off = this->w*y + x;
+  this->c[off] = *template;
+  this->c[off].ch = ch;
+}
+
 void console_render(canvas* dst, console* this) {
   int global_reverse_video = 0;
   int extremity_reverse_video = 0;

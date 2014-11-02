@@ -71,13 +71,65 @@ typedef struct {
 #define CONS_VGA_BRIGHT_GREEN   ((canvas_pixel)CP_GREEN  + CP_SIZE-1)
 #define CONS_VGA_BRIGHT_CYAN    ((canvas_pixel)CP_CYAN   + CP_SIZE-1)
 #define CONS_VGA_BRIGHT_BLUE    ((canvas_pixel)CP_BLUE   + CP_SIZE-1)
-#define CONS_VGA_BRIGHT_WHITE   ((canvas_pixel)CP_WHITE  + CP_SIZE-1)
+#define CONS_VGA_BRIGHT_WHITE   ((canvas_pixel)CP_GREY   + CP_SIZE-1)
+
+#define CONS_STIP1_BLOCK ((unsigned char)176)
+#define CONS_STIP2_BLOCK ((unsigned char)177)
+#define CONS_STIP3_BLOCK ((unsigned char)178)
+#define CONS_L1010 ((unsigned char)179)
+#define CONS_L1011 ((unsigned char)180)
+#define CONS_L1012 ((unsigned char)181)
+#define CONS_L2021 ((unsigned char)182)
+#define CONS_L0021 ((unsigned char)183)
+#define CONS_L0012 ((unsigned char)184)
+#define CONS_L2022 ((unsigned char)185)
+#define CONS_L2020 ((unsigned char)186)
+#define CONS_L0022 ((unsigned char)187)
+#define CONS_L2002 ((unsigned char)188)
+#define CONS_L2001 ((unsigned char)189)
+#define CONS_L1002 ((unsigned char)190)
+#define CONS_L0011 ((unsigned char)191)
+#define CONS_L1100 ((unsigned char)192)
+#define CONS_L1101 ((unsigned char)193)
+#define CONS_L0111 ((unsigned char)194)
+#define CONS_L1110 ((unsigned char)195)
+#define CONS_L0101 ((unsigned char)196)
+#define CONS_L1111 ((unsigned char)197)
+#define CONS_L1210 ((unsigned char)198)
+#define CONS_L2120 ((unsigned char)199)
+#define CONS_L2200 ((unsigned char)200)
+#define CONS_L0220 ((unsigned char)201)
+#define CONS_L2202 ((unsigned char)202)
+#define CONS_L0222 ((unsigned char)203)
+#define CONS_L2220 ((unsigned char)204)
+#define CONS_L0202 ((unsigned char)205)
+#define CONS_L2222 ((unsigned char)206)
+#define CONS_L1202 ((unsigned char)207)
+#define CONS_L2101 ((unsigned char)208)
+#define CONS_L0212 ((unsigned char)209)
+#define CONS_L0121 ((unsigned char)210)
+#define CONS_L2100 ((unsigned char)211)
+#define CONS_L1200 ((unsigned char)212)
+#define CONS_L0210 ((unsigned char)213)
+#define CONS_L0120 ((unsigned char)214)
+#define CONS_L2121 ((unsigned char)215)
+#define CONS_L1212 ((unsigned char)216)
+#define CONS_L1001 ((unsigned char)217)
+#define CONS_L0110 ((unsigned char)218)
+#define CONS_FBLOCK ((unsigned char)219)
+#define CONS_LHBLOCK ((unsigned char)220)
+#define CONS_LHBAR ((unsigned char)221)
+#define CONS_RHBAR ((unsigned char)222)
+#define CONS_HHBLOCK ((unsigned char)223)
+#define CONS_MHBLOCK ((unsigned char)254)
 
 console* console_new(const canvas*);
 void console_delete(console*);
 console_cell* console_ca(console*, unsigned x, unsigned y);
 void console_puts(console*, const console_cell* template,
                   unsigned x0, unsigned y, const char*);
+void console_putc(console*, const console_cell* template,
+                  unsigned x, unsigned y, unsigned char);
 void console_bel(console*);
 void console_clear(console*);
 void console_render(canvas*, console*);
