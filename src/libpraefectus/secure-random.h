@@ -30,6 +30,8 @@
 
 #include <stdlib.h>
 
+__BEGIN_DECLS
+
 /**
  * Populates the given buffer with sz bytes of reasonably secure random
  * data. (Eg, on Linux this will come from /dev/urandom.)
@@ -40,5 +42,7 @@
  * @return Whether the operation succeeded.
  */
 int praef_secure_random(void* dst, size_t sz);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_SECURE_RANDOM_H_ */

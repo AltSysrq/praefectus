@@ -33,6 +33,10 @@
 #include "keccak-rename.h"
 #include "keccak/KeccakSponge.h"
 
+#include "bsd.h"
+
+__BEGIN_DECLS
+
 #define PRAEF_KECCAK_CAP (512)
 #define PRAEF_KECCAK_RATE (1600 - PRAEF_KECCAK_CAP)
 
@@ -70,5 +74,7 @@ static inline unsigned long long praef_keccak_sponge_squeeze_integer(
 
   return val;
 }
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_KECCAK_H_ */

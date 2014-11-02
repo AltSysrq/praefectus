@@ -32,6 +32,8 @@
 #include "common.h"
 #include "dsa.h"
 
+__BEGIN_DECLS
+
 /**
  * The minumum possible MTU for messages produced by the hlmsg encoder.
  */
@@ -302,5 +304,7 @@ void praef_hlmsg_debug_dump(const praef_hlmsg*);
  * Like praef_hlmsg_debug_dump(), but takes a raw data array and size pair.
  */
 void praef_hlmsg_debug_ddump(const void*, size_t);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_HL_MSG_H_ */

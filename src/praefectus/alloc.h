@@ -32,6 +32,8 @@
 #include <string.h>
 #include "bsd.h"
 
+__BEGIN_DECLS
+
 static inline void* xmalloc(size_t sz) {
   void* ret = malloc(sz);
   if (!ret)
@@ -45,5 +47,7 @@ static inline void* zxmalloc(size_t sz) {
   memset(ret, 0, sz);
   return ret;
 }
+
+__END_DECLS
 
 #endif /* ALLOC_H_ */

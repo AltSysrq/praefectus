@@ -28,7 +28,11 @@
 #ifndef GRAPHICS_FONT_H_
 #define GRAPHICS_FONT_H_
 
+#include "bsd.h"
+
 #include "canvas.h"
+
+__BEGIN_DECLS
 
 /**
  * @file
@@ -56,5 +60,7 @@ void font_render(canvas*, signed lx, signed ty,
  * Renders the given character at the given coordinates.
  */
 void font_renderch(canvas*, signed lx, signed ty, unsigned char, canvas_pixel);
+
+__END_DECLS
 
 #endif /* GRAPHICS_FONT_H_ */

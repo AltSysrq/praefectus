@@ -33,6 +33,8 @@
 #include "messages/PraefMsg.h"
 #include "messages/PraefNetworkIdentifierPair.h"
 
+__BEGIN_DECLS
+
 /**
  * An outbox is a front-end to a praef_hlmsg_encoder which distributes
  * resulting messages to subscribed praef_mq objects.
@@ -129,5 +131,7 @@ void praef_mq_set_triangular(praef_mq*, int triangular);
  * messages whose delay has fully elapsed.
  */
 void praef_mq_update(praef_mq*);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_OUTBOX_H_ */

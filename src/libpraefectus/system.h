@@ -36,6 +36,8 @@
 #include "messages/PraefNetworkIdentifierPair.h"
 #include "messages/PraefMsgJoinRequest.h"
 
+__BEGIN_DECLS
+
 /**
  * A praef_system is a full assembly of all the smaller components of
  * praefectus (though the application is still responsible for wiring some of
@@ -1278,5 +1280,7 @@ void praef_system_conf_max_advance_per_frame(praef_system*, unsigned);
  * set this to something more reasonable.
  */
 void praef_system_conf_max_event_vote_offset(praef_system*, unsigned);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_SYSTEM_H_ */

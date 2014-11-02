@@ -95,5 +95,15 @@
 # endif
 #endif
 
+/* Just in case we find a system that doesn't define these */
+#ifndef __BEGIN_DECLS
+#if defined(__cplusplus)
+#define	__BEGIN_DECLS	extern "C" {
+#define	__END_DECLS	}
+#else
+#define	__BEGIN_DECLS
+#define	__END_DECLS
+#endif
+#endif
 
 #endif /* BSD_H_ */

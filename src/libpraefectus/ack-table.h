@@ -34,6 +34,8 @@
 #define PRAEF_ACK_TABLE_SIZE (128*8)
 #define PRAEF_ACK_TABLE_MASK (PRAEF_ACK_TABLE_SIZE-1)
 
+__BEGIN_DECLS
+
 /**
  * Tracks messages received by the local node according to their advisory
  * serial numbers. This can be used both for reporting to other nodes what
@@ -191,5 +193,7 @@ void praef_ack_remote_put(praef_ack_remote*, praef_advisory_serial_number sn,
 unsigned praef_ack_find_missing(const praef_hlmsg* dst[PRAEF_ACK_TABLE_SIZE],
                                 const praef_ack_local*,
                                 const praef_ack_remote*);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_ACK_TABLE_H_ */

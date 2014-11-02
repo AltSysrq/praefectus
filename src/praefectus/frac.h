@@ -28,6 +28,10 @@
 #ifndef FRAC_H_
 #define FRAC_H_
 
+#include "bsd.h"
+
+__BEGIN_DECLS
+
 /**
  * A fraction represents essentially a cached division, and thus ranges from
  * 0..1 (similar to a zo_scaling_factor). Multiplications with a fraction are
@@ -147,5 +151,7 @@ static inline precise_fraction precise_fraction_fmul(
   b >>= PRECISE_FRACTION_BITS - PRECISE_FRACTION_BITS/2;
   return a*b;
 }
+
+__END_DECLS
 
 #endif /* FRAC_H_ */

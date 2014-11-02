@@ -30,8 +30,12 @@
 
 #include <SDL.h>
 
+#include "bsd.h"
+
 #include "graphics/console.h"
 #include "graphics/crt.h"
+
+__BEGIN_DECLS
 
 /**
  * The game_state is the high-level unit of activity control. There is exactly
@@ -104,5 +108,7 @@ struct game_state_s {
   game_state_txted_t    txted;
   game_state_txtin_t    txtin;
 };
+
+__END_DECLS
 
 #endif /* GAME_STATE_H_ */

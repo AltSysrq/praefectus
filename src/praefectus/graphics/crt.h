@@ -30,7 +30,11 @@
 
 #include <SDL.h>
 
+#include "bsd.h"
+
 #include "canvas.h"
+
+__BEGIN_DECLS
 
 /**
  * Stores the state for the intermediate simulated-CRT projection.
@@ -91,5 +95,7 @@ void crt_screen_proj(unsigned*restrict dst,
  * Populates the given palette with the default colours.
  */
 void crt_default_palette(crt_colour*);
+
+__END_DECLS
 
 #endif /* GRAPHICS_CRT_H_ */

@@ -31,6 +31,8 @@
 #include "context.h"
 #include "event.h"
 
+__BEGIN_DECLS
+
 /**
  * A transactor is a special context/object pair which manages the acceptance
  * and redaction of events within a slave context.
@@ -145,5 +147,7 @@ praef_event* praef_transactor_put_event(praef_transactor*,
 praef_event* praef_transactor_deadline(praef_transactor*,
                                        praef_event* evt,
                                        praef_instant deadline);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_TRANSACTOR_H_ */

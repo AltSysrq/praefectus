@@ -28,6 +28,10 @@
 #ifndef GRAPHICS_CANVAS_H_
 #define GRAPHICS_CANVAS_H_
 
+#include "bsd.h"
+
+__BEGIN_DECLS
+
 /**
  * @file
  *
@@ -128,5 +132,7 @@ canvas* canvas_new(unsigned short w, unsigned short h);
 static inline unsigned canvas_off(const canvas* c, unsigned x, unsigned y) {
   return y * c->pitch + x;
 }
+
+__END_DECLS
 
 #endif /* GRAPHICS_CANVAS_H_ */

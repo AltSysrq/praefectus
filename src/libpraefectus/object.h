@@ -30,6 +30,8 @@
 
 #include "common.h"
 
+__BEGIN_DECLS
+
 /**
  * The reserved null object id; application objects may not have this ID.
  */
@@ -96,5 +98,7 @@ int praef_compare_object_id(const praef_object*, const praef_object*);
 RB_HEAD(praef_object_idmap, praef_object_s);
 RB_PROTOTYPE(praef_object_idmap, praef_object_s, idmap,
              praef_compare_object_id)
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_OBJECT_H_ */

@@ -28,7 +28,11 @@
 #ifndef GRAPHICS_CONSOLE_H_
 #define GRAPHICS_CONSOLE_H_
 
+#include "bsd.h"
+
 #include "canvas.h"
+
+__BEGIN_DECLS
 
 typedef enum {
   cbb_strobe,
@@ -133,5 +137,7 @@ void console_putc(console*, const console_cell* template,
 void console_bel(console*);
 void console_clear(console*);
 void console_render(canvas*, console*);
+
+__END_DECLS
 
 #endif /* GRAPHICS_CONSOLE_H_ */

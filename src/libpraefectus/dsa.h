@@ -33,6 +33,8 @@
 #include "dsa-parms.h"
 #include "object.h"
 
+__BEGIN_DECLS
+
 /**
  * The number of bytes in a praefectus DSA signature.
  */
@@ -211,5 +213,7 @@ int praef_verifier_verify_once(
  */
 praef_pubkey_hint praef_pubkey_hint_of(
   const unsigned char sig[PRAEF_PUBKEY_SIZE]);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_DSA_H_ */

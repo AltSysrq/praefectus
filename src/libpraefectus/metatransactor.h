@@ -32,6 +32,8 @@
 #include "event.h"
 #include "object.h"
 
+__BEGIN_DECLS
+
 /**
  * The status of a node in a metatransactor is a two-bit field consisting of a
  * GRANT and a DENY bit. Events from a node are meaningful only if it has the
@@ -190,5 +192,7 @@ praef_instant praef_metatransactor_get_deny(praef_metatransactor*,
  * Advances the time of the given metatransactor.
  */
 void praef_metatransactor_advance(praef_metatransactor*, unsigned);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_METATRANSACTOR_H_ */

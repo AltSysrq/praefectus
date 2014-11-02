@@ -30,6 +30,8 @@
 
 #include <libpraefectus/message-bus.h>
 
+__BEGIN_DECLS
+
 /**
  * Performs any application-wide initialisation of the network library.
  *
@@ -243,5 +245,7 @@ int praef_umb_get_error(const praef_message_bus*);
  * praef_umb_get_error().
  */
 const char* praef_umb_get_error_context(const praef_message_bus*);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_UDP_MESSAGE_BUS_UDP_MESSAGE_BUS_H_ */

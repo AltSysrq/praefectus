@@ -32,6 +32,8 @@
 
 #include "common.h"
 
+__BEGIN_DECLS
+
 /**
  * The number of entries in a hash tree directory.
  */
@@ -313,5 +315,7 @@ void praef_hash_tree_hash_of(unsigned char dst[PRAEF_HASH_SIZE],
  */
 const unsigned char* praef_hash_tree_get_hash_of(
   const praef_hash_tree_objref*);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_HASH_TREE_H_ */

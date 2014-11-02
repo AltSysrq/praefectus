@@ -31,6 +31,8 @@
 #include "common.h"
 #include "object.h"
 
+__BEGIN_DECLS
+
 /**
  * The serial number type for an event.
  */
@@ -113,5 +115,7 @@ int praef_compare_event_sequence(const praef_event*, const praef_event*);
 SPLAY_HEAD(praef_event_sequence, praef_event_s);
 SPLAY_PROTOTYPE(praef_event_sequence, praef_event_s, sequence,
                 praef_compare_event_sequence)
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_EVENT_H_ */

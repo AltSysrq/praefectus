@@ -31,6 +31,8 @@
 #include "transactor.h"
 #include "metatransactor.h"
 
+__BEGIN_DECLS
+
 /**
  * The praef_mtt_bridge provides a bridge from a praef_metatransactor_cxn to
  * the equivalent primitives on a praef_transactor.
@@ -59,5 +61,7 @@ typedef struct {
  * @param tx The transactor to use for this bridge.
  */
 void praef_mtt_bridge_init(praef_mtt_bridge* dst, praef_transactor* tx);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_MTT_BRIDGE_H_ */

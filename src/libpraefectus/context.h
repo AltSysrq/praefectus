@@ -32,6 +32,8 @@
 #include "object.h"
 #include "event.h"
 
+__BEGIN_DECLS
+
 /**
  * Opaque type for a single praefectus context. A context maintains a chain of
  * events and knowledge of the set of objects in existence, as well as the
@@ -150,5 +152,7 @@ const praef_event* praef_context_get_event(
  * object, returns NULL.
  */
 praef_object* praef_context_get_object(const praef_context*, praef_object_id);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_CONTEXT_H_ */

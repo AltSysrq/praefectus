@@ -30,6 +30,8 @@
 
 #include "common.h"
 
+__BEGIN_DECLS
+
 /**
  * A clock source is a reference to what some external source believes the
  * current time is. Every clock source is registered with exactly one clock,
@@ -149,5 +151,7 @@ void praef_clock_source_sample(praef_clock_source*, const praef_clock*,
  * @param count_self Whether to count the clock's own monotime as a source.
  */
 void praef_clock_tick(praef_clock*, unsigned delta, int count_self);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_CLOCK_H_ */

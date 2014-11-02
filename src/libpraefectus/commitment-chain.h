@@ -30,6 +30,8 @@
 
 #include "common.h"
 
+__BEGIN_DECLS
+
 /**
  * A comchain (commitment chain) is used to track commitments and reveals from
  * other nodes, in order to determine what data they have access to. It is also
@@ -144,5 +146,7 @@ int praef_comchain_create_commit(unsigned char hash[PRAEF_HASH_SIZE],
                                  praef_comchain*,
                                  praef_instant start_inclusive,
                                  praef_instant end_exclusive);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_COMMITMENT_CHAIN_H_ */

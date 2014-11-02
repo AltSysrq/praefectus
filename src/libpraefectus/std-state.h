@@ -33,6 +33,8 @@
 #include "metatransactor.h"
 #include "mtt-bridge.h"
 
+__BEGIN_DECLS
+
 /**
  * The std_state structure is a convenience for managing the "standard" stack
  * of validated, deserialised state, consisting of a context, transactor, and
@@ -69,5 +71,7 @@ void praef_std_state_cleanup(praef_std_state*);
  * a consistent state.
  */
 void praef_std_state_advance(praef_std_state*, unsigned, praef_userdata);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_STD_STATE_H_ */

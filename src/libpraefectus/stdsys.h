@@ -31,6 +31,8 @@
 #include "system.h"
 #include "std-state.h"
 
+__BEGIN_DECLS
+
 /**
  * Creates a partial application interface which implements all the *_bridge()
  * methods via calls to the given standard state stack.
@@ -140,5 +142,7 @@ void praef_stdsys_event_vote(praef_app*, praef_stdsys_event_vote_t);
  * from praef_stdsys_new().
  */
 void praef_stdsys_delete(praef_app*);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_STDSYS_H_ */

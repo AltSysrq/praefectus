@@ -33,6 +33,8 @@
 #include "messages/PraefNetworkIdentifierPair.h"
 #include "common.h"
 
+__BEGIN_DECLS
+
 /**
  * The message-bus structure abstracts away most aspects of physical network
  * communication, primarily to support testing without needing a live network.
@@ -130,5 +132,7 @@ struct praef_message_bus_s {
 
   praef_message_bus_recv_t recv;
 };
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_MESSAGE_BUS_H_ */

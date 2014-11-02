@@ -30,6 +30,8 @@
 
 #include "message-bus.h"
 
+__BEGIN_DECLS
+
 /**
  * A virtual network simulates an optionally latent and lossy asynchronous
  * network between multiple virtual message busses. This is primarily useful
@@ -168,5 +170,7 @@ unsigned long long praef_virtual_bus_bw_out(
  * parameters; in such a case, advance() will return 0.
  */
 int praef_virtual_network_advance(praef_virtual_network*, unsigned);
+
+__END_DECLS
 
 #endif /* LIBPRAEFECTUS_VIRTUAL_BUS_H_ */

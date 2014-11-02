@@ -28,9 +28,15 @@
 #ifndef TOP_TEST_STATE_H_
 #define TOP_TEST_STATE_H_
 
+#include "bsd.h"
+
 #include "../game-state.h"
+
+__BEGIN_DECLS
 
 game_state* test_state_new(void);
 void test_state_delete(game_state*);
+
+__END_DECLS
 
 #endif /* TOP_TEST_STATE_H_ */
