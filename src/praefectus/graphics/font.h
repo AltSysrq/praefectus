@@ -52,4 +52,9 @@ unsigned font_strwidth(const char*);
 void font_render(canvas*, signed lx, signed ty,
                  const char*, canvas_pixel);
 
+/**
+ * Renders the given character at the given coordinates.
+ */
+void font_renderch(canvas*, signed lx, signed ty, unsigned char, canvas_pixel);
+
 #endif /* GRAPHICS_FONT_H_ */

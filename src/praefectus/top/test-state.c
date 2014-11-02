@@ -32,7 +32,7 @@
 #include <SDL.h>
 
 #include "../alloc.h"
-#include "../graphics/canvas.h"
+#include "../graphics/console.h"
 #include "../graphics/crt.h"
 #include "../graphics/font.h"
 #include "../game-state.h"
@@ -50,7 +50,7 @@ typedef struct {
 } test_state;
 
 static game_state* test_state_update(test_state*, unsigned);
-static void test_state_draw(test_state*, canvas*, crt_colour*);
+static void test_state_draw(test_state*, console*, crt_colour*);
 static void test_state_key(test_state*, SDL_KeyboardEvent*);
 
 game_state* test_state_new(void) {
@@ -81,81 +81,28 @@ static game_state* test_state_update(test_state* this, unsigned et) {
   }
 }
 
-static const crt_colour demon_palette[16] = {
-  0x000000, /* 0 */
-  0x020202,
-  0x040404,
-  0x060606,
-  0x080808, /* 4 */
-  0x101010,
-  0x202020,
-  0x3F3F3F,
-  0x003F3F, /* 8 */
-  0x00003F,
-  0x3F003F,
-  0x3F0000,
-  0x3F3F00, /* 12 */
-  0x003F00,
-  0x001010,
-  0x000004,
-};
-
-static void test_state_draw(test_state* this, canvas* dst,
+/* Hack to test BEL */
+static console* scons;
+static void test_state_draw(test_state* this, console* dst,
                             crt_colour* palette) {
-  /* For the purposes of testing, do a demon automaton directly in the
-   * canvas. The particular palette used here is designed to produce large dark
-   * regions.
-   *
-   * Note we only use the first 16 colours.
-   */
-  canvas_pixel prev[dst->pitch * dst->h];
-  unsigned x, y;
-  signed ox, oy;
-  canvas_pixel curr;
+  console_cell cell;
+  scons = dst;
 
-  memcpy(palette, demon_palette, sizeof(demon_palette));
+  memset(&cell, 0, sizeof(cell));
+  cell.fg = CONS_VGA_WHITE;
+  console_puts(dst, &cell, 0, 0, "Hello world");
+  cell.bg = CONS_VGA_YELLOW;
+  console_puts(dst, &cell, 0, 1, "With background");
+  cell.blink = 1;
+  console_puts(dst, &cell, 0, 2, "Blink");
+  cell.reverse_video = 1;
+  console_puts(dst, &cell, 0, 3, "Reverse video");
 
-  if (!this->has_rendered) {
-    /* Initialise the canvas randomly */
-    for (y = 0; y < dst->h; ++y)
-      for (x = 0; x < dst->w; ++x)
-        dst->data[canvas_off(dst, x, y)] = rand() & 0xF;
+  dst->show_cursor = 1;
+  dst->cursor_x = 2;
+  dst->cursor_y = 2;
 
-    this->has_rendered = 1;
-  } else if (this->time_till_step <= 0) {
-    this->time_till_step += 8;
-    memcpy(prev, dst->data, sizeof(prev));
-
-    for (y = 0; y < dst->h; ++y) {
-      for (x = 0; x < dst->w; ++x) {
-        curr = prev[canvas_off(dst, x, y)];
-        for (oy = -1; oy <= +1; ++oy) {
-          if ((unsigned)oy + y >= dst->h) continue;
-          for (ox = -1; ox <= +1; ++ox) {
-            if ((unsigned)ox + x >= dst->w) continue;
-
-            if (((curr+1) & 0xF) == prev[canvas_off(dst, x+ox, y+oy)]) {
-              dst->data[canvas_off(dst, x, y)] = (curr+1) & 0xF;
-              goto next_pixel;
-            }
-          }
-        }
-
-        next_pixel:;
-      }
-    }
-  }
-
-  memset(dst->data, 0, dst->pitch * dst->h * sizeof(canvas_pixel));
-
-  font_render(dst, 0, 0 * FONT_CHARH,
-              "THE QUICK BROWN FOX JUMPS", 7);
-  font_render(dst, 0, 1 * FONT_CHARH,
-              "OVER THE LAZY DOG", 7);
-  font_render(dst, 0, 2 * FONT_CHARH,
-              "The quick brown fox jumps", 7);
-  font_render(dst, 0, 3 * FONT_CHARH,
-              "over the lazy dog", 7);
+  crt_default_palette(palette);
 }
 
 static void test_state_key(test_state* this,
@@ -163,4 +110,6 @@ static void test_state_key(test_state* this,
   if (SDL_KEYDOWN == evt->type &&
       SDLK_ESCAPE == evt->keysym.sym)
     this->is_alive = 0;
+  else
+    console_bel(scons);
 }

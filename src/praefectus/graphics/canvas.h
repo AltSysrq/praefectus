@@ -72,10 +72,11 @@ typedef unsigned char canvas_pixel;
 #define CP_GREY         0x00
 #define CP_RED          0x20
 #define CP_ORANGE       0x40
-#define CP_GREEN        0x60
-#define CP_CYAN         0x80
-#define CP_BLUE         0xA0
-#define CP_VIOLET       0xC0
+#define CP_YELLOW       0x60
+#define CP_GREEN        0x80
+#define CP_CYAN         0xA0
+#define CP_BLUE         0xC0
+#define CP_VIOLET       0xE0
 /**
  * The number of indices within one colour plane.
  */

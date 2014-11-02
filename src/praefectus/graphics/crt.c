@@ -209,3 +209,36 @@ void crt_screen_proj(unsigned*restrict dst, const crt_screen* src) {
     }
   }
 }
+
+static const crt_colour crt_default_ramp[CP_SIZE] = {
+  0x00, 0x02, 0x04, 0x06, 0x08, 0x0A, 0x0C, 0x0E,
+  0x10, 0x12, 0x14, 0x16, 0x18, 0x1A, 0x1C, 0x1E,
+  0x20, 0x22, 0x24, 0x26, 0x28, 0x2A, 0x2C, 0x2E,
+  0x30, 0x32, 0x34, 0x36, 0x38, 0x3A, 0x3C, 0x3F,
+};
+
+static void crt_default_cp(crt_colour* dst, crt_colour mask) {
+  unsigned i;
+  crt_colour c;
+
+  for (i = 0; i < CP_SIZE; ++i) {
+    c = crt_default_ramp[i];
+    dst[i] = ((c << 16) | (c << 8) | c) & mask;
+  }
+}
+
+void crt_default_palette(crt_colour* dst) {
+  unsigned i;
+
+  crt_default_cp(dst + CP_GREY  , 0x3F3F3F);
+  crt_default_cp(dst + CP_RED   , 0x3F0000);
+  crt_default_cp(dst + CP_YELLOW, 0x3F3F00);
+  crt_default_cp(dst + CP_GREEN , 0x003F00);
+  crt_default_cp(dst + CP_CYAN  , 0x003F3F);
+  crt_default_cp(dst + CP_BLUE  , 0x00003F);
+  crt_default_cp(dst + CP_VIOLET, 0x3F003F);
+
+  for (i = 0; i < CP_SIZE; ++i)
+    dst[CP_ORANGE+i] =
+      (crt_default_ramp[i] << 16) | (crt_default_ramp[i]/2 << 8);
+}

@@ -57,6 +57,8 @@
 #include "../game-state.h"
 #include "../alloc.h"
 #include "../graphics/font.h"
+#include "../graphics/console.h"
+#include "../graphics/canvas.h"
 #include "test-state.h"
 
 /* Move this somewhere else if anything else winds up needing it. */
@@ -74,7 +76,7 @@ SDL_PixelFormat* screen_pixel_format;
 static int might_be_zaphod = 1;
 
 static game_state* update(game_state*);
-static void draw(canvas*, crt_screen*, game_state*, SDL_Window*);
+static void draw(console*, canvas*, crt_screen*, game_state*, SDL_Window*);
 static int handle_input(game_state*);
 
 static int parse_x11_screen(signed* screen, const char* display) {
@@ -228,6 +230,7 @@ int main(int argc, char** argv) {
   SDL_Texture* rendertex;
   const int image_types = IMG_INIT_JPG | IMG_INIT_PNG;
   canvas* canv;
+  console* cons;
   Uint32* framebuffer_front, * framebuffer_tmp, * framebuffer_both;
   game_state* state;
   SDL_Rect window_bounds;
@@ -323,6 +326,8 @@ int main(int argc, char** argv) {
 
   canv = canvas_new(round_to_multiple(NOMINAL_HEIGHT * ww / wh, FONT_CHARW),
                     round_to_multiple(NOMINAL_HEIGHT, FONT_CHARH));
+  cons = console_new(canv);
+  /* TODO: Configurable BEL behaviour */
   crt = crt_screen_new(canv->w, canv->h, ww, wh, ww);
   framebuffer_both = xmalloc(2 * sizeof(Uint32) * ww * wh);
   framebuffer_back = framebuffer_both;
@@ -332,7 +337,7 @@ int main(int argc, char** argv) {
   state = test_state_new();
 
   do {
-    draw(canv, crt, state, screen);
+    draw(cons, canv, crt, state, screen);
     SDL_SemWait(framebuffer_ready);
     framebuffer_tmp = framebuffer_front;
     framebuffer_front = framebuffer_back;
@@ -363,6 +368,7 @@ int main(int argc, char** argv) {
   SDL_SemWait(framebuffer_ready);
 
   free(canv);
+  console_delete(cons);
   crt_screen_delete(crt);
   free(framebuffer_both);
 
@@ -391,11 +397,13 @@ static game_state* update(game_state* state) {
   return (*state->update)(state, elapsed);
 }
 
-static void draw(canvas* canv, crt_screen* crt,
+static void draw(console* cons, canvas* canv, crt_screen* crt,
                  game_state* state,
                  SDL_Window* screen) {
   crt_colour palette[256];
-  (*state->draw)(state, canv, palette);
+  console_clear(cons);
+  (*state->draw)(state, cons, palette);
+  console_render(canv, cons);
   crt_screen_xfer(crt, canv, palette);
 }
 

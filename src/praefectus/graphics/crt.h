@@ -87,4 +87,9 @@ void crt_screen_xfer(crt_screen* dst, const canvas*restrict src,
 void crt_screen_proj(unsigned*restrict dst,
                      const crt_screen* src);
 
+/**
+ * Populates the given palette with the default colours.
+ */
+void crt_default_palette(crt_colour*);
+
 #endif /* GRAPHICS_CRT_H_ */

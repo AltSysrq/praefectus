@@ -30,7 +30,7 @@
 
 #include <SDL.h>
 
-#include "graphics/canvas.h"
+#include "graphics/console.h"
 #include "graphics/crt.h"
 
 /**
@@ -59,7 +59,7 @@ typedef game_state* (*game_state_update_t)(game_state*, unsigned elapsed);
  * Draws the graphical representation of this state onto the given canvas and
  * colour palette.
  */
-typedef void (*game_state_draw_t)(game_state*, canvas*,
+typedef void (*game_state_draw_t)(game_state*, console*,
                                   crt_colour* palette);
 /**
  * Called for every received keyboard event. This should not be used for

@@ -46,19 +46,23 @@ unsigned font_strwidth(const char* str) {
 
 void font_render(canvas* dst, signed x0, signed y0,
                  const char* str, canvas_pixel colour) {
-  signed ox, oy, cx0;
-  const char* s;
-  unsigned char c;
+  while (*str) {
+    font_renderch(dst, x0, y0, *str, colour);
+    ++str;
+    x0 += FONT_CHARW;
+  }
+}
+
+void font_renderch(canvas* dst, signed cx0, signed y0,
+                   unsigned char c, canvas_pixel colour) {
+  signed ox, oy;
   for (oy = 0; oy < FONT_CHARH; ++oy) {
     if (y0+oy >= 0 && y0+oy < dst->h) {
-      for (s = str, cx0 = x0; *s; ++s, cx0 += FONT_CHARW) {
-        for (ox = 0; ox < FONT_CHARW; ++ox) {
-          if (cx0+ox >= 0 && cx0+ox < dst->w) {
-            c = *s;
-            if (' ' != f437_xpm[c / XPM_PITCH_CHARS * FONT_CHARH + oy + XPM_ROW_OFFSET]
-                               [c % XPM_PITCH_CHARS * FONT_CHARW + ox])
-              dst->data[canvas_off(dst, cx0+ox, y0+oy)] = colour;
-          }
+      for (ox = 0; ox < FONT_CHARW; ++ox) {
+        if (cx0+ox >= 0 && cx0+ox < dst->w) {
+          if (' ' != f437_xpm[c / XPM_PITCH_CHARS * FONT_CHARH + oy + XPM_ROW_OFFSET]
+                             [c % XPM_PITCH_CHARS * FONT_CHARW + ox])
+            dst->data[canvas_off(dst, cx0+ox, y0+oy)] = colour;
         }
       }
     }
