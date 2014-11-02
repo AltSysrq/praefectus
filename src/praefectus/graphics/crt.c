@@ -158,7 +158,7 @@ void crt_screen_xfer(crt_screen* dst, const canvas*restrict src,
 
     for (x = 0; x < dst->w; ++x) {
       old = dst->data[crt_screen_off(dst, x, y)];
-      old = (old >> 1) & 0x003F3F3F;
+      old = ((old >> 1) & 0x001F1F1F) + ((old >> 2) & 0x000F0F0F);
       new = palette[src->data[canvas_off(src, x, y)]];
 
       ghosting = (charge >> 19) & 0x3F;
