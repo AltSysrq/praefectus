@@ -25,7 +25,8 @@ praefectus/top/test-state.c \
 praefectus/graphics/canvas.c \
 praefectus/graphics/crt.c \
 praefectus/graphics/font.c \
-praefectus/graphics/console.c
+praefectus/graphics/console.c \
+praefectus/ui/menu.c
 
 praef_vertexd_CFLAGS = $(AM_CFLAGS) -Ilibpraefectus/messages
 praef_vertexd_LDADD = libudp-common.la libvertexd-config.la

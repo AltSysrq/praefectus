@@ -31,10 +31,11 @@
 #include "bsd.h"
 
 #include "../game-state.h"
+#include "../graphics/console.h"
 
 __BEGIN_DECLS
 
-game_state* test_state_new(void);
+game_state* test_state_new(console*);
 void test_state_delete(game_state*);
 
 __END_DECLS

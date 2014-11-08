@@ -35,6 +35,7 @@
 #include "../graphics/console.h"
 #include "../graphics/crt.h"
 #include "../graphics/font.h"
+#include "../ui/menu.h"
 #include "../game-state.h"
 #include "test-state.h"
 
@@ -42,27 +43,114 @@
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #endif
 
+static int anything(int i) { return 1; }
+
 typedef struct {
   game_state self;
-  int has_rendered;
   int is_alive;
-  signed time_till_step;
+  console* cons;
+  menu_level* active_menu;
+  menu_level top_menu;
 } test_state;
+
+static int checkbox_state;
+static unsigned radio_state;
+static char textbuf[8];
+const menu_item items_on_top_menu[] = {
+  { .type = mit_label,
+    .v = {
+      .label = {
+        .label = "This is a label."
+      }
+    }
+  },
+  { .type = mit_submenu,
+    .v = {
+      .submenu = {
+        .label = "Configure",
+        .action = /* TODO */ NULL
+      }
+    }
+  },
+  { .type = mit_checkbox,
+    .v = {
+      .checkbox = {
+        .label = "Checkbox",
+        .is_checked = &checkbox_state
+      }
+    }
+  },
+  { .type = mit_radiobox,
+    .v = {
+      .radio = {
+        .label = "Radiobox",
+        .ordinal = 0,
+        .selected = &radio_state
+      }
+    }
+  },
+  { .type = mit_radiolist,
+    .v = {
+      .radio = {
+        .label = "Radiolist",
+        .ordinal = 0,
+        .selected = &radio_state
+      }
+    }
+  },
+  { .type = mit_textfield,
+    .v = {
+      .textfield = {
+        .label = "Text",
+        .accept = anything,
+        .text = textbuf,
+        .text_size = sizeof(textbuf)
+      }
+    }
+  },
+};
+
+const menu_action actions_on_top_menu[] = {
+  { .label = "Abort" },
+  { .label = "Retry" },
+  { .label = "Fail" },
+};
+
+static void do_nothing(void* u, menu_level* m) { }
+static void quit(void*, menu_level*);
+const menu_level top_menu = {
+  .selected = 1,
+  .x = 3, .y = 3,
+  .title = "Main Menu",
+  .items = items_on_top_menu,
+  .num_items = sizeof(items_on_top_menu) / sizeof(menu_item),
+  .actions = actions_on_top_menu,
+  .num_actions = sizeof(actions_on_top_menu) / sizeof(menu_action),
+
+  .on_accept = do_nothing,
+  .on_cancel = quit
+};
 
 static game_state* test_state_update(test_state*, unsigned);
 static void test_state_draw(test_state*, console*, crt_colour*);
 static void test_state_key(test_state*, SDL_KeyboardEvent*);
+static void test_state_txtin(test_state*, SDL_TextInputEvent*);
 
-game_state* test_state_new(void) {
+game_state* test_state_new(console* cons) {
   test_state* this = xmalloc(sizeof(test_state));
 
   memset(this, 0, sizeof(test_state));
   this->self.update = (game_state_update_t)test_state_update;
   this->self.draw = (game_state_draw_t)test_state_draw;
   this->self.key = (game_state_key_t)test_state_key;
+  this->self.txtin = (game_state_txtin_t)test_state_txtin;
   this->is_alive = 1;
-  this->has_rendered = 0;
-  this->time_till_step = 0;
+  this->top_menu = top_menu;
+  this->active_menu = &this->top_menu;
+  this->cons = cons;
+
+  menu_set_minimal_size(&this->top_menu, 0, 0);
+
   return (game_state*)this;
 }
 
@@ -70,9 +158,11 @@ void test_state_delete(game_state* this) {
   free(this);
 }
 
-static game_state* test_state_update(test_state* this, unsigned et) {
-  this->time_till_step -= et;
+static void quit(void* userdata, menu_level* menu) {
+  ((test_state*)userdata)->is_alive = 0;
+}
 
+static game_state* test_state_update(test_state* this, unsigned et) {
   if (this->is_alive) {
     return (game_state*)this;
   } else {
@@ -81,55 +171,18 @@ static game_state* test_state_update(test_state* this, unsigned et) {
   }
 }
 
-/* Hack to test BEL */
-static console* scons;
 static void test_state_draw(test_state* this, console* dst,
                             crt_colour* palette) {
-  console_cell cell;
-  unsigned x, y;
-
-  scons = dst;
-
-  memset(&cell, 0, sizeof(cell));
-  cell.fg = CONS_VGA_BRIGHT_WHITE;
-  console_puts(dst, &cell, 2, 0, "Test");
-  cell.fg = CONS_VGA_BRIGHT_BLACK;
-  console_putc(dst, &cell, 0, 0, CONS_L0110);
-  console_putc(dst, &cell, 1, 0, CONS_L2021);
-  console_putc(dst, &cell, 6, 0, CONS_L2120);
-  for (x = 7; x < 15; ++x)
-    console_putc(dst, &cell, x, 0, CONS_L0101);
-  console_putc(dst, &cell, 15, 0, CONS_L0011);
-  for (y = 1; y < 6; ++y) {
-    console_putc(dst, &cell, 0, y, CONS_L1010);
-    console_putc(dst, &cell, 15, y, CONS_L1010);
-  }
-  console_putc(dst, &cell, 0, 6, CONS_L1100);
-  console_putc(dst, &cell, 15, 6, CONS_L1001);
-  for (x = 1; x < 15; ++x)
-    console_putc(dst, &cell, x, 6, CONS_L0101);
-
-  cell.fg = CONS_VGA_WHITE;
-  console_puts(dst, &cell, 1, 1, "Hello world");
-  cell.bg = CONS_VGA_YELLOW;
-  console_puts(dst, &cell, 1, 2, "With background");
-  cell.blink = 1;
-  console_puts(dst, &cell, 1, 3, "Blink");
-  cell.reverse_video = 1;
-  console_puts(dst, &cell, 1, 4, "Reverse video");
-
-  dst->show_cursor = 1;
-  dst->cursor_x = 2;
-  dst->cursor_y = 2;
-
   crt_default_palette(palette);
+  menu_draw(dst, this->active_menu, 1);
 }
 
 static void test_state_key(test_state* this,
                            SDL_KeyboardEvent* evt) {
-  if (SDL_KEYDOWN == evt->type &&
-      SDLK_ESCAPE == evt->keysym.sym)
-    this->is_alive = 0;
-  else
-    console_bel(scons);
+  menu_key(this->active_menu, this->cons, this, evt);
+}
+
+static void test_state_txtin(test_state* this,
+                             SDL_TextInputEvent* evt) {
+  menu_txtin(this->active_menu, this->cons, evt);
 }
