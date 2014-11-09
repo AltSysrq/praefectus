@@ -20,6 +20,7 @@ libpraef-asn1.la
 
 praef_LDADD = libpraefectus.la libpraef-asn1.la $(SDL_LIBS)
 praef_SOURCES = \
+praefectus/global-config.c \
 praefectus/top/main.c \
 praefectus/top/test-state.c \
 praefectus/graphics/canvas.c \

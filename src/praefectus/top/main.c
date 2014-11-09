@@ -55,6 +55,7 @@
 
 #include "bsd.h"
 #include "../game-state.h"
+#include "../global-config.h"
 #include "../alloc.h"
 #include "../graphics/font.h"
 #include "../graphics/console.h"
@@ -236,6 +237,8 @@ int main(int argc, char** argv) {
   SDL_Thread* crt_render_thread;
   unsigned num_frames_since_fps_report = 0, last_fps_report = SDL_GetTicks();
 
+  load_config();
+
   if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))
     errx(EX_SOFTWARE, "Unable to initialise SDL: %s", SDL_GetError());
 
@@ -367,6 +370,8 @@ int main(int argc, char** argv) {
   console_delete(cons);
   crt_screen_delete(crt);
   free(framebuffer_both);
+
+  save_config();
 
   return 0;
 }
