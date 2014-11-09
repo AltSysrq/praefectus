@@ -32,7 +32,6 @@ AC_SEARCH_LIBS([errc], [c bsd])
 AC_SEARCH_LIBS([sin], [c m])
 AC_SEARCH_LIBS([dlopen], [dl])
 PKG_CHECK_MODULES([SDL], [sdl2])
-PKG_CHECK_MODULES([SDLIMG], [SDL2_image])
 PKG_CHECK_MODULES([CHECK], [check], [], [:])
 AC_SEARCH_LIBS(__gmpz_powm, [gmp mpir], [],
 [AC_MSG_ERROR([cannot locate a gmp or mpir library])])
@@ -69,5 +68,6 @@ AC_CONFIG_FILES([Makefile src/Makefile src/asn1-support/Makefile
                  src/libpraefectus/messages/Makefile
                  src/udp-common/Makefile
                  src/vertexd/config/Makefile
+                 src/praefectus/asn1/Makefile
                  test/Makefile])
 AC_OUTPUT

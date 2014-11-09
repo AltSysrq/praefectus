@@ -13,4 +13,9 @@ PraefDummyChoice ::= CHOICE {
   chars VisibleString,
   mchars PrintableString
 }
+
+PraefDummySet ::= SET {
+  null NULL
+}
+
 END

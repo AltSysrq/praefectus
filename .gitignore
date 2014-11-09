@@ -43,3 +43,4 @@ udp-common
 src/chat-demo/chat-demo
 praef-vertexd
 src/vertexd/config
+src/praefectus/asn1

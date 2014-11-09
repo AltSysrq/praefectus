@@ -228,7 +228,6 @@ int main(int argc, char** argv) {
   SDL_Window* screen;
   SDL_Renderer* renderer;
   SDL_Texture* rendertex;
-  const int image_types = IMG_INIT_JPG | IMG_INIT_PNG;
   canvas* canv;
   console* cons;
   Uint32* framebuffer_front, * framebuffer_tmp, * framebuffer_both;
@@ -251,9 +250,6 @@ int main(int argc, char** argv) {
                             0);
   if (!screen)
     errx(EX_OSERR, "Unable to create window: %s", SDL_GetError());
-
-  if (image_types != (image_types & IMG_Init(image_types)))
-    errx(EX_SOFTWARE, "Unable to init SDLIMG: %s", IMG_GetError());
 
   screen_pixel_format = SDL_AllocFormat(SDL_PIXELFORMAT_ARGB8888);
   if (!screen_pixel_format)

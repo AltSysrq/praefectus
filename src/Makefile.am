@@ -5,20 +5,20 @@ AUTOMAKE_OPTIONS = subdir-objects
 # Recursing into asn1-support first has the nice effect of forcing everything
 # there to be built first, so we don't need to go through the headache of
 # getting Automake to comprehend that a task produces multiple header files.
-SUBDIRS = asn1-support libpraefectus/messages udp-common vertexd/config .
+SUBDIRS = asn1-support libpraefectus/messages udp-common vertexd/config \
+	praefectus/asn1 .
 
-AM_CFLAGS=-Iasn1-support -D_BSD_SOURCE \
-          $(SDL_CFLAGS) $(SDLIMG_CFLAGS)
-AM_LDFLAGS=$(SDL_LIBS) $(SDLIMG_LIBS)
+AM_CFLAGS=-Iasn1-support -D_BSD_SOURCE $(SDL_CFLAGS)
 
 bin_PROGRAMS = praef praef-vertexd
 noinst_PROGRAMS = nbodies/nbodies-vnet-4-ideal nbodies/nbodies-vis \
   nbodies/nbodies-vnet-8-latent-lossy chat-demo/chat-demo
 noinst_LTLIBRARIES = libpraefectus.la libasn1-support.la \
 libpraefectus-messages.la nbodies/libnbodies-core.la \
-libudp-common.la libpraefectus-umb.la libvertexd-config.la
+libudp-common.la libpraefectus-umb.la libvertexd-config.la \
+libpraef-asn1.la
 
-praef_LDADD = libpraefectus.la
+praef_LDADD = libpraefectus.la libpraef-asn1.la $(SDL_LIBS)
 praef_SOURCES = \
 praefectus/top/main.c \
 praefectus/top/test-state.c \
@@ -137,6 +137,7 @@ asn1-support/ber_tlv_tag.c \
 asn1-support/constr_CHOICE.c \
 asn1-support/constr_SEQUENCE.c \
 asn1-support/constr_SEQUENCE_OF.c \
+asn1-support/constr_SET.c \
 asn1-support/constr_SET_OF.c \
 asn1-support/constr_TYPE.c \
 asn1-support/constraints.c \
@@ -166,6 +167,13 @@ libvertexd_config_la_SOURCES = \
 vertexd/config/VertexdConfiguration.c \
 vertexd/config/Realm.c
 
+libpraef_asn1_la_CFLAGS = -w -Iasn1-support
+libpraef_asn1_la_LIBADD = libasn1-support.la
+libpraef_asn1_la_SOURCES = \
+praefectus/asn1/PraefectusConfiguration.c \
+praefectus/asn1/ControlsConfiguration.c \
+praefectus/asn1/BoundKey.c
+
 nbodies_libnbodies_core_la_SOURCES = nbodies/nbodies-core.c
 nbodies_nbodies_vnet_4_ideal_SOURCES = nbodies/nbodies-vnet-4-ideal.c
 nbodies_nbodies_vnet_4_ideal_LDADD = \
@@ -176,6 +184,7 @@ nbodies_nbodies_vnet_8_latent_lossy_LDADD = \
   nbodies/libnbodies-core.la libpraefectus.la
 
 nbodies_nbodies_vis_SOURCES = nbodies/nbodies-vis.c
+nbodies_nbodies_vis_LDADD = $(SDL_LIBS)
 
 chat_demo_chat_demo_SOURCES = chat-demo/chat-demo.c
-chat_demo_chat_demo_LDADD = libpraefectus.la libpraefectus-umb.la
+chat_demo_chat_demo_LDADD = libpraefectus.la libpraefectus-umb.la $(SDL_LIBS)
