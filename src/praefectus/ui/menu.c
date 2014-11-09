@@ -401,11 +401,17 @@ void menu_key(menu_level* this, console* cons, void* userdata,
   case SDLK_RETURN:
     if (!menu_activate(this, userdata))
       menu_do_primary_action(this, userdata);
-    break;
+    /* Supress changing console properties, because either nothing has changed
+     * or this is no longer the active menu.
+     */
+    return;
 
   case SDLK_ESCAPE:
     menu_cancel(this, userdata);
-    break;
+    /* Supress changing console properties, because either nothing has changed
+     * or this is no longer the active menu.
+     */
+    return;
 
   case SDLK_BACKSPACE:
     menu_delete_backwards_char(this, cons);

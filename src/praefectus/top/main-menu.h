@@ -25,8 +25,8 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef TOP_TEST_STATE_H_
-#define TOP_TEST_STATE_H_
+#ifndef TOP_MAIN_MENU_H_
+#define TOP_MAIN_MENU_H_
 
 #include "bsd.h"
 
@@ -35,9 +35,8 @@
 
 __BEGIN_DECLS
 
-game_state* test_state_new(console*);
-void test_state_delete(game_state*);
+game_state* main_menu_new(console*);
 
 __END_DECLS
 
-#endif /* TOP_TEST_STATE_H_ */
+#endif /* TOP_MAIN_MENU_H_ */
