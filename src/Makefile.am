@@ -27,7 +27,9 @@ praefectus/graphics/canvas.c \
 praefectus/graphics/crt.c \
 praefectus/graphics/font.c \
 praefectus/graphics/console.c \
-praefectus/ui/menu.c
+praefectus/ui/menu.c \
+praefectus/game/context.c \
+praefectus/game/object.c
 
 praef_vertexd_CFLAGS = $(AM_CFLAGS) -Ilibpraefectus/messages
 praef_vertexd_LDADD = libudp-common.la libvertexd-config.la
@@ -171,9 +173,13 @@ vertexd/config/Realm.c
 libpraef_asn1_la_CFLAGS = -w -Iasn1-support
 libpraef_asn1_la_LIBADD = libasn1-support.la
 libpraef_asn1_la_SOURCES = \
-praefectus/asn1/PraefectusConfiguration.c \
+praefectus/asn1/BoundKey.c \
 praefectus/asn1/ControlsConfiguration.c \
-praefectus/asn1/BoundKey.c
+praefectus/asn1/GameEvent.c \
+praefectus/asn1/GameEventInitialise.c \
+praefectus/asn1/GameEventSetControl.c \
+praefectus/asn1/GameEventFire.c \
+praefectus/asn1/PraefectusConfiguration.c
 
 nbodies_libnbodies_core_la_SOURCES = nbodies/nbodies-core.c
 nbodies_nbodies_vnet_4_ideal_SOURCES = nbodies/nbodies-vnet-4-ideal.c

@@ -54,6 +54,7 @@
 #include <libpraefectus/common.h>
 
 #include "bsd.h"
+#include "../common.h"
 #include "../game-state.h"
 #include "../global-config.h"
 #include "../alloc.h"
@@ -64,7 +65,6 @@
 
 /* Move this somewhere else if anything else winds up needing it. */
 SDL_PixelFormat* screen_pixel_format;
-#define SECOND 64
 #define NOMINAL_HEIGHT 480
 
 /* Whether the multi-display configuration might be a Zaphod configuration. If

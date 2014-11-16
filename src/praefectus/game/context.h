@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013 Jason Lingle
+ * Copyright (c) 2014 Jason Lingle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,37 +25,22 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef ALLOC_H_
-#define ALLOC_H_
+#ifndef GAME_CONTEXT_H_
+#define GAME_CONTEXT_H_
 
-#include <stdlib.h>
-#include <string.h>
 #include "bsd.h"
 
-__BEGIN_DECLS
+struct game_object_s;
 
-static inline void* xmalloc(size_t sz) {
-  void* ret = malloc(sz);
-  if (!ret)
-    err(EX_UNAVAILABLE, "out of memory");
+typedef struct game_context_s {
+  /**
+   * A list of all objects in the context, sorted ascending by id.
+   */
+  SLIST_HEAD(,game_object_s) objects;
+} game_context;
 
-  return ret;
-}
+void game_context_init(game_context*);
+void game_context_destroy(game_context*);
+void game_context_add_object(game_context*, struct game_object_s*);
 
-static inline void* xrealloc(void* ptr, size_t sz) {
-  void* ret = realloc(ptr, sz);
-  if (!ret)
-    err(EX_UNAVAILABLE, "out of memory");
-
-  return ret;
-}
-
-static inline void* zxmalloc(size_t sz) {
-  void* ret = xmalloc(sz);
-  memset(ret, 0, sz);
-  return ret;
-}
-
-__END_DECLS
-
-#endif /* ALLOC_H_ */
+#endif /* GAME_CONTEXT_H_ */

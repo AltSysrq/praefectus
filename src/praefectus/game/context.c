@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013 Jason Lingle
+ * Copyright (c) 2014 Jason Lingle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,37 +25,36 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef ALLOC_H_
-#define ALLOC_H_
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 
-#include <stdlib.h>
-#include <string.h>
-#include "bsd.h"
+#include "context.h"
+#include "object.h"
 
-__BEGIN_DECLS
-
-static inline void* xmalloc(size_t sz) {
-  void* ret = malloc(sz);
-  if (!ret)
-    err(EX_UNAVAILABLE, "out of memory");
-
-  return ret;
+void game_context_init(game_context* this) {
+  SLIST_INIT(&this->objects);
 }
 
-static inline void* xrealloc(void* ptr, size_t sz) {
-  void* ret = realloc(ptr, sz);
-  if (!ret)
-    err(EX_UNAVAILABLE, "out of memory");
+void game_context_destroy(game_context* this) {
+  game_object* obj, * tmp;
 
-  return ret;
+  SLIST_FOREACH_SAFE(obj, &this->objects, next, tmp)
+    game_object_delete(obj);
 }
 
-static inline void* zxmalloc(size_t sz) {
-  void* ret = xmalloc(sz);
-  memset(ret, 0, sz);
-  return ret;
+void game_context_add_object(game_context* this, game_object* obj) {
+  game_object* after, * next;
+
+  if (SLIST_EMPTY(&this->objects) ||
+      obj->self.id < SLIST_FIRST(&this->objects)->self.id) {
+    SLIST_INSERT_HEAD(&this->objects, obj, next);
+  } else {
+    for (after = SLIST_FIRST(&this->objects),
+           next = SLIST_NEXT(after, next);
+         next && next->self.id < obj->self.id;
+         after = next,
+           next = SLIST_NEXT(after, next));
+    SLIST_INSERT_AFTER(after, obj, next);
+  }
 }
-
-__END_DECLS
-
-#endif /* ALLOC_H_ */

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2013 Jason Lingle
+ * Copyright (c) 2014 Jason Lingle
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,37 +25,12 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef ALLOC_H_
-#define ALLOC_H_
+#ifndef COMMON_H_
+#define COMMON_H_
 
-#include <stdlib.h>
-#include <string.h>
-#include "bsd.h"
+/**
+ * The number of frames in one second.
+ */
+#define SECOND 64
 
-__BEGIN_DECLS
-
-static inline void* xmalloc(size_t sz) {
-  void* ret = malloc(sz);
-  if (!ret)
-    err(EX_UNAVAILABLE, "out of memory");
-
-  return ret;
-}
-
-static inline void* xrealloc(void* ptr, size_t sz) {
-  void* ret = realloc(ptr, sz);
-  if (!ret)
-    err(EX_UNAVAILABLE, "out of memory");
-
-  return ret;
-}
-
-static inline void* zxmalloc(size_t sz) {
-  void* ret = xmalloc(sz);
-  memset(ret, 0, sz);
-  return ret;
-}
-
-__END_DECLS
-
-#endif /* ALLOC_H_ */
+#endif /* COMMON_H_ */
