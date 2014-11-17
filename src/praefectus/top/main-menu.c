@@ -36,6 +36,7 @@
 #include "../game-state.h"
 #include "../alloc.h"
 #include "../global-config.h"
+#include "../graphics/canvas.h"
 #include "../graphics/console.h"
 #include "../ui/menu.h"
 #include "main-menu.h"
@@ -60,7 +61,7 @@ static void main_menu_update_key_config_labels(main_menu*);
 static void main_menu_set_active(main_menu*, menu_level*);
 
 static game_state* main_menu_update(main_menu*, unsigned);
-static void main_menu_draw(main_menu*, console*, crt_colour*);
+static void main_menu_draw(main_menu*, canvas*, crt_colour*);
 static void main_menu_key(main_menu*, SDL_KeyboardEvent*);
 static void main_menu_txtin(main_menu*, SDL_TextInputEvent*);
 
@@ -235,14 +236,14 @@ struct main_menu_s {
   BoundKey_t* currently_configuring_key;
 };
 
-game_state* main_menu_new(console* cons) {
+game_state* main_menu_new(const canvas* canv) {
   main_menu* this = zxmalloc(sizeof(main_menu));
 
   this->self.update = (game_state_update_t)main_menu_update;
   this->self.draw = (game_state_draw_t)main_menu_draw;
   this->self.key = (game_state_key_t)main_menu_key;
   this->self.txtin = (game_state_txtin_t)main_menu_txtin;
-  this->cons = cons;
+  this->cons = console_new(canv);
   this->top = main_menu_top;
   this->play = main_menu_play;
   this->config = main_menu_config;
@@ -273,6 +274,7 @@ game_state* main_menu_new(console* cons) {
 }
 
 static void main_menu_delete(main_menu* this) {
+  free(this->cons);
   free(this);
 }
 
@@ -285,26 +287,28 @@ static game_state* main_menu_update(main_menu* this, unsigned et) {
   }
 }
 
-static void main_menu_draw(main_menu* this, console* dst, crt_colour* palette) {
+static void main_menu_draw(main_menu* this, canvas* dst, crt_colour* palette) {
   switch (global_config.bel) {
   case PraefectusConfiguration__bel_none:
-    dst->bel_behaviour = cbb_noop;
+    this->cons->bel_behaviour = cbb_noop;
     break;
   case PraefectusConfiguration__bel_smallflash:
-    dst->bel_behaviour = cbb_flash_extremities;
+    this->cons->bel_behaviour = cbb_flash_extremities;
     break;
 
   case PraefectusConfiguration__bel_flash:
-    dst->bel_behaviour = cbb_flash;
+    this->cons->bel_behaviour = cbb_flash;
     break;
 
   case PraefectusConfiguration__bel_strobe:
-    dst->bel_behaviour = cbb_strobe;
+    this->cons->bel_behaviour = cbb_strobe;
     break;
   }
 
   crt_default_palette(palette);
-  if (this->active) menu_draw(dst, this->active, 1);
+  console_clear(this->cons);
+  if (this->active) menu_draw(this->cons, this->active, 1);
+  console_render(dst, this->cons);
 }
 
 static void main_menu_key(main_menu* this, SDL_KeyboardEvent* evt) {

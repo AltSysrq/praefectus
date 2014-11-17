@@ -35,7 +35,7 @@
 
 __BEGIN_DECLS
 
-game_state* main_menu_new(console*);
+game_state* main_menu_new(const canvas*);
 
 __END_DECLS
 
