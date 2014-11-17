@@ -35,7 +35,7 @@
 
 #include "../graphics/canvas.h"
 
-#define MAX_PROJECTILES 16
+#define MAX_PROJECTILES 15
 
 struct game_context_s;
 

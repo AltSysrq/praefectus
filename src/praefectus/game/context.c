@@ -30,13 +30,18 @@
 #endif
 
 #include "../common.h"
-#include "context.h"
+#include "../asn1/GameEvent.h"
 #include "object.h"
+#include "event.h"
+#include "context.h"
 
 static unsigned game_context_optimistic_events(
   praef_app*, const praef_event*);
 static void game_context_create_node_object(
   praef_app*, praef_object_id);
+static praef_event* game_context_decode_event(
+  praef_app*, praef_instant, praef_object_id,
+  praef_event_serial_number, const void*, size_t);
 
 void game_context_init(game_context* this,
                        praef_message_bus* bus,
@@ -52,7 +57,7 @@ void game_context_init(game_context* this,
 
   praef_stdsys_set_userdata(this->app, this);
   praef_stdsys_optimistic_events(this->app, game_context_optimistic_events);
-  /* TODO: decode_event */
+  this->app->decode_event = game_context_decode_event;
   this->app->create_node_object = game_context_create_node_object;
 
   this->sys = praef_system_new(this->app, bus, netid,
@@ -108,6 +113,28 @@ static void game_context_create_node_object(praef_app* app,
   obj = game_object_new(this, id);
   game_context_add_object(this, obj);
   praef_context_add_object(this->state.context, (praef_object*)obj);
+}
+
+static praef_event* game_context_decode_event(
+  praef_app* app, praef_instant instant, praef_object_id object,
+  praef_event_serial_number serno,
+  const void* data, size_t sz
+) {
+  game_event* evt;
+  GameEvent_t edata, * edata_ptr = &edata;
+  asn_dec_rval_t decode_result;
+
+  memset(&data, 0, sizeof(data));
+  decode_result = uper_decode_complete(
+    NULL, &asn_DEF_GameEvent, (void**)&edata_ptr,
+    data, sz);
+  if (RC_OK != decode_result.code)
+    evt = NULL;
+  else
+    evt = game_event_new(&edata, instant, object, serno);
+
+  (*asn_DEF_GameEvent.free_struct)(&asn_DEF_GameEvent, &edata, 1);
+  return (praef_event*)evt;
 }
 
 void game_context_update(game_context* this, unsigned et) {
