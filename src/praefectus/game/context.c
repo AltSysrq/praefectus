@@ -29,15 +29,51 @@
 #include <config.h>
 #endif
 
+#include "../common.h"
 #include "context.h"
 #include "object.h"
 
-void game_context_init(game_context* this) {
+static unsigned game_context_optimistic_events(
+  praef_app*, const praef_event*);
+static void game_context_create_node_object(
+  praef_app*, praef_object_id);
+
+void game_context_init(game_context* this,
+                       praef_message_bus* bus,
+                       const PraefNetworkIdentifierPair_t* netid) {
   SLIST_INIT(&this->objects);
+
+  if (!praef_std_state_init(&this->state))
+    errx(EX_UNAVAILABLE, "out of memory");
+
+  this->app = praef_stdsys_new(&this->state);
+  if (!this->app)
+    errx(EX_UNAVAILABLE, "out of memory");
+
+  praef_stdsys_set_userdata(this->app, this);
+  praef_stdsys_optimistic_events(this->app, game_context_optimistic_events);
+  /* TODO: decode_event */
+  this->app->create_node_object = game_context_create_node_object;
+
+  this->sys = praef_system_new(this->app, bus, netid,
+                               SECOND/4, praef_sp_lax,
+                               praef_siv_4only,
+                               netid->internet?
+                               praef_snl_global :
+                               praef_snl_local,
+                               512);
+  if (!this->sys)
+    errx(EX_UNAVAILABLE, "out of memory");
+
+  praef_stdsys_set_system(this->app, this->sys);
 }
 
 void game_context_destroy(game_context* this) {
   game_object* obj, * tmp;
+
+  praef_system_delete(this->sys);
+  praef_stdsys_delete(this->app);
+  praef_std_state_cleanup(&this->state);
 
   SLIST_FOREACH_SAFE(obj, &this->objects, next, tmp)
     game_object_delete(obj);
@@ -57,4 +93,23 @@ void game_context_add_object(game_context* this, game_object* obj) {
            next = SLIST_NEXT(after, next));
     SLIST_INSERT_AFTER(after, obj, next);
   }
+}
+
+static unsigned game_context_optimistic_events(praef_app* app,
+                                               const praef_event* evt) {
+  return SECOND/4;
+}
+
+static void game_context_create_node_object(praef_app* app,
+                                            praef_object_id id) {
+  game_context* this = praef_stdsys_userdata(app);
+  game_object* obj;
+
+  obj = game_object_new(this, id);
+  game_context_add_object(this, obj);
+  praef_context_add_object(this->state.context, (praef_object*)obj);
+}
+
+void game_context_update(game_context* this, unsigned et) {
+  this->status = praef_system_advance(this->sys, et);
 }

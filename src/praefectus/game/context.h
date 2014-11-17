@@ -28,19 +28,31 @@
 #ifndef GAME_CONTEXT_H_
 #define GAME_CONTEXT_H_
 
+#include <libpraefectus/system.h>
+#include <libpraefectus/stdsys.h>
+#include <libpraefectus/std-state.h>
+
 #include "bsd.h"
 
 struct game_object_s;
 
 typedef struct game_context_s {
+  praef_std_state state;
+  praef_app* app;
+  praef_system* sys;
+  praef_system_status status;
+
   /**
    * A list of all objects in the context, sorted ascending by id.
    */
   SLIST_HEAD(,game_object_s) objects;
 } game_context;
 
-void game_context_init(game_context*);
+void game_context_init(game_context*, praef_message_bus*,
+                       const PraefNetworkIdentifierPair_t*);
 void game_context_destroy(game_context*);
 void game_context_add_object(game_context*, struct game_object_s*);
+
+void game_context_update(game_context*, unsigned elapsed);
 
 #endif /* GAME_CONTEXT_H_ */
