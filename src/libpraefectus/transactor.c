@@ -31,7 +31,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 #include "common.h"
 #include "transactor.h"
@@ -498,8 +497,7 @@ static void praef_transactor_deadline_apply(
 
   target = praef_transactor_get_wrapped_event(
     tx, evt->evt_object, evt->evt_time, evt->evt_sn);
-  assert(target);
-  assert(target->optimistic);
+  if (!target) return;
 
   target->optimistic = 0;
   praef_transactor_accept_reject_event(
@@ -518,7 +516,7 @@ static void praef_transactor_deadline_unapply(
 
   target = praef_transactor_get_wrapped_event(
     tx, evt->evt_object, evt->evt_time, evt->evt_sn);
-  assert(target);
+  if (!target) return;
 
   target->optimistic = 1;
   praef_transactor_accept_reject_event(

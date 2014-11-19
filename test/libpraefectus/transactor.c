@@ -360,3 +360,14 @@ deftest(retroactive_node_count_adjustments_stack) {
   step(0);
   ck_assert_int_eq(0, object.states[11]);
 }
+
+deftest(doesnt_crash_if_head_event_removed_but_deadline_preserved) {
+  praef_event* evt = mkevt(1, NULL);
+  praef_event* devt = praef_transactor_deadline(tx, evt, 5);
+
+  nodecount(0, 4);
+  praef_context_add_event(master, devt);
+  step(10);
+
+  (*evt->free)(evt);
+}
