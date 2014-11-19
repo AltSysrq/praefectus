@@ -37,6 +37,7 @@
 #include "bsd.h"
 #include "../common.h"
 #include "../alloc.h"
+#include "../global-config.h"
 #include "../graphics/console.h"
 #include "../asn1/GameEvent.h"
 #include "context.h"
@@ -45,8 +46,8 @@
 #define HEARTBEAT_INTERVAL (1*SECOND)
 #define EXPIREY_INTERVAL (2*SECOND)
 #define PROJECTILE_LIFETIME (1*SECOND)
-#define OBJECT_SPEED (GOC_PIXEL_SIZE*32 / SECOND)
-#define PROJECTILE_SPEED_128 (GOC_PIXEL_SIZE*64 / SECOND / 128)
+#define OBJECT_SPEED (GOC_PIXEL_SIZE*64 / SECOND)
+#define PROJECTILE_SPEED_128 (GOC_PIXEL_SIZE*128 / SECOND / 128)
 #define OBJECT_SIZE 16
 
 static void game_object_put_event(praef_system*, const GameEvent_t*);
@@ -99,7 +100,7 @@ static inline signed sign(signed s) {
   return 0;
 }
 
-void game_object_send_events(const game_object* this, praef_system* sys) {
+void game_object_send_events(game_object* this, praef_system* sys) {
   GameEvent_t evt;
   const game_object_core_state* last_state;
 
@@ -109,6 +110,9 @@ void game_object_send_events(const game_object* this, praef_system* sys) {
 
   if (0 == this->core_num_states) {
     evt.present = GameEvent_PR_initialise;
+    memcpy(this->screen_name, global_config.screenname.buf,
+           global_config.screenname.size);
+    this->screen_name[global_config.screenname.size] = 0;
     evt.choice.initialise.screenname.buf = (unsigned char*)this->screen_name;
     evt.choice.initialise.screenname.size = strlen(this->screen_name);
     evt.choice.initialise.xpos = this->self.id & 0xFFFF;
@@ -170,11 +174,11 @@ void game_object_draw(canvas* dst, const game_object* this,
   sy /= GOC_PIXEL_SIZE;
 
   /* TODO, maybe make graphics a bit more interesting. */
-  colour = this->self.id * CP_SIZE;
+  colour = this->self.id * CP_SIZE - 1;
   for (yo = -OBJECT_SIZE/2; yo < OBJECT_SIZE/2; ++yo)
-    if (sy + yo > 0 && sy + yo < dst->h)
+    if (sy + yo >= 0 && sy + yo < dst->h)
       for (xo = -OBJECT_SIZE/2; xo < OBJECT_SIZE/2; ++xo)
-        if (sx + xo > 0 && sx + xo < dst->w)
+        if (sx + xo >= 0 && sx + xo < dst->w)
           dst->data[canvas_off(dst, sx+xo, sy+yo)] = colour;
 
   for (i = 0; i < core.nproj; ++i) {

@@ -40,12 +40,12 @@
 struct game_context_s;
 
 /**
- * Object coordinates are stored in 10.6 fixed-point, and describe a
+ * Object coordinates are stored in 11.5 fixed-point, and describe a
  * 2-dimensional toroidal space.
  */
 typedef unsigned short game_object_coord;
 typedef signed short game_object_scoord;
-#define GOC_PIXEL_SIZE (1 << 6)
+#define GOC_PIXEL_SIZE (1 << 5)
 
 /**
  * Stores the state of a player-controlled object at some point in time. New
@@ -100,9 +100,6 @@ typedef struct game_object_s {
 
   /**
    * The screen name of the player controlling this object, encoded in CP437.
-   *
-   * For the local object, this must be initialised before any events for the
-   * object are sent.
    */
   char screen_name[17];
 
@@ -148,7 +145,7 @@ void game_object_delete(game_object*);
  * Sends any necessary passive events for the (local) object to the given
  * system. This includes initialisation, heartbeats, and control updates.
  */
-void game_object_send_events(const game_object*, praef_system*);
+void game_object_send_events(game_object*, praef_system*);
 /**
  * Sends a single fire event for the given (local) object in the direction
  * implied by (xo,yo).

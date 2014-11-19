@@ -30,7 +30,8 @@ praefectus/graphics/console.c \
 praefectus/ui/menu.c \
 praefectus/game/context.c \
 praefectus/game/object.c \
-praefectus/game/event.c
+praefectus/game/event.c \
+praefectus/game/gameplay.c
 
 praef_vertexd_CFLAGS = $(AM_CFLAGS) -Ilibpraefectus/messages
 praef_vertexd_LDADD = libudp-common.la libvertexd-config.la

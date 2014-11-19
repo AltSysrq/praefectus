@@ -124,7 +124,7 @@ static praef_event* game_context_decode_event(
   GameEvent_t edata, * edata_ptr = &edata;
   asn_dec_rval_t decode_result;
 
-  memset(&data, 0, sizeof(data));
+  memset(&edata, 0, sizeof(edata));
   decode_result = uper_decode_complete(
     NULL, &asn_DEF_GameEvent, (void**)&edata_ptr,
     data, sz);

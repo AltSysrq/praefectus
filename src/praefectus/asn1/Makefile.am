@@ -9,7 +9,7 @@ PraefectusConfiguration.c: configuration.asn1
 	touch PraefectusConfiguration.c
 
 GameEvent.c: events.asn1
-	$(ASN1C) -fcompound-names -fnative-types -R \
+	$(ASN1C) -fcompound-names -fnative-types -gen-PER -R \
 		events.asn1
 	touch GameEvent.c
 
