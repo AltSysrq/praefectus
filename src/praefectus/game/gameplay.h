@@ -34,11 +34,16 @@
 /**
  * Creates a new gameplay state using the given context.
  */
-game_state* gameplay_state_new(game_context*, game_state* parent);
+game_state* gameplay_state_new(game_context*, game_state* parent,
+                               unsigned short canvw, unsigned short canvh,
+                               unsigned short winw, unsigned short winh);
 /**
  * Creates a single-player gameplay state using a loopback network. This will
  * leak the context it creates.
  */
-game_state* gameplay_state_test(void);
+game_state* gameplay_state_test(
+  unsigned short canvw, unsigned short canvh,
+  unsigned short winw, unsigned short winh);
+
 
 #endif /* HAVE_GAME_GAMEPLAY_H_ */

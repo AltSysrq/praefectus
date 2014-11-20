@@ -88,7 +88,7 @@ typedef struct {
  * lifetime relative to the creation time of the projectile.
  */
 typedef struct {
-  praef_instant created_at;
+  praef_instant created_at, instant;
   game_object_coord x, y;
   signed char vx, vy;
 } game_object_proj_state;

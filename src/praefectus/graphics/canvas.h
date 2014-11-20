@@ -133,6 +133,12 @@ static inline unsigned canvas_off(const canvas* c, unsigned x, unsigned y) {
   return y * c->pitch + x;
 }
 
+static inline void canvas_put(canvas* dst, signed short x, signed short y,
+                              canvas_pixel px) {
+  if (x >= 0 && x < dst->w && y >= 0 && y < dst->h)
+    dst->data[canvas_off(dst, x, y)] = px;
+}
+
 __END_DECLS
 
 #endif /* GRAPHICS_CANVAS_H_ */

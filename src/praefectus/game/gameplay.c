@@ -55,6 +55,9 @@ typedef struct {
   game_context* context;
   int is_alive;
 
+  unsigned short canvw, canvh, winw, winh;
+  unsigned short curx, cury;
+
   struct {
     int up, down, left, right;
   } pressed;
@@ -75,7 +78,10 @@ static void gameplay_mmotion(gameplay_state*, SDL_MouseMotionEvent*);
 static void gameplay_txtin(gameplay_state*, SDL_TextInputEvent*);
 static void gameplay_state_delete(gameplay_state*);
 
-static gameplay_state* gameplay_state_ctor(void) {
+static gameplay_state* gameplay_state_ctor(
+  unsigned short canvw, unsigned short canvh,
+  unsigned short winw, unsigned short winh
+) {
   gameplay_state* this = zxmalloc(sizeof(gameplay_state));
   unsigned i;
 
@@ -92,12 +98,21 @@ static gameplay_state* gameplay_state_ctor(void) {
     this->stars[i].y = rand() ^ (rand() << 15);
   }
 
+  this->canvw = canvw;
+  this->canvh = canvh;
+  this->winw = winw;
+  this->winh = winh;
+  this->curx = canvw/2;
+  this->cury = canvh/2;
+
   return this;
 }
 
 game_state* gameplay_state_new(game_context* context,
-                               game_state* parent) {
-  gameplay_state* this = gameplay_state_ctor();
+                               game_state* parent,
+                               unsigned short canvw, unsigned short canvh,
+                               unsigned short winw, unsigned short winh) {
+  gameplay_state* this = gameplay_state_ctor(canvw, canvh, winw, winh);
 
   this->parent = parent;
   this->context = context;
@@ -106,7 +121,8 @@ game_state* gameplay_state_new(game_context* context,
   return (game_state*)this;
 }
 
-game_state* gameplay_state_test(void) {
+game_state* gameplay_state_test(unsigned short canvw, unsigned short canvh,
+                                unsigned short winw, unsigned short winh) {
   gameplay_state* this;
   praef_virtual_network* vnet;
   praef_virtual_bus* vbus;
@@ -121,7 +137,7 @@ game_state* gameplay_state_test(void) {
   game_context_init(context, praef_virtual_bus_mb(vbus),
                     praef_virtual_bus_address(vbus));
 
-  this = gameplay_state_ctor();
+  this = gameplay_state_ctor(canvw, canvh, winw, winh);
   this->context = context;
   this->parent = NULL;
   this->virtual_network = vnet;
@@ -206,6 +222,13 @@ static void gameplay_draw(gameplay_state* this, canvas* dst,
         game_object_draw(dst, obj, cx, cy);
     }
   }
+
+  for (i = 0; i < 4; ++i) {
+    canvas_put(dst, this->curx - i, this->cury, CP_GREY + CP_SIZE-1);
+    canvas_put(dst, this->curx + i, this->cury, CP_GREY + CP_SIZE-1);
+    canvas_put(dst, this->curx, this->cury - i, CP_GREY + CP_SIZE-1);
+    canvas_put(dst, this->curx, this->cury + i, CP_GREY + CP_SIZE-1);
+  }
 }
 
 static void gameplay_key(gameplay_state* this, SDL_KeyboardEvent* evt) {
@@ -232,11 +255,30 @@ static void gameplay_key(gameplay_state* this, SDL_KeyboardEvent* evt) {
 }
 
 static void gameplay_mmotion(gameplay_state* this, SDL_MouseMotionEvent* evt) {
-  /* TODO */
+  this->curx = evt->x * (unsigned)this->canvw / this->winw;
+  this->cury = evt->y * (unsigned)this->canvh / this->winh;
 }
 
 static void gameplay_mbutton(gameplay_state* this, SDL_MouseButtonEvent* evt) {
-  /* TODO */
+  game_object* self = gameplay_state_get_self(this);
+  signed short ox, oy;
+
+  this->curx = evt->x * (unsigned)this->canvw / this->winw;
+  this->cury = evt->y * (unsigned)this->canvh / this->winh;
+  ox = this->curx - this->canvw/2;
+  oy = this->cury - this->canvh/2;
+
+  if (self && SDL_MOUSEBUTTONDOWN == evt->type) {
+    switch (evt->button) {
+    case SDL_BUTTON_LEFT:
+      game_object_send_fire_one(self, this->context->sys, ox, oy);
+      break;
+
+    case SDL_BUTTON_RIGHT:
+      game_object_send_fire_all(self, this->context->sys, ox, oy);
+      break;
+    }
+  }
 }
 
 static void gameplay_txtin(gameplay_state* this, SDL_TextInputEvent* txtin) {

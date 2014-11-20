@@ -322,6 +322,8 @@ int main(int argc, char** argv) {
     errx(EX_UNAVAILABLE, "Failed to spawn render thread: %s",
          SDL_GetError());
 
+  SDL_ShowCursor(0);
+
   canv = canvas_new(round_to_multiple(NOMINAL_HEIGHT * ww / wh, FONT_CHARW),
                     round_to_multiple(NOMINAL_HEIGHT, FONT_CHARH));
   /* TODO: Configurable BEL behaviour */
@@ -332,7 +334,7 @@ int main(int argc, char** argv) {
   memset(framebuffer_back, 0, 2 * sizeof(Uint32) * ww * wh);
 
   /* state = main_menu_new(canv);*/
-  state = gameplay_state_test();
+  state = gameplay_state_test(canv->w, canv->h, ww, wh);
 
   do {
     draw(canv, crt, state, screen);

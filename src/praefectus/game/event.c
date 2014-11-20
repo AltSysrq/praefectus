@@ -118,14 +118,15 @@ static void game_event_apply(game_object* obj,
       return;
 
     proj[core.nproj].created_at = core.instant;
+    proj[core.nproj].instant = core.instant;
     proj[core.nproj].x = core.x;
     proj[core.nproj].y = core.y;
     length = isqrt(this->data.choice.fire.xoff *
                      this->data.choice.fire.xoff +
                    this->data.choice.fire.yoff *
                      this->data.choice.fire.yoff);
-    proj[core.nproj].vx = this->data.choice.fire.xoff * 128 / length;
-    proj[core.nproj].vy = this->data.choice.fire.yoff * 128 / length;
+    proj[core.nproj].vx = this->data.choice.fire.xoff * 127 / length;
+    proj[core.nproj].vy = this->data.choice.fire.yoff * 127 / length;
     ++core.nproj;
     break;
   }

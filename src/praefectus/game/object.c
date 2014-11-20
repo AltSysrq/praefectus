@@ -47,7 +47,7 @@
 #define EXPIREY_INTERVAL (2*SECOND)
 #define PROJECTILE_LIFETIME (1*SECOND)
 #define OBJECT_SPEED (GOC_PIXEL_SIZE*64 / SECOND)
-#define PROJECTILE_SPEED_128 (GOC_PIXEL_SIZE*128 / SECOND / 128)
+#define PROJECTILE_SPEED_128 (1)
 #define OBJECT_SIZE 16
 
 static void game_object_put_event(praef_system*, const GameEvent_t*);
@@ -151,8 +151,8 @@ void game_object_send_fire_all(const game_object* this, praef_system* sys,
 
   for (i = 0; i < MAX_PROJECTILES; ++i)
     game_object_send_fire_one(this, sys,
-                              xo + (rand() & 0xFF) - 0x7F,
-                              yo + (rand() & 0xFF) - 0x7F);
+                              xo + (rand() & 0x1F) - 0x0F,
+                              yo + (rand() & 0x1F) - 0x0F);
 }
 
 void game_object_draw(canvas* dst, const game_object* this,
@@ -187,15 +187,16 @@ void game_object_draw(canvas* dst, const game_object* this,
     sx /= GOC_PIXEL_SIZE;
     sy /= GOC_PIXEL_SIZE;
 
-    if (sy > 0 && sy < dst->h && sx > 0 && sx < dst->w)
-      dst->data[canvas_off(dst, sx, sy)] = colour;
+    for (yo = -1; yo <= +1; ++yo)
+      for (xo = -1; xo <= +1; ++xo)
+        canvas_put(dst, sx+xo, sy+yo, colour);
   }
 }
 
 int game_object_current_state(game_object_core_state* core,
                               game_object_proj_state proj[MAX_PROJECTILES],
                               const game_object* this) {
-  unsigned et, i, j;
+  unsigned lt, et, i, j;
 
   if (0 == this->core_num_states) return 0;
 
@@ -208,11 +209,13 @@ int game_object_current_state(game_object_core_state* core,
   core->instant = this->now;
 
   for (i = j = 0; i < core->nproj; ++i) {
-    et = this->now - this->proj_states[this->proj_num_states-1 - i].created_at;
-    if (et < PROJECTILE_LIFETIME) {
+    lt = this->now - this->proj_states[this->proj_num_states-1 - i].created_at;
+    et = this->now - this->proj_states[this->proj_num_states-1 - i].instant;
+    if (lt < PROJECTILE_LIFETIME) {
       proj[j] = this->proj_states[this->proj_num_states-1 - i];
       proj[j].x += proj[j].vx * et * PROJECTILE_SPEED_128;
       proj[j].y += proj[j].vy * et * PROJECTILE_SPEED_128;
+      proj[j].instant = this->now;
       ++j;
     }
   }
