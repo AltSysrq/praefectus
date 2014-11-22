@@ -65,7 +65,8 @@ libpraefectus/system-mod.c \
 libpraefectus/system-commit.c \
 libpraefectus/system-ack.c \
 libpraefectus/system.c \
-libpraefectus/stdsys.c
+libpraefectus/stdsys.c \
+libpraefectus/flat-netid.c
 
 libpraefectus_la_LIBADD = libpraefectus-messages.la
 
