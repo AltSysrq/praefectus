@@ -44,7 +44,7 @@ void praef_flat_netid_from_asn1(praef_flat_netid* dst,
   memcpy(dst->intranet, dst->backing_asn1.intranet.address.choice.ipv4.buf,
          dst->backing_asn1.intranet.address.choice.ipv4.size);
 
-  if (dst->internet) {
+  if (dst->backing_asn1.internet) {
     dst->backing_asn1inet = *dst->backing_asn1.internet;
     memcpy(dst->internet, dst->backing_asn1inet.address.choice.ipv4.buf,
            dst->backing_asn1inet.address.choice.ipv4.size);
