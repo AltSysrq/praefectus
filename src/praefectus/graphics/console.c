@@ -125,7 +125,22 @@ void console_render(canvas* dst, console* this, int transparent) {
       ((y == 0 || y == (unsigned)this->h-1) && extremity_reverse_video);
 
     for (x = 0; x < this->w; ++x, ++ch) {
-      if (!this->c[ch].ch && transparent) continue;
+      if (!this->c[ch].ch && transparent) {
+        /* If reversing video here, invert all greyscale pixels, but otherwise
+         * leave the region alone.
+         */
+        if (row_reverse_video) {
+          for (oy = 0; oy < FONT_CHARH; ++oy) {
+            for (ox = 0; ox < FONT_CHARW; ++ox) {
+              fg = dst->data[canvas_off(dst, x*FONT_CHARW+ox, y*FONT_CHARH+oy)];
+              if (/* fg >= CP_GREY is always true */ fg < CP_GREY+CP_SIZE)
+                dst->data[canvas_off(dst, x*FONT_CHARW+ox, y*FONT_CHARH+oy)] =
+                  CP_GREY + (CP_SIZE - 1 - (fg - CP_GREY));
+            }
+          }
+        }
+        continue;
+      }
 
       if (row_reverse_video ^ this->c[ch].reverse_video ^
           (this->show_mouse &&

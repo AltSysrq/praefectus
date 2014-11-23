@@ -115,8 +115,8 @@ void game_object_send_events(game_object* this, praef_system* sys) {
     this->screen_name[global_config.screenname.size] = 0;
     evt.choice.initialise.screenname.buf = (unsigned char*)this->screen_name;
     evt.choice.initialise.screenname.size = strlen(this->screen_name);
-    evt.choice.initialise.xpos = this->self.id & 0xFFFF;
-    evt.choice.initialise.ypos = (this->self.id >> 16) & 0xFFFF;
+    evt.choice.initialise.xpos = this->self.id & 0x0FFF;
+    evt.choice.initialise.ypos = (this->self.id >> 16) & 0x0FFF;
   } else if (sign(this->want_xvel) != (signed)last_state->xvel - 1 ||
              sign(this->want_yvel) != (signed)last_state->yvel - 1) {
     evt.present = GameEvent_PR_setcontrol;

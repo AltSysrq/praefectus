@@ -171,14 +171,24 @@ static game_object* gameplay_state_get_self(gameplay_state* this) {
 static game_state* gameplay_update(gameplay_state* this, unsigned et) {
   game_state* parent;
   game_object* self;
+  game_object_core_state core;
+  game_object_proj_state proj[MAX_PROJECTILES];
+  signed prev_health = 15;
 
   if (this->virtual_network)
     praef_virtual_network_advance(this->virtual_network, et);
 
-  if ((self = gameplay_state_get_self(this)))
+  if ((self = gameplay_state_get_self(this))) {
+    if (game_object_current_state(&core, proj, self))
+      prev_health = core.hp;
     game_object_send_events(self, this->context->sys);
+  }
 
   game_context_update(this->context, et);
+
+  if (self && game_object_current_state(&core, proj, self) &&
+      prev_health != core.hp)
+    console_bel(this->cons);
 
   if (praef_ss_ok != this->context->status)
     /* TODO: Better error reporting */
@@ -303,6 +313,22 @@ static void gameplay_draw(gameplay_state* this, canvas* dst,
     x += strlen(score_str) + 1;
   }
 
+  switch (global_config.bel) {
+  case PraefectusConfiguration__bel_none:
+    this->cons->bel_behaviour = cbb_noop;
+    break;
+  case PraefectusConfiguration__bel_smallflash:
+    this->cons->bel_behaviour = cbb_flash_extremities;
+    break;
+
+  case PraefectusConfiguration__bel_flash:
+    this->cons->bel_behaviour = cbb_flash;
+    break;
+
+  case PraefectusConfiguration__bel_strobe:
+    this->cons->bel_behaviour = cbb_strobe;
+    break;
+  }
   this->cons->show_mouse = 0;
   console_render(dst, this->cons, 1);
 }
