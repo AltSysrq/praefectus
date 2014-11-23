@@ -60,7 +60,6 @@
 #include "../graphics/font.h"
 #include "../graphics/canvas.h"
 #include "main-menu.h"
-#include "../game/gameplay.h"
 
 /* Move this somewhere else if anything else winds up needing it. */
 SDL_PixelFormat* screen_pixel_format;
@@ -332,8 +331,7 @@ int main(int argc, char** argv) {
   framebuffer_front = framebuffer_both + ww*wh;
   memset(framebuffer_back, 0, 2 * sizeof(Uint32) * ww * wh);
 
-  /* state = main_menu_new(canv);*/
-  state = gameplay_state_test(canv->w, canv->h, ww, wh);
+  state = main_menu_new(canv, ww, wh);
 
   do {
     draw(canv, crt, state, screen);

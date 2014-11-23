@@ -262,12 +262,10 @@ void game_object_step(game_object* this, praef_userdata _) {
   unsigned i;
   game_object_scoord dx, dy;
 
-  ++this->now;
-
   if (!game_object_current_state(&this_core, this_proj, this))
-    return;
+    goto frame_complete;
 
-  if (!this_core.nproj) return;
+  if (!this_core.nproj) goto frame_complete;
 
   /* Check for collisions between this object's projectiles and other objects.
    */
@@ -303,13 +301,16 @@ void game_object_step(game_object* this, praef_userdata _) {
       }
     }
   }
+
+  frame_complete:
+  ++this->now;
 }
 
 void game_object_rewind(game_object* this, praef_instant instant) {
   this->now = instant;
 
   while (this->core_num_states &&
-         instant >= this->core_states[this->core_num_states-1].instant)
+         this->core_states[this->core_num_states-1].instant >= instant)
     game_object_remove_last_state(this);
 }
 

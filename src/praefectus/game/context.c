@@ -29,6 +29,8 @@
 #include <config.h>
 #endif
 
+#include <libpraefectus/system-stderr-log.h>
+
 #include "../common.h"
 #include "../asn1/GameEvent.h"
 #include "object.h"
@@ -71,6 +73,7 @@ void game_context_init(game_context* this,
     errx(EX_UNAVAILABLE, "out of memory");
 
   praef_stdsys_set_system(this->app, this->sys);
+  praef_app_log_to_stderr(this->app);
 }
 
 void game_context_destroy(game_context* this) {
