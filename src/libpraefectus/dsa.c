@@ -205,9 +205,9 @@ static int praef_compare_verifier_entry(
 
 RB_HEAD(praef_verifier_entry_tree, praef_verifier_entry_s);
 RB_PROTOTYPE(praef_verifier_entry_tree, praef_verifier_entry_s,
-             tree, praef_compare_verifier_entry)
+             tree, praef_compare_verifier_entry);
 RB_GENERATE(praef_verifier_entry_tree, praef_verifier_entry_s,
-            tree, praef_compare_verifier_entry)
+            tree, praef_compare_verifier_entry);
 
 struct praef_verifier_s {
   mpz_t p, q, g, r, s, w, u1, u2, v, h;
@@ -412,7 +412,9 @@ praef_object_id praef_verifier_verify(
    * such entry.
    */
   this->example.hint = hint;
-  entry = RB_NFIND(praef_verifier_entry_tree, &this->entries, &this->example);
+  entry = RB_NFIND_CMP(praef_verifier_entry_tree,
+                       &this->entries, &this->example,
+                       tree, praef_compare_verifier_entry);
   if (!entry || entry->hint != hint) return 0;
 
   if (!praef_verifier_prepare_verify(this, sig, data, sz))

@@ -76,6 +76,16 @@ int praef_umb_application_init(void) {
 
 #endif
 
+/* DragonFly doesn't support passing flags (like SOCK_NONBLOCK) via type, and
+ * thus doesn't even define SOCK_NONBLOCK.
+ *
+ * TODO On such systems, reconfigure the socket after the fact, or maybe select
+ * on the socket before reading to poll it.
+ */
+#ifndef SOCK_NONBLOCK
+#define SOCK_NONBLOCK 0
+#endif
+
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -163,9 +173,9 @@ static size_t praef_umb_recv(
 static int praef_compare_umb_routes(const praef_umb_route*,
                                     const praef_umb_route*);
 RB_PROTOTYPE_STATIC(praef_umb_route_tree, praef_umb_route_s, tree,
-                    praef_compare_umb_routes)
+                    praef_compare_umb_routes);
 RB_GENERATE_STATIC(praef_umb_route_tree, praef_umb_route_s,
-                   tree, praef_compare_umb_routes)
+                   tree, praef_compare_umb_routes);
 
 static size_t praef_umb_per_encode(void* dst, size_t size,
                                    PraefUdpMsg_t* message,

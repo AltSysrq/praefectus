@@ -38,4 +38,4 @@ int praef_compare_object_id(const praef_object* a, const praef_object* b) {
 }
 
 RB_GENERATE(praef_object_idmap, praef_object_s, idmap,
-            praef_compare_object_id)
+            praef_compare_object_id);

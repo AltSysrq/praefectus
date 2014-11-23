@@ -90,6 +90,6 @@ int praef_compare_system_state_present_vote(
   const praef_system_state_present_vote* b);
 SPLAY_PROTOTYPE(praef_system_state_present_votes,
                 praef_system_state_present_vote_s,
-                tree, praef_compare_system_state_present_vote)
+                tree, praef_compare_system_state_present_vote);
 
 #endif /* LIBPRAEFECTUS__SYSTEM_STATE_H_ */

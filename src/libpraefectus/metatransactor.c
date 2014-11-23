@@ -106,10 +106,10 @@ SPLAY_HEAD(praef_metatransactor_node_event_sequence,
            praef_metatransactor_node_event_s);
 SPLAY_PROTOTYPE(praef_metatransactor_node_event_sequence,
                 praef_metatransactor_node_event_s, sequence,
-                praef_compare_metatransactor_node_event)
+                praef_compare_metatransactor_node_event);
 SPLAY_GENERATE(praef_metatransactor_node_event_sequence,
                praef_metatransactor_node_event_s, sequence,
-               praef_compare_metatransactor_node_event)
+               praef_compare_metatransactor_node_event);
 
 typedef struct praef_metatransactor_node_s {
   praef_object self;

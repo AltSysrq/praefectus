@@ -41,7 +41,7 @@ int praef_compare_node_ack_discont(
   const praef_node_ack_discont*, const praef_node_ack_discont*);
 RB_HEAD(praef_node_ack_discont_queue, praef_node_ack_discont_s);
 RB_PROTOTYPE(praef_node_ack_discont_queue, praef_node_ack_discont_s,
-             tree, praef_compare_node_ack_discont)
+             tree, praef_compare_node_ack_discont);
 
 typedef struct {
   unsigned direct_ack_interval;

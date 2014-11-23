@@ -176,7 +176,7 @@ int praef_node_has_deny_with_offset(praef_node*, unsigned);
 int praef_node_is_alive(praef_node*);
 
 int praef_compare_nodes(const praef_node*, const praef_node*);
-RB_PROTOTYPE(praef_node_map, praef_node_s, map, praef_compare_nodes)
+RB_PROTOTYPE(praef_node_map, praef_node_s, map, praef_compare_nodes);
 
 #define PRAEF_OOM_IF_NOT(sys, cond) do {                \
     if (!(cond)) (sys)->abnormal_status = praef_ss_oom; \

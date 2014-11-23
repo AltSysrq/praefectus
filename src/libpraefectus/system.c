@@ -38,7 +38,7 @@ int praef_compare_nodes(const praef_node* a, const praef_node* b) {
   return (a->id > b->id) - (a->id < b->id);
 }
 
-RB_GENERATE(praef_node_map, praef_node_s, map, praef_compare_nodes)
+RB_GENERATE(praef_node_map, praef_node_s, map, praef_compare_nodes);
 
 void praef_system_conf_grace_period(praef_system* sys, unsigned i) {
   sys->grace_period = i;

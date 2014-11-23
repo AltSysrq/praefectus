@@ -106,4 +106,60 @@
 #endif
 #endif
 
+/* DragonFly's queue.h doesn't define FOREACH_SAFE variants */
+#ifndef SLIST_FOREACH_SAFE
+#define SLIST_FOREACH_SAFE(var, head, name, temp_var)           \
+    for ((var) = SLIST_FIRST(head);                             \
+         (var) && ((temp_var) = SLIST_NEXT((var), name), 1);    \
+         (var) = (temp_var))
+#endif
+#ifndef LIST_FOREACH_SAFE
+#define LIST_FOREACH_SAFE(var, head, name, temp_var)           \
+    for ((var) = LIST_FIRST(head);                             \
+         (var) && ((temp_var) = LIST_NEXT((var), name), 1);    \
+         (var) = (temp_var))
+#endif
+#ifndef STAILQ_FOREACH_SAFE
+#define STAILQ_FOREACH_SAFE(var, head, name, temp_var)           \
+    for ((var) = STAILQ_FIRST(head);                             \
+         (var) && ((temp_var) = STAILQ_NEXT((var), name), 1);    \
+         (var) = (temp_var))
+#endif
+#ifndef TAILQ_FOREACH_SAFE
+#define TAILQ_FOREACH_SAFE(var, head, name, temp_var)           \
+    for ((var) = TAILQ_FIRST(head);                             \
+         (var) && ((temp_var) = TAILQ_NEXT((var), name), 1);    \
+         (var) = (temp_var))
+#endif
+
+/* DragonFly's tree.h doesn't define RB_NFIND */
+#ifndef RB_NFIND
+/* XXX This only works on modern GCC/Clang.
+ * Contained implementation adapted from FreeBSD's tree.h
+ */
+#define RB_NFIND_CMP(type, head, target, field, cmp)    \
+    ({                                                  \
+      typeof(target) _tmp = RB_ROOT(head);              \
+      typeof(target) _res = NULL;                       \
+      typeof(target) _target = (target);                \
+      int _comp;                                        \
+      while (_tmp) {                                    \
+        _comp = cmp(_target, _tmp);                     \
+        if (_comp < 0) {                                \
+          _res = _tmp;                                  \
+          _tmp = RB_LEFT(_tmp, field);                  \
+        } else if (_comp > 0) {                         \
+          _tmp = RB_RIGHT(_tmp, field);                 \
+        } else {                                        \
+          _res = _tmp;                                  \
+          break;                                        \
+        }                                               \
+      }                                                 \
+      _res;                                             \
+    })
+#else
+#define RB_NFIND_CMP(type, head, target, field, cmp)    \
+    RB_NFIND(type, head, target)
+#endif
+
 #endif /* BSD_H_ */

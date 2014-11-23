@@ -172,11 +172,11 @@ SPLAY_HEAD(praef_transactor_wrapped_event_map,
 SPLAY_PROTOTYPE(praef_transactor_wrapped_event_map,
                 praef_transactor_wrapped_event_s,
                 map,
-                praef_compare_transactor_wrapped_event)
+                praef_compare_transactor_wrapped_event);
 SPLAY_GENERATE(praef_transactor_wrapped_event_map,
                praef_transactor_wrapped_event_s,
                map,
-               praef_compare_transactor_wrapped_event)
+               praef_compare_transactor_wrapped_event);
 
 struct praef_transactor_s {
   praef_object self;

@@ -34,7 +34,7 @@
 #include "messages/PraefMsg.h"
 
 RB_GENERATE(praef_node_ack_discont_queue, praef_node_ack_discont_s,
-            tree, praef_compare_node_ack_discont)
+            tree, praef_compare_node_ack_discont);
 
 int praef_compare_node_ack_discont(const praef_node_ack_discont* a,
                                    const praef_node_ack_discont* b) {

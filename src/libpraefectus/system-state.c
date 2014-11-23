@@ -503,4 +503,4 @@ int praef_compare_system_state_present_vote(
 
 SPLAY_GENERATE(praef_system_state_present_votes,
                praef_system_state_present_vote_s,
-               tree, praef_compare_system_state_present_vote)
+               tree, praef_compare_system_state_present_vote);

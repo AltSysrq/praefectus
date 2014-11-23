@@ -42,4 +42,4 @@ int praef_compare_event_sequence(const praef_event* a, const praef_event* b) {
 }
 
 SPLAY_GENERATE(praef_event_sequence, praef_event_s, sequence,
-               praef_compare_event_sequence)
+               praef_compare_event_sequence);

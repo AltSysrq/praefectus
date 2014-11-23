@@ -472,9 +472,9 @@ static int compare_enumerate_sysid(const enumerated_sysid* a,
 }
 
 RB_PROTOTYPE_STATIC(enumerated_sysid_tree, enumerated_sysid_s,
-                    tree, compare_enumerate_sysid)
+                    tree, compare_enumerate_sysid);
 RB_GENERATE_STATIC(enumerated_sysid_tree, enumerated_sysid_s,
-                   tree, compare_enumerate_sysid)
+                   tree, compare_enumerate_sysid);
 
 static void handle_discover(unsigned sock, pv_client* client,
                             const struct sockaddr* reply_addr,

@@ -76,17 +76,17 @@ static int praef_compare_comchain_object_by_instant(
 RB_HEAD(praef_comchain_object_hash_tree, praef_comchain_object_s);
 RB_PROTOTYPE_STATIC(praef_comchain_object_hash_tree,
                     praef_comchain_object_s, tree,
-                    praef_compare_comchain_object_by_hash)
+                    praef_compare_comchain_object_by_hash);
 RB_GENERATE_STATIC(praef_comchain_object_hash_tree,
                    praef_comchain_object_s, tree,
-                   praef_compare_comchain_object_by_hash)
+                   praef_compare_comchain_object_by_hash);
 RB_HEAD(praef_comchain_object_instant_tree, praef_comchain_object_s);
 RB_PROTOTYPE_STATIC(praef_comchain_object_instant_tree,
                     praef_comchain_object_s, tree,
-                    praef_compare_comchain_object_by_instant)
+                    praef_compare_comchain_object_by_instant);
 RB_GENERATE_STATIC(praef_comchain_object_instant_tree,
                    praef_comchain_object_s, tree,
-                   praef_compare_comchain_object_by_instant)
+                   praef_compare_comchain_object_by_instant);
 
 /**
  * Possible states for a commit.
@@ -156,10 +156,10 @@ static int praef_compare_comchain_commitment(
 RB_HEAD(praef_comchain_commitment_tree, praef_comchain_commitment_s);
 RB_PROTOTYPE_STATIC(praef_comchain_commitment_tree,
                     praef_comchain_commitment_s, tree,
-                    praef_compare_comchain_commitment)
+                    praef_compare_comchain_commitment);
 RB_GENERATE_STATIC(praef_comchain_commitment_tree,
                    praef_comchain_commitment_s, tree,
-                   praef_compare_comchain_commitment)
+                   praef_compare_comchain_commitment);
 
 struct praef_comchain_s {
   /**
@@ -312,8 +312,9 @@ static void praef_comchain_commitment_backfill(
 
   exobj.instant = commit->start;
   memset(exobj.hash, 0, PRAEF_HASH_SIZE);
-  for (obj = RB_NFIND(praef_comchain_object_instant_tree,
-                      &this->unassociated_objects, &exobj);
+  for (obj = RB_NFIND_CMP(praef_comchain_object_instant_tree,
+                          &this->unassociated_objects, &exobj,
+                          tree, praef_compare_comchain_object_by_instant);
        obj && obj->instant < commit->end; obj = objtmp) {
     objtmp = RB_NEXT(praef_comchain_object_instant_tree,
                      &this->unassociated_objects, obj);
@@ -453,7 +454,9 @@ int praef_comchain_reveal(praef_comchain* this,
    * object really falls within the commit's range.
    */
   example.start = instant;
-  commit = RB_NFIND(praef_comchain_commitment_tree, &this->commits, &example);
+  commit = RB_NFIND_CMP(praef_comchain_commitment_tree,
+                        &this->commits, &example,
+                        tree, praef_compare_comchain_commitment);
   if (commit && commit->start > instant)
     commit = RB_PREV(praef_comchain_commitment_tree, &this->commits, commit);
   else if (!commit)

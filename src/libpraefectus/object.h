@@ -97,7 +97,7 @@ int praef_compare_object_id(const praef_object*, const praef_object*);
 
 RB_HEAD(praef_object_idmap, praef_object_s);
 RB_PROTOTYPE(praef_object_idmap, praef_object_s, idmap,
-             praef_compare_object_id)
+             praef_compare_object_id);
 
 __END_DECLS
 
