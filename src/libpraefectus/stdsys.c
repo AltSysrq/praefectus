@@ -239,5 +239,5 @@ static int praef_stdsys_event_vote_default(
 
   return !optimistic ||
     evt->instant > clock->systime ||
-    evt->instant - clock->systime <= optimistic;
+    clock->systime - evt->instant <= optimistic;
 }
