@@ -675,7 +675,26 @@ static void main_menu_open_connecting(main_menu* this, const char* str) {
 }
 
 static void main_menu_open_lan_menu(void* vthis, menu_level* menu) {
-  /* TODO */
+  main_menu_reset_context(THIS);
+  THIS->bus = praef_umb_new(PACKAGE_NAME, PACKAGE_VERSION,
+                            well_known_ports, lenof(well_known_ports),
+                            praef_uiv_ipv4);
+  if (!THIS->bus) {
+    main_menu_open_error(THIS, "Unable to create network socket.");
+    return;
+  }
+
+  if (praef_umb_set_spam_firewall(THIS->bus, 1)) {
+    main_menu_open_error(THIS, "Unable to broadcast to network.");
+    return;
+  }
+
+  THIS->connecting_state = mmcs_idling;
+  THIS->is_internet_game = 0;
+  THIS->new_or_join.title = "LAN Game";
+  THIS->new_or_join.cascaded_under = &THIS->play;
+  menu_set_minimal_size(&THIS->new_or_join, 0, 0);
+  main_menu_set_active(THIS, &THIS->new_or_join);
 }
 
 static void main_menu_open_inet_menu(void* vthis, menu_level* menu) {
