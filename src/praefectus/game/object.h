@@ -176,9 +176,24 @@ int game_object_current_state(game_object_core_state*,
                               game_object_proj_state[MAX_PROJECTILES],
                               const game_object*);
 /**
+ * Like game_object_current_state(), but uses the given time instead.
+ *
+ * This is used when objects interact, so that the state used reflects the
+ * state of the object doing the interaction (which might be slightly before
+ * the current time of this object).
+ */
+int game_object_state_at(game_object_core_state*,
+                         game_object_proj_state[MAX_PROJECTILES],
+                         const game_object*,
+                         praef_instant);
+/**
  * Updates the current state of the given object to match the given core and
  * projectile states. The projectile states are expected to be normalised as
  * per game_object_current_state().
+ *
+ * If game_object_state_at() was used to retrieve the state, care must be taken
+ * that any state this object has precedes the new state, or is at the same
+ * time.
  */
 void game_object_put_state(game_object*,
                            const game_object_core_state*,

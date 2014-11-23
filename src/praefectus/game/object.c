@@ -193,35 +193,42 @@ void game_object_draw(canvas* dst, const game_object* this,
   }
 }
 
-int game_object_current_state(game_object_core_state* core,
-                              game_object_proj_state proj[MAX_PROJECTILES],
-                              const game_object* this) {
+int game_object_state_at(game_object_core_state* core,
+                         game_object_proj_state proj[MAX_PROJECTILES],
+                         const game_object* this,
+                         praef_instant now) {
   unsigned lt, et, i, j;
 
   if (0 == this->core_num_states) return 0;
 
   *core = this->core_states[this->core_num_states-1];
-  et = this->now - core->instant;
+  et = now - core->instant;
   if (et >= EXPIREY_INTERVAL) return 0;
 
   core->x += et * ((signed)core->xvel - 1) * OBJECT_SPEED;
   core->y += et * ((signed)core->yvel - 1) * OBJECT_SPEED;
-  core->instant = this->now;
+  core->instant = now;
 
   for (i = j = 0; i < core->nproj; ++i) {
-    lt = this->now - this->proj_states[this->proj_num_states-1 - i].created_at;
-    et = this->now - this->proj_states[this->proj_num_states-1 - i].instant;
+    lt = now - this->proj_states[this->proj_num_states-1 - i].created_at;
+    et = now - this->proj_states[this->proj_num_states-1 - i].instant;
     if (lt < PROJECTILE_LIFETIME) {
       proj[j] = this->proj_states[this->proj_num_states-1 - i];
       proj[j].x += proj[j].vx * et * PROJECTILE_SPEED_128;
       proj[j].y += proj[j].vy * et * PROJECTILE_SPEED_128;
-      proj[j].instant = this->now;
+      proj[j].instant = now;
       ++j;
     }
   }
 
   core->nproj = j;
   return 1;
+}
+
+int game_object_current_state(game_object_core_state* core,
+                              game_object_proj_state proj[MAX_PROJECTILES],
+                              const game_object* this) {
+  return game_object_state_at(core, proj, this, this->now);
 }
 
 void game_object_put_state(game_object* this,
@@ -271,15 +278,19 @@ void game_object_step(game_object* this, praef_userdata _) {
    */
   SLIST_FOREACH(other, &this->context->objects, next) {
     if (this == other) continue;
-    if (!game_object_current_state(&other_core, other_proj, other))
+    /* Need to use the timestamp of this, because the other object may have
+     * incremented its timestamp meanwhile, but this action occurs in the
+     * this frame.
+     */
+    if (!game_object_state_at(&other_core, other_proj, other, this->now))
       continue;
 
     for (i = 0; i < this_core.nproj; ++i) {
       dx = this_proj[i].x - other_core.x;
       dy = this_proj[i].y - other_core.y;
 
-      if (abs(dx) <= OBJECT_SIZE*GOC_PIXEL_SIZE &&
-          abs(dy) <= OBJECT_SIZE*GOC_PIXEL_SIZE) {
+      if (abs(dx) <= OBJECT_SIZE*GOC_PIXEL_SIZE/2 &&
+          abs(dy) <= OBJECT_SIZE*GOC_PIXEL_SIZE/2) {
         if (!other_core.hp) {
           /* Other player killed */
           other_core.hp = ~0;
@@ -297,11 +308,19 @@ void game_object_step(game_object* this, praef_userdata _) {
         memmove(this_proj + i, this_proj + i + 1,
                 sizeof(game_object_proj_state) * (this_core.nproj-i-1));
         --i;
+        --this_core.nproj;
         game_object_put_state(this, &this_core, this_proj);
       }
     }
   }
 
+  /* Don't increment the time until everything is done; all changes must occur
+   * in the previous frame to achieve rewind consistency.
+   *
+   * Note that other objects may interact with this one using the previous
+   * timestamp, so no states can be inserted with the new time until the event
+   * application phase starts.
+   */
   frame_complete:
   ++this->now;
 }
