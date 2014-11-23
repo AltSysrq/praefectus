@@ -148,14 +148,14 @@ deftest(contained_contexts) {
 deftest(pessimistic_event_not_applied_without_votes) {
   int applied = 0;
 
-  nodecount(0, 10);
+  nodecount(0, 9);
   put_pes_evt(1, lambdav((), applied = 1));
   step(2);
   ck_assert_int_eq(0, applied);
 }
 
 deftest(optimistic_event_applied_until_deadline) {
-  nodecount(0, 10);
+  nodecount(0, 9);
   put_opt_evt(1, 3, lambdav((), object.states[object.now+1] = 1));
   step(2);
   ck_assert_int_eq(1, object.states[2]);
@@ -166,7 +166,7 @@ deftest(optimistic_event_applied_until_deadline) {
 deftest(pessimistic_event_applied_one_after_votes) {
   evtpair evt;
 
-  nodecount(0, 4);
+  nodecount(0, 3);
   evt = put_pes_evt(1, lambdav((), ++object.states[object.now+1]));
   step(2);
   ck_assert_int_eq(0, object.states[2]);
@@ -184,7 +184,7 @@ deftest(pessimistic_event_applied_one_after_votes) {
 deftest(pessimistic_event_applied_after_node_count_reduction) {
   evtpair evt;
 
-  nodecount(0, 10);
+  nodecount(0, 9);
   evt = put_pes_evt(1, lambdav((), ++object.states[object.now+1]));
   step(2);
   ck_assert_int_eq(0, object.states[2]);
@@ -200,7 +200,7 @@ deftest(pessimistic_event_applied_after_node_count_reduction) {
 deftest(optimistic_event_not_redacted_at_deadline_if_has_votes) {
   evtpair evt;
 
-  nodecount(0, 4);
+  nodecount(0, 3);
   evt = put_opt_evt(1, 3, lambdav((), ++object.states[object.now+1]));
   step(2);
   ck_assert_int_eq(1, object.states[2]);
@@ -213,7 +213,7 @@ deftest(optimistic_event_not_redacted_at_deadline_if_has_votes) {
 deftest(event_redacted_after_retroactive_node_count_increase) {
   evtpair evt;
 
-  nodecount(0, 4);
+  nodecount(0, 3);
   evt = put_pes_evt(1, lambdav((), ++object.states[object.now+1]));
   votefor(evt);
   votefor(evt);
@@ -227,7 +227,7 @@ deftest(event_redacted_after_retroactive_node_count_increase) {
 deftest(event_resurrected_if_gains_votes_after_deadline) {
   evtpair evt;
 
-  nodecount(0, 3);
+  nodecount(0, 2);
   evt = put_opt_evt(1, 3, lambdav((), object.states[object.now+1] = 1));
   step(2);
   ck_assert_int_eq(1, object.states[2]);
@@ -243,7 +243,7 @@ deftest(event_resurrected_if_gains_votes_after_deadline) {
 deftest(event_redacted_after_vote_redaction) {
   evtpair evt, votea, voteb;
 
-  nodecount(0, 4);
+  nodecount(0, 3);
   evt = put_pes_evt(1, lambdav((), ++object.states[object.now+1]));
   votefor(evt);
   votea = votefor(evt);
@@ -261,7 +261,7 @@ deftest(event_redacted_after_vote_redaction) {
 deftest(event_redacted_after_node_decrease_redaction) {
   evtpair evt, node_count;
 
-  nodecount(0, 5);
+  nodecount(0, 4);
   node_count = nodecount(1, -1);
   evt = put_pes_evt(1, lambdav((), ++object.states[object.now+1]));
   votefor(evt);
@@ -276,7 +276,7 @@ deftest(event_redacted_after_node_decrease_redaction) {
 deftest(event_unredacted_after_node_increase_redaction) {
   evtpair evt, node_count;
 
-  nodecount(0, 4);
+  nodecount(0, 3);
   evt = put_pes_evt(1, lambdav((), ++object.states[object.now+1]));
   votefor(evt);
   votefor(evt);
@@ -293,7 +293,7 @@ deftest(event_unredacted_after_node_increase_redaction) {
 deftest(event_removed_if_redacted) {
   evtpair evt;
 
-  nodecount(0, 4);
+  nodecount(0, 3);
   evt = put_pes_evt(1, lambdav((), ++object.states[object.now+1]));
   votefor(evt);
   votefor(evt);
@@ -307,7 +307,7 @@ deftest(event_removed_if_redacted) {
 deftest(event_never_applied_if_redacted_before_acceptance) {
   evtpair evt;
 
-  nodecount(0, 4);
+  nodecount(0, 3);
   evt = put_opt_evt(1, 10, lambdav((), ++object.states[object.now+1]));
   redact(evt);
   step(2);
@@ -317,7 +317,7 @@ deftest(event_never_applied_if_redacted_before_acceptance) {
 deftest(later_node_count_increase_does_not_affect_earlier_acceptance) {
   evtpair evt;
 
-  nodecount(0, 2);
+  nodecount(0, 1);
   evt = put_pes_evt(1, lambdav((), ++object.states[object.now+1]));
   nodecount(2, +10);
   step(3);
@@ -330,7 +330,7 @@ deftest(later_node_count_increase_does_not_affect_earlier_acceptance) {
 deftest(later_node_count_decrease_does_not_affect_earlier_rejection) {
   evtpair evt;
 
-  nodecount(0, 5);
+  nodecount(0, 4);
   evt = put_pes_evt(1, lambdav((), ++object.states[object.now+1]));
   step(3);
   ck_assert_int_eq(0, object.states[3]);
@@ -344,7 +344,7 @@ deftest(later_node_count_decrease_does_not_affect_earlier_rejection) {
 deftest(retroactive_node_count_adjustments_stack) {
   evtpair evt;
 
-  nodecount(0, 4);
+  nodecount(0, 3);
   evt = put_pes_evt(10, lambdav((), ++object.states[object.now+1]));
   votefor(evt);
   votefor(evt);
@@ -365,7 +365,7 @@ deftest(doesnt_crash_if_head_event_removed_but_deadline_preserved) {
   praef_event* evt = mkevt(1, NULL);
   praef_event* devt = praef_transactor_deadline(tx, evt, 5);
 
-  nodecount(0, 4);
+  nodecount(0, 3);
   praef_context_add_event(master, devt);
   step(10);
 

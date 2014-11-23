@@ -209,7 +209,7 @@ praef_transactor* praef_transactor_new(praef_context* slave) {
   this->master = master;
   this->slave = slave;
   this->initial_node_count.valid_after = 0;
-  this->initial_node_count.count = 0;
+  this->initial_node_count.count = 1;
   this->next_evt_sn = 0;
 
   SLIST_INIT(&this->journal);
