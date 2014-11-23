@@ -40,12 +40,12 @@
 #define CURSOR_BLINK_INTERVAL 6
 #define CHAR_BLINK_INTERVAL 30
 
-console* console_new(const canvas* canv) {
+console* console_new(unsigned short cw, unsigned short ch) {
   unsigned w, h;
   console* this;
 
-  w = canv->w / FONT_CHARW;
-  h = canv->h / FONT_CHARH;
+  w = cw / FONT_CHARW;
+  h = ch / FONT_CHARH;
   this = zxmalloc(offsetof(console, c) +
                   sizeof(console_cell) * w * h);
   this->w = w;
@@ -93,7 +93,7 @@ void console_putc(console* this, const console_cell* template,
   this->c[off].ch = ch;
 }
 
-void console_render(canvas* dst, console* this) {
+void console_render(canvas* dst, console* this, int transparent) {
   int global_reverse_video = 0;
   int extremity_reverse_video = 0;
   int row_reverse_video;
@@ -125,8 +125,11 @@ void console_render(canvas* dst, console* this) {
       ((y == 0 || y == (unsigned)this->h-1) && extremity_reverse_video);
 
     for (x = 0; x < this->w; ++x, ++ch) {
+      if (!this->c[ch].ch && transparent) continue;
+
       if (row_reverse_video ^ this->c[ch].reverse_video ^
-          (x == this->mouse_x && y == this->mouse_y)) {
+          (this->show_mouse &&
+           x == this->mouse_x && y == this->mouse_y)) {
         fg = this->c[ch].bg;
         bg = this->c[ch].fg;
       } else {

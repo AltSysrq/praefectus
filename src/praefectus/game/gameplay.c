@@ -53,6 +53,7 @@ typedef struct {
   game_state self;
   game_state* parent;
   game_context* context;
+  console* cons;
   int is_alive;
 
   unsigned short canvw, canvh, winw, winh;
@@ -98,6 +99,7 @@ static gameplay_state* gameplay_state_ctor(
     this->stars[i].y = rand() ^ (rand() << 15);
   }
 
+  this->cons = console_new(canvw, canvh);
   this->canvw = canvw;
   this->canvh = canvh;
   this->winw = winw;
@@ -151,6 +153,7 @@ static void gameplay_state_delete(gameplay_state* this) {
   if (this->virtual_network)
     praef_virtual_network_delete(this->virtual_network);
 
+  free(this->cons);
   free(this);
 }
 
@@ -190,6 +193,7 @@ static game_state* gameplay_update(gameplay_state* this, unsigned et) {
   }
 }
 
+#define NUM_TOP_SCORES 4
 static void gameplay_draw(gameplay_state* this, canvas* dst,
                           crt_colour* palette) {
   game_object* obj, * self;
@@ -197,7 +201,17 @@ static void gameplay_draw(gameplay_state* this, canvas* dst,
   game_object_scoord sx, sy;
   game_object_core_state core;
   game_object_proj_state proj[MAX_PROJECTILES];
-  unsigned i;
+  console_cell cell;
+  char score_str[32];
+  unsigned i, x;
+  struct {
+    const char* name;
+    canvas_pixel colour;
+    signed score;
+  } top_scores[NUM_TOP_SCORES] = {
+    { "", 0, -1 }, { "", 0, -1 },
+    { "", 0, -1 }, { "", 0, -1 }
+  };
 
   crt_default_palette(palette);
   memset(dst->data, 0, dst->pitch * dst->h * sizeof(canvas_pixel));
@@ -218,8 +232,22 @@ static void gameplay_draw(gameplay_state* this, canvas* dst,
           dst->data[canvas_off(dst, sx, sy)] = CP_GREY + CP_SIZE/2;
       }
 
-      SLIST_FOREACH(obj, &this->context->objects, next)
+      SLIST_FOREACH(obj, &this->context->objects, next)  {
         game_object_draw(dst, obj, cx, cy);
+
+        if (game_object_current_state(&core, proj, obj)) {
+          for (i = 0; i < NUM_TOP_SCORES; ++i) {
+            if ((signed)core.score > top_scores[i].score) {
+              memmove(top_scores+i+1, top_scores+i,
+                      sizeof(top_scores[0]) * (NUM_TOP_SCORES - i - 1));
+              top_scores[i].score = core.score;
+              top_scores[i].colour = obj->self.id * CP_SIZE - 1;
+              top_scores[i].name = obj->screen_name;
+              break;
+            }
+          }
+        }
+      }
     }
   }
 
@@ -229,6 +257,54 @@ static void gameplay_draw(gameplay_state* this, canvas* dst,
     canvas_put(dst, this->curx, this->cury - i, CP_GREY + CP_SIZE-1);
     canvas_put(dst, this->curx, this->cury + i, CP_GREY + CP_SIZE-1);
   }
+
+  console_clear(this->cons);
+  memset(&cell, 0, sizeof(cell));
+  cell.bg = CONS_VGA_BRIGHT_BLACK;
+  cell.fg = CONS_VGA_WHITE;
+  for (i = 0; i < this->cons->w; ++i) {
+    console_putc(this->cons, &cell, i, 0, ' ');
+    console_putc(this->cons, &cell, i, this->cons->h-1, ' ');
+  }
+
+  if (self && game_object_current_state(&core, proj, self)) {
+    cell.fg = CONS_VGA_BRIGHT_RED;
+    for (i = 0; i < (unsigned)core.hp/2; ++i)
+      console_putc(this->cons, &cell, i, 0, 3);
+
+    if (core.hp & 1) {
+      cell.fg = CONS_VGA_RED;
+      console_putc(this->cons, &cell, i, 0, 3);
+    }
+
+    for (i = 0; i < MAX_PROJECTILES; ++i) {
+      cell.fg = (MAX_PROJECTILES - i - 1 < (unsigned)core.nproj?
+                 CONS_VGA_BLACK : CONS_VGA_BRIGHT_WHITE);
+      console_putc(this->cons, &cell, i + 9, 0, 7);
+    }
+
+    snprintf(score_str, sizeof(score_str),
+             "Score: %d", (unsigned)core.score);
+    cell.fg = CONS_VGA_BRIGHT_WHITE;
+    console_puts(this->cons, &cell, this->cons->w - strlen(score_str), 0,
+                 score_str);
+  }
+
+  x = 0;
+  for (i = 0; i < NUM_TOP_SCORES; ++i) {
+    if (top_scores[i].score < 0) break;
+
+    cell.fg = top_scores[i].colour;
+    console_puts(this->cons, &cell, x, this->cons->h-1, top_scores[i].name);
+    x += strlen(top_scores[i].name);
+    snprintf(score_str, sizeof(score_str), ": %d", top_scores[i].score);
+    cell.fg = CONS_VGA_BRIGHT_WHITE;
+    console_puts(this->cons, &cell, x, this->cons->h-1, score_str);
+    x += strlen(score_str) + 1;
+  }
+
+  this->cons->show_mouse = 0;
+  console_render(dst, this->cons, 1);
 }
 
 static void gameplay_key(gameplay_state* this, SDL_KeyboardEvent* evt) {

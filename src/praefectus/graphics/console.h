@@ -127,7 +127,7 @@ typedef struct {
 #define CONS_HHBLOCK ((unsigned char)223)
 #define CONS_MHBLOCK ((unsigned char)254)
 
-console* console_new(const canvas*);
+console* console_new(unsigned short canvw, unsigned short canvh);
 void console_delete(console*);
 console_cell* console_ca(console*, unsigned x, unsigned y);
 void console_puts(console*, const console_cell* template,
@@ -136,7 +136,7 @@ void console_putc(console*, const console_cell* template,
                   unsigned x, unsigned y, unsigned char);
 void console_bel(console*);
 void console_clear(console*);
-void console_render(canvas*, console*);
+void console_render(canvas*, console*, int transparent);
 
 __END_DECLS
 

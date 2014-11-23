@@ -453,7 +453,7 @@ game_state* main_menu_new(const canvas* canv,
   this->self.draw = (game_state_draw_t)main_menu_draw;
   this->self.key = (game_state_key_t)main_menu_key;
   this->self.txtin = (game_state_txtin_t)main_menu_txtin;
-  this->cons = console_new(canv);
+  this->cons = console_new(canv->w, canv->h);
   this->canvw = canv->w;
   this->canvh = canv->h;
   this->winw = winw;
@@ -622,7 +622,7 @@ static void main_menu_draw(main_menu* this, canvas* dst, crt_colour* palette) {
   crt_default_palette(palette);
   console_clear(this->cons);
   if (this->active) menu_draw(this->cons, this->active, 1);
-  console_render(dst, this->cons);
+  console_render(dst, this->cons, 0);
 }
 
 static void main_menu_key(main_menu* this, SDL_KeyboardEvent* evt) {

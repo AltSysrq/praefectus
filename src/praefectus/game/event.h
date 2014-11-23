@@ -37,6 +37,7 @@
 typedef struct {
   praef_event self;
   GameEvent_t data;
+  unsigned char screenname_buf[17];
 } game_event;
 
 game_event* game_event_new(const GameEvent_t*, praef_instant,

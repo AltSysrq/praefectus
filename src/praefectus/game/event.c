@@ -63,6 +63,11 @@ game_event* game_event_new(const GameEvent_t* data,
   this->self.apply = (praef_event_apply_t)game_event_apply;
   this->self.free = free;
   this->data = *data;
+  if (GameEvent_PR_initialise == this->data.present) {
+    memcpy(this->screenname_buf, this->data.choice.initialise.screenname.buf,
+           this->data.choice.initialise.screenname.size);
+    this->data.choice.initialise.screenname.buf = this->screenname_buf;
+  }
   return this;
 }
 
