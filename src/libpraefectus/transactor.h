@@ -134,10 +134,6 @@ praef_event* praef_transactor_put_event(praef_transactor*,
  * This does not add the event to the transactor context; doing so is the
  * responsibility of the caller.
  *
- * This event may only be present in a context if the corresponding put_event
- * event is also in it; if the latter is redacted, so too must this event be
- * redacted. The effect of failing to meet this invariant is undefined.
- *
  * @param evt An event passed into praef_transactor_put_event() with
  * optimistic=1.
  * @param deadline The instant (in the containing context) at which the
