@@ -469,7 +469,7 @@ deftest(encoding_is_idempotent_with_signator_and_no_garbage_bytes) {
 }
 
 deftest(encoding_is_nonidempotent_with_garbage_bytes) {
-  unsigned char data[2][PRAEF_HLMSG_MTU_MIN+1];
+  unsigned char data[2][PRAEF_HLMSG_MTU_MIN+1+8];
   praef_hlmsg msg;
   size_t first_size;
   praef_advisory_serial_number serno = 0;
