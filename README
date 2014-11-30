@@ -1,0 +1,124 @@
+Praefectus
+==========
+
+Introduction
+------------
+
+Praefectus is a non-steplocking variant of the Lockstep Protocol, suitable for
+use in totally decentralised, real-time, networked applications, in particular
+real-time games.
+
+The protocol makes logic cheats (eg, speed hacks) impossible, and reduces the
+viability of delayed-action and lookahead cheats. In the absence of Sybil
+attacks, it is additionally possible to guarantee that lookahead cheats are
+impossible.
+
+There is also a simple game built on top of the praefectus library. It's not
+very fun, though, given the time constraints on the project.
+
+Supported Platforms
+-------------------
+
+libpraefectus itself has been tested to work correctly on the following
+platforms:
+
+- FreeBSD 10.x, amd64 and x86
+- OpenBSD 5.5, amd64
+- DragonFly(BSD) 3.8, 4.0 amd64
+- Debian Jessie, amd64 and x86
+- Ubuntu 14.04 amd64
+
+There is code to support Windows; in theory, it should work, but this has not
+yet been tested.
+
+Building
+--------
+
+### Prerequisites
+
+For the library, a C89 compiler, `asn1c`, autotools (including libtool),
+`pkg-config`, the GMP library, and a C library including the BSD extensions. On
+GNU systems, libbsd[-dev] provides this. The example game also requires SDL2.x
+and a C99 compiler.
+
+If you want to run the unit tests, also make sure `check`/`libcheck` are
+installed, and that `$CC` is a relatively recent version of GCC (clang can't
+compile the tests).
+
+For Debianoids, including Ubuntu, you can get all the dependencies via
+```
+  sudo apt-get install build-essential libbsd-dev libsdl2-dev asn1c \
+      autoconf automake libtool libgmp-dev
+```
+
+### Compiling
+
+To build, run
+```
+  autoreconf -i
+  ./configure
+  make
+```
+
+`make install` will install things, but unless you really like playing a square
+in space, there isn't much utility to this.
+
+To run unit tests, make sure check is installed (`sudo apt-get install check`
+on Debianoids), rerun `./configure` if necessary, then run `make check`.
+
+Including in another Program
+----------------------------
+
+Praefectus doesn't currently support simply installing its include files and
+shared library object, since some special handling is needed for its header
+files.
+
+The build system currently produces only a static library, which in libtool's
+infinite wisdom, winds up located under `src/.libs/libpraefectus.a`. For the
+libpraefectus headers to work, you need the HAVE_*_H preprocessor definitions
+used by `bsd.h` to be set appropriately, and ensure that the `asn1-support`
+directory is in the include path.
+
+Because of this, it's probably easiest if you make Praefectus a submodule (or
+similar) of your own repository, and integrate its `Makefile.am`s into your own
+build system if you're using autotools, and ensure your `configure.ac` checks
+for everything praefectus's does. When building your own application, you still
+need to ensure `asn1-support` is on the include path, but otherwise it should
+all just work.
+
+Of course, right now this would mean your application depends on SDL2.x and
+would install praef-vertexd and the demo game as well. Someday I'll try to make
+this less bad, so that the library can just be installed normally.
+
+Getting Started
+---------------
+
+The contents of [src/praefectus/game](src/praefectus/game) will likely help
+understand how things fit together, as it's a pretty simple yet interesting
+stack.
+
+libpraefectus is pretty big, but pretty much all the public APIs are fairly
+well-documented. You'll want to start learning how
+[objects](src/libpraefectus/object.h) and [events](src/libpraefectus/event.h)
+work first. [The context system](src/libpraefectus/context.h) describes how
+these fit together, though your application won't touch contexts directly
+unless you're doing something truly unusual.
+
+The concept of event voting is described in
+[transactor.h](src/libpraefectus/transactor.h). Your application will likely
+need to handle this itself at least partially at some point (though likely via
+a higher-level interface), but you don't need to understand this immediately.
+
+The top-level API is the [system API](src/libpraefectus/system.h). You need to
+provide the glue to the lower layers to this API; it's recommended you at least
+start with the [basic implementation](src/libpraefectus/stdsys.h) and
+adapt/extend it as necessary.
+
+Headers whose names begin with hyphens do not have anything resembling a stable
+API. Other headers are unlikely to have incompatible API or ABI changes, though
+the library is still in a somewhat developmental stage, so this is not yet
+guaranteed.
+
+For actual networking, you probably want the [UDP message
+bus](src/libpraefectus/udp-message-bus/udp-message-bus.h). If you want to use
+something that's not UDP, you need to implement that yourself.
