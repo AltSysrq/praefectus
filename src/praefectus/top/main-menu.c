@@ -50,7 +50,7 @@
 #include "../game/gameplay.h"
 #include "main-menu.h"
 
-#define VERTEX_SERVER "localhost"
+#define VERTEX_SERVER "j.lin.gl"
 #define VERTEX_PORT 44444
 static const unsigned short well_known_ports[] = {
   29296, 24946
