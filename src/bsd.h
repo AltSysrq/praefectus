@@ -26,8 +26,8 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BSD_H_
-#define BSD_H_
+#ifndef LIBPRAEFECTUS_BSD_H_
+#define LIBPRAEFECTUS_BSD_H_
 
 /* Since GNU's "libbsd" package for some reason puts the headers in a different
  * location, despite its sole purpose being to provide compatibility with
@@ -162,4 +162,4 @@
     RB_NFIND(type, head, target)
 #endif
 
-#endif /* BSD_H_ */
+#endif /* LIBPRAEFECTUS_BSD_H_ */
