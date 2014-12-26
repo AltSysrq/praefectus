@@ -9,8 +9,8 @@ libpraefectus/hl-msg.t libpraefectus/clock.t \
 libpraefectus/outbox.t libpraefectus/ack-table.t \
 libpraefectus/system-wire.t \
 libpraefectus/system-fullstack.t
-AM_CFLAGS = $(CHECK_CFLAGS) -I$(top_builddir)/src \
-  -I$(top_builddir)/src/asn1-support -Wall -Wextra \
+AM_CFLAGS = $(CHECK_CFLAGS) -I../src \
+  -I../src/asn1-support -Wall -Wextra \
   -Wno-unused-parameter -Wno-long-long -Wno-missing-field-initializers \
   -std=gnu99 -Wno-gnu
 
