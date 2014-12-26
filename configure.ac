@@ -12,6 +12,17 @@ LT_INIT([dlopen])
 AM_CONFIG_HEADER([config.h])
 PKG_PROG_PKG_CONFIG()
 
+AC_ARG_ENABLE([demos], AS_HELP_STRING(dnl
+[--enable-demos], [Build demo applications (requires SDL2).]))
+AC_ARG_ENABLE([vertexd], AS_HELP_STRING(dnl
+[--enable-vertexd], [Build vertexd server.]))
+
+AS_IF([test "x$enable_vertexd" = "xyes"], [
+  AM_CONDITIONAL(BUILD_VERTEXD, true)
+], [
+  AM_CONDITIONAL(BUILD_VERTEXD, false)
+])
+
 # Checks for programs.
 AC_PROG_CC
 AM_PROG_CC_C_O
@@ -31,7 +42,15 @@ LDFLAGS="$LDFLAGS -L/usr/local/lib"
 AC_SEARCH_LIBS([errc], [c bsd])
 AC_SEARCH_LIBS([sin], [c m])
 AC_SEARCH_LIBS([dlopen], [dl])
-PKG_CHECK_MODULES([SDL], [sdl2])
+AS_IF([test "x$enable_demos" = "xyes"], [
+  PKG_CHECK_MODULES([SDL], [sdl2])
+  AM_CONDITIONAL(BUILD_DEMOS, true)
+], [
+  AM_CONDITIONAL(BUILD_DEMOS, false)
+  SDL_CFLAGS=
+  SDL_LIBS=
+])
+
 PKG_CHECK_MODULES([CHECK], [check], [], [:])
 AC_SEARCH_LIBS(__gmpz_powm, [gmp mpir], [],
 [AC_MSG_ERROR([cannot locate a gmp or mpir library])])

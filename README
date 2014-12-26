@@ -60,6 +60,9 @@ To build, run
   make
 ```
 
+If you want to build the demo game, run `./configure --enable-demos` instead of
+just `./configure`.
+
 `make install` will install things, but unless you really like playing a square
 in space, there isn't much utility to this.
 
@@ -85,10 +88,6 @@ build system if you're using autotools, and ensure your `configure.ac` checks
 for everything praefectus's does. When building your own application, you still
 need to ensure `asn1-support` is on the include path, but otherwise it should
 all just work.
-
-Of course, right now this would mean your application depends on SDL2.x and
-would install praef-vertexd and the demo game as well. Someday I'll try to make
-this less bad, so that the library can just be installed normally.
 
 Getting Started
 ---------------

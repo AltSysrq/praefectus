@@ -10,13 +10,30 @@ SUBDIRS = asn1-support libpraefectus/messages udp-common vertexd/config \
 
 AM_CFLAGS=-Iasn1-support -D_BSD_SOURCE $(SDL_CFLAGS)
 
-bin_PROGRAMS = praef praef-vertexd
-noinst_PROGRAMS = nbodies/nbodies-vnet-4-ideal nbodies/nbodies-vis \
+if BUILD_DEMOS
+demo_bin = praef
+demo_noinst = nbodies/nbodies-vnet-4-ideal nbodies/nbodies-vis \
   nbodies/nbodies-vnet-8-latent-lossy chat-demo/chat-demo
+demo_libs = nbodies/libnbodies-core.la libpraef-asn1.la
+else
+demo_bin =
+demo_noinst =
+demo_libs =
+endif
+
+if BUILD_VERTEXD
+vertexd_bin = praef-vertexd
+vertexd_libs = libvertexd-config.la
+else
+vertexd_bin =
+vertexd_libs =
+endif
+
+bin_PROGRAMS = $(demo_bin) $(vertexd_bin)
+noinst_PROGRAMS = $(demo_noinst)
 noinst_LTLIBRARIES = libpraefectus.la libasn1-support.la \
-libpraefectus-messages.la nbodies/libnbodies-core.la \
-libudp-common.la libpraefectus-umb.la libvertexd-config.la \
-libpraef-asn1.la
+libpraefectus-messages.la $(demo_libs) \
+libudp-common.la libpraefectus-umb.la $(vertexd_libs)
 
 praef_LDADD = libpraefectus.la libpraefectus-umb.la \
               libpraef-asn1.la $(SDL_LIBS)
