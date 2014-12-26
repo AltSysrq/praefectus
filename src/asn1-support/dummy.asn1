@@ -11,7 +11,8 @@ PraefDummyChoice ::= CHOICE {
   bool BOOLEAN,
   null NULL,
   chars VisibleString,
-  mchars PrintableString
+  mchars PrintableString,
+  utf8 UTF8String
 }
 
 PraefDummySet ::= SET {

@@ -153,6 +153,7 @@ asn1-support/NativeInteger.c \
 asn1-support/OCTET_STRING.c \
 asn1-support/PrintableString.c \
 asn1-support/VisibleString.c \
+asn1-support/UTF8String.c \
 asn1-support/asn_SEQUENCE_OF.c \
 asn1-support/asn_SET_OF.c \
 asn1-support/asn_codecs_prim.c \
