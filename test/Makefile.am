@@ -10,7 +10,7 @@ libpraefectus/outbox.t libpraefectus/ack-table.t \
 libpraefectus/system-wire.t \
 libpraefectus/system-fullstack.t
 AM_CFLAGS = $(CHECK_CFLAGS) -I../src \
-  -I../src/asn1-support -Wall -Wextra \
+  -I../src/libpraefectus/asn1-support -Wall -Wextra \
   -Wno-unused-parameter -Wno-long-long -Wno-missing-field-initializers \
   -std=gnu99 -Wno-gnu
 

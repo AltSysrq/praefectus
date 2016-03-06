@@ -90,7 +90,7 @@ int praef_umb_application_init(void) {
 #include <string.h>
 #include <time.h>
 
-#include "bsd.h"
+#include "../bsd.h"
 #include "udp-message-bus.h"
 #include "../../udp-common/PraefUdpMsg.h"
 

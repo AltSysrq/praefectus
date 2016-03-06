@@ -27,7 +27,7 @@ core
 core-fullstack
 transactor
 vgcore.*
-src/asn1-support
+src/libpraefectus/asn1-support
 src/libpraefectus/messages
 gen-dsa-parms
 *.t
@@ -44,3 +44,4 @@ src/chat-demo/chat-demo
 praef-vertexd
 src/vertexd/config
 src/praefectus/asn1
+praef-config.h

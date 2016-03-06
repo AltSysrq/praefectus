@@ -72,22 +72,15 @@ on Debianoids), rerun `./configure` if necessary, then run `make check`.
 Including in another Program
 ----------------------------
 
-Praefectus doesn't currently support simply installing its include files and
-shared library object, since some special handling is needed for its header
-files.
+libpraefectus can be installed as a normal shared library with `make install`,
+which should make it possible to link against it with `-lpraefectus` and to
+include its headers as `#include <libpraefectus/system.h>` and so forth. Note
+that you will need to have `$PREFIX/libpraefectus/asn1-support` directly on
+your include path since some of the generated files depend on that.
 
-The build system currently produces only a static library, which in libtool's
-infinite wisdom, winds up located under `src/.libs/libpraefectus.a`. For the
-libpraefectus headers to work, you need the HAVE_*_H preprocessor definitions
-used by `bsd.h` to be set appropriately, and ensure that the `asn1-support`
-directory is in the include path.
-
-Because of this, it's probably easiest if you make Praefectus a submodule (or
-similar) of your own repository, and integrate its `Makefile.am`s into your own
-build system if you're using autotools, and ensure your `configure.ac` checks
-for everything praefectus's does. When building your own application, you still
-need to ensure `asn1-support` is on the include path, but otherwise it should
-all just work.
+The shared library route is not always the best approach. If your project uses
+Autotools as its build system, it is often easier to simply embed praefectus as
+a submodule and link statically.
 
 Getting Started
 ---------------

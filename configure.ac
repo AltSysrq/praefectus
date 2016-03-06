@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.6])
-AC_INIT([praefectus], [0.0.0], [jason@lin.gl])
+AC_INIT([praefectus], [1.0.0], [jason@lin.gl])
 AC_CONFIG_SRCDIR([src/main.c])
 AM_INIT_AUTOMAKE([1.11])
 AM_SILENT_RULES(yes)
@@ -83,7 +83,9 @@ AC_TYPE_SIZE_T
 # Checks for library functions.
 AC_CHECK_FUNCS([dlfunc dlerror])
 
-AC_CONFIG_FILES([Makefile src/Makefile src/asn1-support/Makefile
+AC_CONFIG_FILES([Makefile src/Makefile
+                 src/libpraefectus/asn1-support/Makefile
+                 src/libpraefectus/Makefile
                  src/libpraefectus/messages/Makefile
                  src/udp-common/Makefile
                  src/vertexd/config/Makefile
