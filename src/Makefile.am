@@ -85,6 +85,7 @@ libpraefectus/system-commit.c \
 libpraefectus/system-ack.c \
 libpraefectus/system.c \
 libpraefectus/stdsys.c \
+libpraefectus/simple.c \
 libpraefectus/flat-netid.c \
 libpraefectus/system-stderr-log.c
 
@@ -319,6 +320,7 @@ libpraefectus/mtt-bridge.h \
 libpraefectus/object.h \
 libpraefectus/outbox.h \
 libpraefectus/secure-random.h \
+libpraefectus/simple.h \
 libpraefectus/std-state.h \
 libpraefectus/stdsys.h \
 libpraefectus/system-stderr-log.h \

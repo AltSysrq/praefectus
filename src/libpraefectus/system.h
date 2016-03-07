@@ -321,7 +321,7 @@ typedef int (*praef_app_is_auth_valid_t)(
  *
  * @param req The request that may need authentication data. Its auth field is
  * initially NULL.
- * @param auth_data An OCTET STRING with a 64-byte data array. If the
+ * @param auth_data An OCTET STRING with a 58-byte data array. If the
  * application wishes to use authentication, it should fill this data array in
  * and set the size appropriately, then point req->data at auth_data.
  */

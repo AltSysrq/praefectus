@@ -112,7 +112,7 @@ void praef_system_conf_max_live_nodes(
 void praef_system_join_update(praef_system* sys) {
   PraefMsg_t request;
   OCTET_STRING_t auth;
-  unsigned char auth_data[64];
+  unsigned char auth_data[58];
   unsigned char local_pubkey[PRAEF_PUBKEY_SIZE];
   int has_pending_join_tree_queries;
   praef_node* node;
