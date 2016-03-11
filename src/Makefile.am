@@ -221,7 +221,7 @@ nbodies_nbodies_vis_LDADD = $(SDL_LIBS)
 chat_demo_chat_demo_SOURCES = chat-demo/chat-demo.c
 chat_demo_chat_demo_LDADD = libpraefectus.la libpraefectus-umb.la $(SDL_LIBS)
 
-include_HEADERS = \
+nobase_include_HEADERS = \
 libpraefectus/ack-table.h \
 libpraefectus/asn1-support/BIT_STRING.h \
 libpraefectus/asn1-support/BOOLEAN.h \
