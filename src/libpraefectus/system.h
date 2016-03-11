@@ -747,13 +747,13 @@ const praef_clock* praef_system_get_clock(praef_system*);
 /**
  * Returns the id of the local node, or 0 if the local id is not yet known.
  */
-praef_object_id praef_system_get_local_id(praef_system*);
+praef_object_id praef_system_get_local_id(const praef_system*);
 
 /**
  * Returns the latency to the node with the given id, in instants, or ~0u if no
  * node with that id is known.
  */
-unsigned praef_system_get_latency_to(praef_system*, praef_object_id);
+unsigned praef_system_get_latency_to(const praef_system*, praef_object_id);
 
 /**
  * Sets the Out-of-Memory flag on the given praef_system. All further calls to
@@ -1153,8 +1153,8 @@ void praef_system_conf_route_kill_delay(praef_system*, unsigned);
  * Controls the interval at which the local node will propose for itself to
  * gain the GRANT status once it feels it is ready to handle it.
  *
- * Larger values will somewhat reduce the time required to join a system in the
- * face of packet loss, at the cost of slightly greater bandwidth usage.
+ * Smaller values will somewhat reduce the time required to join a system in
+ * the face of packet loss, at the cost of slightly greater bandwidth usage.
  *
  * The default is 16*std_latency.
  */
@@ -1164,9 +1164,9 @@ void praef_system_conf_propose_grant_interval(praef_system*, unsigned);
  * bit on any node it feels negatively about.
  *
  * All nodes in the system should use the same value for this configuration to
- * minimise bandwidth, though the penalty for not doing so is reasonably
- * small. Larger values increase bandwidth usage, but will somewhat reduce the
- * time needed to start DENYing another node.
+ * minimise bandwidth, though the penalty for not doing so is reasonably small.
+ * Smaller values increase bandwidth usage, but will somewhat reduce the time
+ * needed to start DENYing another node.
  *
  * The default is 16*std_latency.
  *
